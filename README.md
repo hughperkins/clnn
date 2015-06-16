@@ -44,3 +44,20 @@ print(l1cl:forward(datasetcl[2][1]))
 
 </pre>
 
+## Installation
+
+### Pre-requisites
+
+* have installed torch, nn, [cltorch](https://github.com/hughperkins/cltorch)
+* have activated the torch installation
+
+### Procedure
+
+```
+git clone https://github.com/hughperkins/clnn.git
+cd clnn
+luarocks make rocks/clnn-scm-1.rockspec
+```
+
+You should now be able to use `require 'clnn'` from your lua scripts :-)
+
