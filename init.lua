@@ -1,7 +1,9 @@
 require "torch"
-clnn = paths.require("libclnn")
+require 'nn'
+print('nn.Module\n', nn.Module)
 
 require('cltorch')
+clnn = paths.require("libclnn")
 
 local function Module__cl(self)
 --   print("Module__cl")
@@ -17,7 +19,15 @@ local function Module__cl(self)
    return self
 end
 
-require 'nn'
+local function Criterion__cl(self)
+--   print("Module__cl")
+ --  print('self\n', self)
+  self.gradInput = self.gradInput:cl()
 
+  return self
+end
+
+print('nn.Module\n', nn.Module)
 rawset(torch.getmetatable('nn.Module'), 'cl', Module__cl)
+rawset(torch.getmetatable('nn.Criterion'), 'cl', Criterion__cl)
 
