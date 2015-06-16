@@ -29,9 +29,19 @@ C = A:cl()
 --out = l1:forward(C)
 --print('out\n', out)
 
-l1cl = l1:cl()
+l1cl = l1:clone():cl()
 print('l1cl\n', l1cl)
 outcl = l1cl:forward(C)
 print('out\n', outcl)
 
+print('l1.weight\n', l1.weight)
+print('l1cl.weight\n', l1cl.weight)
+
+gradOutput = torch.Tensor{0.5, -0.8}
+a = l1:backward(A, gradOutput)
+print('a\n', a)
+
+gradOutputCl = gradOutput:cl()
+c = l1cl:backward(C, gradOutputCl)
+print('c\n', c)
 

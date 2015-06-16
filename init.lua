@@ -9,6 +9,9 @@ local function Module__cl(self)
   self.weight = self.weight:cl()
   self.bias = self.bias:cl()
   self.output = self.output:cl()
+  self.gradInput = self.gradInput:cl()
+  self.gradWeight = self.gradWeight:cl()
+  self.gradBias = self.gradBias:cl()
 
 --   self.weight 
    return self
