@@ -2,7 +2,7 @@ require('cltorch')
 
 require "torch"
 require 'nn'
-print('nn.Module\n', nn.Module)
+--print('nn.Module\n', nn.Module)
 
 require('cltorch')
 clnn = paths.require("libclnn")
@@ -31,17 +31,17 @@ local function Criterion__cl(self)
 end
 
 
-print('nn.Module\n', nn.Module)
+--print('nn.Module\n', nn.Module)
 rawset(torch.getmetatable('nn.Module'), 'cl', Module__cl)
 rawset(torch.getmetatable('nn.Criterion'), 'cl', Criterion__cl)
 
 -- next few lines should be in MSECriterion.lua really, but putting 
 -- them here for now, "to get it working"
 function torch.ClTensor.nn.MSECriterion_updateGradInput(self, input, target)
-  print('torch.ClTensor.nn.MSECriterion_updateGradInput')
-  print('self', self)
-  print('input', input)
-  print('target', target)
+--  print('torch.ClTensor.nn.MSECriterion_updateGradInput')
+--  print('self', self)
+--  print('input', input)
+--  print('target', target)
   norm = 2
   if self.sizeAverage then
     size = torch.numel(input)
@@ -52,16 +52,16 @@ function torch.ClTensor.nn.MSECriterion_updateGradInput(self, input, target)
 end
 
 function torch.ClTensor.nn.MSECriterion_updateOutput(self, input, target)
-  print('torch.ClTensor.nn.MSECriterion_updateOutput')
+--  print('torch.ClTensor.nn.MSECriterion_updateOutput')
   work = input - target
   work = torch.pow(work, 2)
-  print('diffsquare\n', work)
+--  print('diffsquare\n', work)
   se = torch.sum(work)
-  print('se\n', se)
+--  print('se\n', se)
   if self.sizeAverage then
     mse = se / torch.numel(input)
   end
-  print('mse\n', mse)
+--  print('mse\n', mse)
   return mse
 end
 
