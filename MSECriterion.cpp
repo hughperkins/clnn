@@ -24,12 +24,16 @@ using namespace std;
 //  }
 //};
 
-
+/*
 static int clnn_MSECriterion_updateOutput(lua_State *L)
 {
+  cout << "MSECriterion_updateOutput start" << endl;
   THClState *state = getCltorchState(L);
+  cout << "MSECriterion_updateOutput got state" << endl;
   THClTensor *input = (THClTensor*)luaT_checkudata(L, 2, "torch.ClTensor");
+  cout << "MSECriterion_updateOutput got input" << endl;
   THClTensor *target = (THClTensor*)luaT_checkudata(L, 3, "torch.ClTensor");
+  cout << "MSECriterion_updateOutput 2" << endl;
   THAssert(THClTensor_checkGPU(state, 2, input, target));
 
   int sizeAverage = luaT_getfieldcheckboolean(L, 1, "sizeAverage");
@@ -43,7 +47,11 @@ static int clnn_MSECriterion_updateOutput(lua_State *L)
   input = THClTensor_newContiguous(state, input);
   target = THClTensor_newContiguous(state, target);
 
+  cout << "MSECriterion_updateOutput, before thrust bit" << endl;
   // thrust stuff :-(
+  // does something like:
+  // sum( per-element-square( per-element-diff( state, input) ) )
+  // I guess we can do this in lua???
 //  thrust::device_ptr<float> input_data(THClTensor_data(state, input));
 //  thrust::device_ptr<float> target_data(THClTensor_data(state, target));
 //  sum = thrust::inner_product(input_data, input_data+size, target_data, (float) 0, thrust::plus<float>(), mse_functor());
@@ -61,7 +69,7 @@ static int clnn_MSECriterion_updateOutput(lua_State *L)
   THError("Not implemented");
   return 1;
 }
-
+*/
 
 //struct mse_updateGradInput_functor
 //{
@@ -184,7 +192,7 @@ static int clnn_MSECriterion_updateGradInput2(lua_State *L)
 
 
 static const struct luaL_Reg clnn_MSECriterion__ [] = {
-  {"MSECriterion_updateOutput", clnn_MSECriterion_updateOutput},
+//  {"MSECriterion_updateOutput", clnn_MSECriterion_updateOutput},
   {"MSECriterion_updateGradInput", clnn_MSECriterion_updateGradInput},
   {"MSECriterion_updateOutput2", clnn_MSECriterion_updateOutput2},
   {"MSECriterion_updateGradInput2", clnn_MSECriterion_updateGradInput2},

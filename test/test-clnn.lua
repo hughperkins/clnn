@@ -68,13 +68,11 @@ end
 
 print('e1[1].nn', e1[1].nn)
 
-if false then
 criterion = nn.MSECriterion() -- Mean Squared Error criterion
 trainer = nn.StochasticGradient(l1, criterion)
 trainer.learningRate = 0.1  
 print('learningRate', trainer.learningRate)
 trainer:train(dataset) -- train using some examples
-end
 
 print('e1[1].nn', e1[1].nn)
 print(l1:forward(e1[1]))
@@ -83,9 +81,6 @@ print('e1[1].nn', e1[1].nn)
 -- dump(e1[1].nn)
 
 print(torch.Tensor({3,5}).nn)
-
-if false then
-
 
 print('criterion\n', criterion)
 datasetcl = {}
@@ -112,5 +107,4 @@ trainercl:train(datasetcl) -- train using some examples
 
 print(l1cl:forward(e1[1]))
 print(l1cl:forward(e2[1]))
-end
 
