@@ -103,7 +103,11 @@ static int clnn_MSECriterion_updateGradInput(lua_State *L)
   THClTensor_resizeAs(state, gradInput, input);
 
   // no clue what this is ... :-/
-
+   // ok, so this is backprop of gradient for mse, so ...
+   // norm is a float
+   // and otherwise it's just x - y, which is 
+   // looks like this is http://thrust.github.io/doc/group__transformations.html#ga68a3ba7d332887f1332ca3bc04453792
+   // so, gradinput = norm * (input - target)
 //  thrust::device_ptr<float> input_data(THClTensor_data(state, input));
 //  thrust::device_ptr<float> target_data(THClTensor_data(state, target));
 //  thrust::device_ptr<float> gradInput_data(THClTensor_data(state, gradInput));

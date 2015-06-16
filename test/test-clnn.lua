@@ -105,6 +105,6 @@ trainercl.learningRate = 0.1
 print('learningRate', trainercl.learningRate)
 trainercl:train(datasetcl) -- train using some examples
 
-print(l1cl:forward(e1[1]))
-print(l1cl:forward(e2[1]))
+print(l1cl:forward(datasetcl[1][1]))
+print(l1cl:forward(datasetcl[2][1]))
 
