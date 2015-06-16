@@ -12,6 +12,9 @@ Not much so far :-)
 - can use stochasticgradientdescent on a linear layer
 
 <pre>
+require 'nn'
+require 'clnn'
+
 l1cl = nn.Linear(3, 2):cl()
 C = torch.ClTensor{3,5,2}
 print('l1cl:forward(A)\n', l1cl:forward(C))
