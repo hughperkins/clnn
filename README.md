@@ -48,7 +48,7 @@ print(l1cl:forward(datasetcl[2][1]))
 
 ### Pre-requisites
 
-* have installed torch, nn, [cltorch](https://github.com/hughperkins/cltorch)
+* have installed [torch](https://github.com/torch/torch), [nn](https://github.com/torch/nn), [cltorch](https://github.com/hughperkins/cltorch)
 * have activated the torch installation
 
 ### Procedure
