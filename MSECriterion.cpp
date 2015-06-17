@@ -197,18 +197,18 @@ static int clnn_MSECriterion_updateGradInput2(lua_State *L)
 
 static const struct luaL_Reg clnn_MSECriterion__ [] = {
 //  {"MSECriterion_updateOutput", clnn_MSECriterion_updateOutput},
-  {"MSECriterion_updateGradInput", clnn_MSECriterion_updateGradInput},
-  {"MSECriterion_updateOutput2", clnn_MSECriterion_updateOutput2},
-  {"MSECriterion_updateGradInput2", clnn_MSECriterion_updateGradInput2},
+//  {"MSECriterion_updateGradInput", clnn_MSECriterion_updateGradInput},
+//  {"MSECriterion_updateOutput2", clnn_MSECriterion_updateOutput2},
+//  {"MSECriterion_updateGradInput2", clnn_MSECriterion_updateGradInput2},
   {NULL, NULL}
 };
 
 void clnn_MSECriterion_init(lua_State *L)
 {
-  cout << "clnn_MSECriterion_init" << endl;
+//  cout << "clnn_MSECriterion_init" << endl;
   luaT_pushmetatable(L, "torch.ClTensor");
-  cout << "clnn_MSECriterion_init pushed metatable" << endl;
+//  cout << "clnn_MSECriterion_init pushed metatable" << endl;
   luaT_registeratname(L, clnn_MSECriterion__, "nn");
-  cout << "clnn_MSECriterion_init done registeratname" << endl;
+//  cout << "clnn_MSECriterion_init done registeratname" << endl;
   lua_pop(L,1);
 }

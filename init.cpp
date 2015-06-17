@@ -12,9 +12,9 @@ extern "C" {
 void clnn_MSECriterion_init(lua_State *L);
 
 int luaopen_libclnn( lua_State *L ) {
-    printf("luaopen_libclnn called :-)\n");
+//    printf("luaopen_libclnn called :-)\n");
     clnn_MSECriterion_init(L);
-    cout << " try cout" << endl;
+//    cout << " try cout" << endl;
     return 1;
 }
 
