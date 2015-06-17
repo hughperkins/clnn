@@ -11,12 +11,13 @@ clnn = paths.require("libclnn")
 local function Module__cl(self)
 --   print("Module__cl")
  --  print('self\n', self)
-  self.weight = self.weight:cl()
-  self.bias = self.bias:cl()
-  self.output = self.output:cl()
-  self.gradInput = self.gradInput:cl()
-  self.gradWeight = self.gradWeight:cl()
-  self.gradBias = self.gradBias:cl()
+--  self.weight = self.weight:cl()
+--  self.bias = self.bias:cl()
+--  self.output = self.output:cl()
+--  self.gradInput = self.gradInput:cl()
+--  self.gradWeight = self.gradWeight:cl()
+--  self.gradBias = self.gradBias:cl()
+  self:type('torch.ClTensor')
 
 --   self.weight 
    return self
@@ -25,7 +26,8 @@ end
 local function Criterion__cl(self)
 --   print("Module__cl")
  --  print('self\n', self)
-  self.gradInput = self.gradInput:cl()
+--  self.gradInput = self.gradInput:cl()
+  self:type('torch.ClTensor')
 
   return self
 end
