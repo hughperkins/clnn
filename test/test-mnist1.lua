@@ -14,39 +14,29 @@ end
 local train_data = _trainset.data
 local train_labels = _trainset.label
 for i=1,1280 do
--- for i,row in ipairs(_trainset)
---  print(torch.reshape(train_data[i], 28 *28))
---  print(train_labels[i])
   local e = {}
-  e[1] = torch.reshape(train_data[i], 28 * 28):double()
+  e[1] = torch.reshape(train_data[i], 28 * 28):double():cl()
   local expectedout = torch.Tensor(10)
---  print('expectedout\n', expectedout)
   expectedout:zero()
---  print('expectedout\n', expectedout)
   local label = train_labels[i]
   if label == 0 then
     label = 10
   end
---  print('label', label)
   expectedout[label] = 1
---  e[2] = torch.Tensor({train_labels[i]})
-  e[2] = expectedout
+  e[2] = expectedout:cl()
   trainset[#trainset+1] = e
 end
 
 e1 = trainset[1]
-print('e1[1]', e1[1])
-print('e1[2]', e1[2])
 
-print('Ntrain', trainset.size()) -- to retrieve the size
---print('Ntest', testset.size()) -- to retrieve the size
+print('Ntrain', trainset.size())
 
-local net = nn.Linear(28 * 28, 10)
+local net = nn.Linear(28 * 28, 10):cl()
 print('net\n', net)
-local criterion = nn.MSECriterion() -- Mean Squared Error criterion
+local criterion = nn.MSECriterion():cl()
 local trainer = nn.StochasticGradient(net, criterion)
 trainer.learningRate = 0.000001
 print('learningRate', trainer.learningRate)
-trainer:train(trainset) -- train using some examples
+trainer:train(trainset)
 
 
