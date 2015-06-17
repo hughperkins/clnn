@@ -18,7 +18,7 @@ message("Torch_INSTALL_LIB ${Torch_INSTALL_LIB}")
 #add_library( clnn SHARED init.cpp )
 
 set(src init.cpp MSECriterion.cpp utils.c)
-set(luasrc init.lua)
+set(luasrc init.lua MSECriterion.lua)
 ADD_TORCH_PACKAGE(clnn "${src}" "${luasrc}" )
 
 TARGET_LINK_LIBRARIES(clnn luaT THCl TH)

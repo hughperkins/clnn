@@ -35,34 +35,5 @@ end
 rawset(torch.getmetatable('nn.Module'), 'cl', Module__cl)
 rawset(torch.getmetatable('nn.Criterion'), 'cl', Criterion__cl)
 
--- next few lines should be in MSECriterion.lua really, but putting 
--- them here for now, "to get it working"
-function torch.ClTensor.nn.MSECriterion_updateGradInput(self, input, target)
---  print('torch.ClTensor.nn.MSECriterion_updateGradInput')
---  print('self', self)
---  print('input', input)
---  print('target', target)
-  norm = 2
-  if self.sizeAverage then
-    size = torch.numel(input)
-    norm = norm / size
-  end
-  self.gradInput = (input - target) * norm
-  return self.gradInput
-end
-
-function torch.ClTensor.nn.MSECriterion_updateOutput(self, input, target)
---  print('torch.ClTensor.nn.MSECriterion_updateOutput')
-  work = input - target
-  work = torch.pow(work, 2)
---  print('diffsquare\n', work)
-  se = torch.sum(work)
---  print('se\n', se)
-  if self.sizeAverage then
-    mse = se / torch.numel(input)
-  end
---  print('mse\n', mse)
-  return mse
-end
-
+require 'MSECriterion'
 
