@@ -61,11 +61,11 @@ luarocks make rocks/clnn-scm-1.rockspec
 
 You should now be able to use `require 'clnn'` from your lua scripts :-)
 
-# Vision
+## Vision
 
 I want to be able to use this to run things like [AlexNet](http://www.cs.toronto.edu/~fritz/absps/imagenet.pdf), [Clark and Storkey](http://arxiv.org/abs/1412.3409), and [Playing Atari with Deep Reinforcement Learning](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf)
 
-# Why I choose torch
+## Why I choose torch
 
 I really like the torch `nn` syntax, and naming.  Actually, I started to use the same naming conventions in my [DeepCL](https://github.com/hughperkins/DeepCL) library.  Finally, I thought, oh, let's just get torch nn working on OpenCL somehow :-)   Or try anyway.
 
