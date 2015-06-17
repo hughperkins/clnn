@@ -8,34 +8,42 @@ require('cltorch')
 clnn = paths.require("libclnn")
 
 
-local function Module__cl(self)
---   print("Module__cl")
- --  print('self\n', self)
---  self.weight = self.weight:cl()
---  self.bias = self.bias:cl()
---  self.output = self.output:cl()
---  self.gradInput = self.gradInput:cl()
---  self.gradWeight = self.gradWeight:cl()
---  self.gradBias = self.gradBias:cl()
-  self:type('torch.ClTensor')
-
---   self.weight 
-   return self
+function nn.Module:cl()
+   return self:type('torch.ClTensor')
 end
 
-local function Criterion__cl(self)
---   print("Module__cl")
- --  print('self\n', self)
---  self.gradInput = self.gradInput:cl()
-  self:type('torch.ClTensor')
-
-  return self
+function nn.Criterion:cl()
+   return self:type('torch.ClTensor')
 end
+
+--local function Module__cl(self)
+----   print("Module__cl")
+-- --  print('self\n', self)
+----  self.weight = self.weight:cl()
+----  self.bias = self.bias:cl()
+----  self.output = self.output:cl()
+----  self.gradInput = self.gradInput:cl()
+----  self.gradWeight = self.gradWeight:cl()
+----  self.gradBias = self.gradBias:cl()
+--  self:type('torch.ClTensor')
+
+----   self.weight 
+--   return self
+--end
+
+--local function Criterion__cl(self)
+----   print("Module__cl")
+-- --  print('self\n', self)
+----  self.gradInput = self.gradInput:cl()
+--  self:type('torch.ClTensor')
+
+--  return self
+--end
 
 
 --print('nn.Module\n', nn.Module)
-rawset(torch.getmetatable('nn.Module'), 'cl', Module__cl)
-rawset(torch.getmetatable('nn.Criterion'), 'cl', Criterion__cl)
+--rawset(torch.getmetatable('nn.Module'), 'cl', Module__cl)
+--rawset(torch.getmetatable('nn.Criterion'), 'cl', Criterion__cl)
 
 require 'MSECriterion'
 
