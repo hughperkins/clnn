@@ -7,19 +7,6 @@ local mnist = require 'mnist'
 local _trainset = mnist.traindataset()
 local _testset = mnist.testdataset()
 
---function trainset.size()
---  return 1280
---end
-
---function testset.size()
---  return 1280
---end
-
---trainset:size(1280)
-
---trainset.size = 1280
---testset.size = 1280
-
 local trainset = {}
 function trainset.size()
   return 1280
@@ -55,9 +42,10 @@ print('Ntrain', trainset.size()) -- to retrieve the size
 --print('Ntest', testset.size()) -- to retrieve the size
 
 local net = nn.Linear(28 * 28, 10)
+print('net\n', net)
 local criterion = nn.MSECriterion() -- Mean Squared Error criterion
 local trainer = nn.StochasticGradient(net, criterion)
-trainer.learningRate = 0.01
+trainer.learningRate = 0.000001
 print('learningRate', trainer.learningRate)
 trainer:train(trainset) -- train using some examples
 
