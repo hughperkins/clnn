@@ -4,7 +4,17 @@ function torch.ClTensor.nn.Tanh_updateOutput(self, input)
 end
 
 function torch.ClTensor.nn.Tanh_updateGradInput(self, input, gradOutput)
-  self.gradInput = torch.cmul(gradOutput, - torch.pow(self.output, 2) + 1)
+  local nElement = self.gradInput:nElement()
+  self.gradInput:resizeAs(input)
+  if self.gradInput:nElement() ~= nElement then
+     self.gradInput:zero()
+  end
+  self.gradInput:copy(self.output)
+  self.gradInput:pow(2)
+  self.gradInput:neg()
+  self.gradInput:add(1)
+  self.gradInput:cmul(gradOutput)
+ -- self.gradInput = torch.cmul(gradOutput, - torch.pow(self.output, 2) + 1)
   return self.gradInput
 end
 

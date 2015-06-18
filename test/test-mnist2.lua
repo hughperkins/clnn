@@ -16,7 +16,7 @@ local batchSize = 128
 --print(batch_labels[1])
 --print(batch_data[1])
 
-local numBatches = 10
+local numBatches = 40
 
 local trainset = {}
 function trainset.size()
@@ -45,6 +45,7 @@ api = os.getenv('API')
 print('api', api)
 
 learningRate = 0.01
+maxIteration = 3
 
 local net = nn.Sequential()
 net:add(nn.Linear(28*28,150))
@@ -54,6 +55,7 @@ net:add(nn.Linear(150,10))
 if api == 'cpu' then
 local criterion = nn.MSECriterion()
 local trainer = nn.StochasticGradient(net, criterion)
+trainer.maxIteration = maxIteration
 trainer.learningRate = learningRate
 sys.tic()
 trainer:train(trainset)
@@ -64,7 +66,7 @@ if api == 'cl' then
 require 'clnn'
 local trainsetcl = {}
 function trainsetcl.size()
-  return 10
+  return numBatches
 end
 for b=1,numBatches do
   table.insert(trainsetcl, {trainset[b][1]:clone():cl(), trainset[b][2]:clone():cl()})
@@ -72,6 +74,7 @@ end
 local netcl = net:cl()
 local criterioncl = nn.MSECriterion():cl()
 local trainercl = nn.StochasticGradient(netcl, criterioncl)
+trainercl.maxIteration = maxIteration
 trainercl.learningRate = learningRate
 sys.tic()
 trainercl:train(trainsetcl)
@@ -82,7 +85,7 @@ if api == 'cuda' then
 require 'cunn'
 local trainsetcuda = {}
 function trainsetcuda.size()
-  return 10
+  return numBatches
 end
 for b=1,numBatches do
   table.insert(trainsetcuda, {trainset[b][1]:clone():cuda(), trainset[b][2]:clone():cuda()})
@@ -90,6 +93,7 @@ end
 local netcuda = net:cuda()
 local criterioncuda = nn.MSECriterion():cuda()
 local trainercuda = nn.StochasticGradient(netcuda, criterioncuda)
+trainercuda.maxIteration = maxIteration
 trainercuda.learningRate = learningRate
 sys.tic()
 trainercuda:train(trainsetcuda)
