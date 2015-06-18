@@ -26,6 +26,7 @@ end
 i = 1
 for b=1,numBatches do
   local batch_data = torch.Tensor(batchSize, 28*28)
+  batch_data = batch_data / 255 - 0.5
   local batch_labels = torch.Tensor(batchSize, 10)
   for bi=1,batchSize do
     batch_data[bi] = torch.reshape(train_data[i], 28 * 28):double()
@@ -43,13 +44,20 @@ end
 api = os.getenv('API')
 print('api', api)
 
+learningRate = 0.01
+
+local net = nn.Sequential()
+net:add(nn.Linear(28*28,150))
+net:add(nn.Tanh())
+net:add(nn.Linear(150,10))
+
 if api == 'cpu' then
-local net = nn.Linear(28 * 28, 10)
 local criterion = nn.MSECriterion()
 local trainer = nn.StochasticGradient(net, criterion)
-trainer.learningRate = 0.000001
-print('learningRate', trainer.learningRate)
+trainer.learningRate = learningRate
+sys.tic()
 trainer:train(trainset)
+print('toc', sys.toc())
 end
 
 if api == 'cl' then
@@ -61,11 +69,10 @@ end
 for b=1,numBatches do
   table.insert(trainsetcl, {trainset[b][1]:clone():cl(), trainset[b][2]:clone():cl()})
 end
-local netcl = nn.Linear(28 * 28, 10):cl()
+local netcl = net:cl()
 local criterioncl = nn.MSECriterion():cl()
 local trainercl = nn.StochasticGradient(netcl, criterioncl)
-trainercl.learningRate = 0.000001
-print('learningRate', trainercl.learningRate)
+trainercl.learningRate = learningRate
 sys.tic()
 trainercl:train(trainsetcl)
 print('toc', sys.toc())
@@ -80,11 +87,10 @@ end
 for b=1,numBatches do
   table.insert(trainsetcuda, {trainset[b][1]:clone():cuda(), trainset[b][2]:clone():cuda()})
 end
-local netcuda = nn.Linear(28 * 28, 10):cuda()
+local netcuda = net:cuda()
 local criterioncuda = nn.MSECriterion():cuda()
 local trainercuda = nn.StochasticGradient(netcuda, criterioncuda)
-trainercuda.learningRate = 0.000001
-print('learningRate', trainercuda.learningRate)
+trainercuda.learningRate = learningRate
 sys.tic()
 trainercuda:train(trainsetcuda)
 print('toc', sys.toc())
