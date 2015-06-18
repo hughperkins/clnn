@@ -40,8 +40,10 @@ for b=1,numBatches do
   table.insert(trainset, {batch_data, batch_labels})
 end
 
+api = os.getenv('API')
+print('api', api)
 
-if false then
+if api == 'cpu' then
 local net = nn.Linear(28 * 28, 10)
 local criterion = nn.MSECriterion()
 local trainer = nn.StochasticGradient(net, criterion)
@@ -50,7 +52,7 @@ print('learningRate', trainer.learningRate)
 trainer:train(trainset)
 end
 
-if true then
+if api == 'cl' then
 require 'clnn'
 local trainsetcl = {}
 function trainsetcl.size()
@@ -69,7 +71,7 @@ trainercl:train(trainsetcl)
 print('toc', sys.toc())
 end
 
-if false then
+if api == 'cuda' then
 require 'cunn'
 local trainsetcuda = {}
 function trainsetcuda.size()
