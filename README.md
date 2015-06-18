@@ -18,7 +18,7 @@ Trainers:
 
 # Samples
 
-* For using a Linear layer on mnist, see [test/test-mnist2.lua](test/test-mnist2.lua)  (can run it by doing `./run-mnist2.sh`)
+* For using a Linear layer on mnist, see [test/test-mnist2.lua](test/test-mnist2.lua)  (can run it by doing `API=cl ./run-mnist2.sh`.  Interchange `cl` for `cuda` or `cpu` to compare with cpu and cuda.  To save you the surprise, for some reason cuda is about ten times faster for now....)
 
 ## Installation
 
