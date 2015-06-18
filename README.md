@@ -6,10 +6,9 @@ Note that the cltorch OpenCL backend for Torch has moved to [https://github.com/
 
 ## What works
 
-Not much so far :-)
-
 - `forward` and `backward` on a `Linear` layer work ok.
 - can use stochasticgradientdescent on a linear layer
+- can train mnist, see [test/test-mnist2.lua](test/test-mnist2.lua)  (can run it by doing `./run-mnist2.sh`)
 
 <pre>
 require 'nn'

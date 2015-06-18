@@ -13,8 +13,8 @@ if [[ ! -v LUAEXE ]]; then {
 echo using luaexe: ${LUAEXE}
 
 if [[ x${RUNGDB} == x1 ]]; then {
-  rungdb.sh ${LUAEXE} test/test-mnist1.lua
+  rungdb.sh ${LUAEXE} test/test-batch.lua
 } else {
-  ${LUAEXE} test/test-mnist1.lua
+  ${LUAEXE} test/test-batch.lua
 } fi
 
