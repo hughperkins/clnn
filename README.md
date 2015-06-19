@@ -10,6 +10,7 @@ Layer types:
 * nn.Linear
 * nn.Tanh
 * nn.Sigmoid
+* nn.ReLU
 
 Criterion:
 * nn.MSECriterion

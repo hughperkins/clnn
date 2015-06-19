@@ -79,10 +79,17 @@ function torch.ClTensor.__eq(self, b)
   end
 end
 
-function test_linear()
-  local N = 10
-  local net = nn.Linear(4, 3)
-  local input = torch.Tensor(N, 4):uniform()
+function _test_layer(net, in_size, out_size)
+  N = 10
+  if in_size == nil then
+    in_size = net.weight:size(2)
+  end
+  if out_size == nil then
+    out_size = net.weight:size(1)
+  end
+  print('net\n', net, 'in_size', in_size, 'out_size', out_size)
+--  local net = nn.Sigmoid()
+  local input = torch.Tensor(N, in_size):uniform() - 0.5
   local output = net:forward(input)
   print('output\n', output)
 
@@ -93,7 +100,7 @@ function test_linear()
 
   luaunit.assertEquals(output, outputCl:double())
 
-  local gradOutput = torch.Tensor(N, 3):uniform()
+  local gradOutput = torch.Tensor(N, out_size):uniform() - 0.5
   local gradInput = net:backward(input, gradOutput)
   print('gradInput\n', gradInput)
 
@@ -102,62 +109,23 @@ function test_linear()
   print('gradInputcl\n', gradInputCl)
 
   luaunit.assertEquals(gradInput, gradInputCl:double())
+end
+
+function test_linear()
+  _test_layer(nn.Linear(4,3))
 end
 
 function test_tanh()
-  print('test_tanh()')
-
-  local N = 10
-  local net = nn.Tanh()
-  local input = torch.Tensor(N, 4):uniform()
-  local output = net:forward(input)
-  print('output\n', output)
-
-  local netCl = net:clone():cl()
-  local inputCl = input:clone():cl()
-  local outputCl = netCl:forward(inputCl)
-  print('outputCl\n', outputCl)
-
-  luaunit.assertEquals(output, outputCl:double())
-
-  local gradOutput = torch.Tensor(N, 4):uniform()
-  local gradInput = net:backward(input, gradOutput)
-  print('gradInput\n', gradInput)
-
-  local gradOutputCl = gradOutput:clone():cl()
-  local gradInputCl = netCl:backward(inputCl, gradOutputCl)
-  print('gradInputcl\n', gradInputCl)
-
-  luaunit.assertEquals(gradInput, gradInputCl:double())
+  _test_layer(nn.Tanh(), 4, 4)
 end
-
 
 function test_sigmoid()
-  print('test_sigmoid()')
-
-  local N = 10
-  local net = nn.Sigmoid()
-  local input = torch.Tensor(N, 4):uniform()
-  local output = net:forward(input)
-  print('output\n', output)
-
-  local netCl = net:clone():cl()
-  local inputCl = input:clone():cl()
-  local outputCl = netCl:forward(inputCl)
-  print('outputCl\n', outputCl)
-
-  luaunit.assertEquals(output, outputCl:double())
-
-  local gradOutput = torch.Tensor(N, 4):uniform()
-  local gradInput = net:backward(input, gradOutput)
-  print('gradInput\n', gradInput)
-
-  local gradOutputCl = gradOutput:clone():cl()
-  local gradInputCl = netCl:backward(inputCl, gradOutputCl)
-  print('gradInputcl\n', gradInputCl)
-
-  luaunit.assertEquals(gradInput, gradInputCl:double())
+  _test_layer(nn.Sigmoid(), 4, 4)
 end
+
+--function test_relu()
+--  _test_layer(nn.ReLU(), 4, 4)
+--end
 
 os.exit( luaunit.LuaUnit.run() )
 
