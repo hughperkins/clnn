@@ -9,8 +9,8 @@ luarocks make rocks/clnn-scm-1.rockspec || exit 1
 export LUA_PATH="$LUA_PATH;${PWD}/thirdparty/?.lua"
 
 if [[ ! -v LUAEXE ]]; then {
-    # LUAEXE=luajit
-    LUAEXE=lua
+     LUAEXE=luajit
+   # LUAEXE=lua
 } fi
 echo using luaexe: ${LUAEXE}
 
