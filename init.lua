@@ -18,4 +18,5 @@ end
 
 require 'MSECriterion'
 require 'Tanh'
+require 'Sigmoid'
 

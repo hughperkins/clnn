@@ -9,6 +9,7 @@ Note that the cltorch OpenCL backend for Torch has moved to [https://github.com/
 Layer types:
 * nn.Linear
 * nn.Tanh
+* nn.Sigmoid
 
 Criterion:
 * nn.MSECriterion
