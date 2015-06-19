@@ -14,7 +14,7 @@ function torch.ClTensor.nn.MSECriterion_updateOutput(self, input, target)
   se = 0
 
   self.workBuffer:copy(input)  
-  self.workBuffer:sub(target)
+  self.workBuffer:csub(target)
   self.workBuffer:pow(2)
   se = torch.sum(self.workBuffer)
 

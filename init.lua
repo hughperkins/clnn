@@ -16,6 +16,8 @@ function nn.Criterion:cl()
    return self:type('torch.ClTensor')
 end
 
+torch.ClTensor.nn = {}
+
 require 'MSECriterion'
 require 'Tanh'
 require 'Sigmoid'
