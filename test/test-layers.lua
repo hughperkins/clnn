@@ -149,7 +149,7 @@ end
 --  _test_layer(nn.ReLU(), 4, 4)
 --end
 
-local batchSize = 32
+local batchSize = 32  
 -- local batchSize = 2
 
 local scenarios = {}
@@ -162,7 +162,6 @@ table.insert(scenarios, {name='l5', inplanes=384, insize=13, outplanes=384, filt
 
 function _test_conv_scenario(scenario)
   -- compare cuda and cl output, for same data
-  -- we probably need to take care to ensure weights are the same, somehow
   collectgarbage()
   local input = torch.Tensor(batchSize, scenario.inplanes, scenario.insize, scenario.insize):uniform()
   local layer = nn.SpatialConvolutionMM(scenario.inplanes, scenario.outplanes,
@@ -171,25 +170,17 @@ function _test_conv_scenario(scenario)
   layer.padH = 0
 
   local layercl = layer:clone():cl()
-  local layercuda = layer:clone():cuda()
-  luaunit.assertEquals(layercl.weight:double(), layercuda.weight:double())
---  print('weights same')
-  luaunit.assertEquals(layercl.bias:double(), layercuda.bias:double())
---  print('bias same')
-
---  print('calc cl out')
   local inputcl = input:cl()
---  print('input', torch.type(input))
---  print('layer', layer)
---  print('layer.output', layer.output)
   local outputcl = layercl:updateOutput(inputcl):double()
---  print('outputcl\n', outputcl)
+  layercl = nil
+  inputcl = nil
   collectgarbage()
 
---  print('calc cuda out')
+  local layercuda = layer:clone():cuda()
   local inputcuda = input:cuda()
   local outputcuda = layercuda:updateOutput(inputcuda):double()
---  print('outputcuda\n', outputcuda)
+  layercuda = nil
+  inputcuda = nil
   collectgarbage()
 
   luaunit.assertEquals(outputcl, outputcuda)
