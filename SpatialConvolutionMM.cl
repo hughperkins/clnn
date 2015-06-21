@@ -39,7 +39,8 @@ kernel void im2col_kernel(const int n, const global float* im_data, int im_offse
 
 kernel void col2im_kernel(const int n, global const float* col_data, int col_offset,
     const int height, const int width, const int channels, const int patch_h, const int patch_w,
-    const int pad_h, const int pad_w, const int stride_h, const int stride_w, const int height_col, const int width_col,
+    const int pad_h, const int pad_w, const int stride_h, const int stride_w,
+    const int height_col, const int width_col,
     global float* im_data, int im_offset) {
   global float *data_im = im_data + im_offset;
   global float *data_col = col_data + col_offset;

@@ -60,7 +60,6 @@ void im2col(THClState *state, THClTensor* im, const int channels,
 //      pad_h, pad_w, stride_h, stride_w,
 //      height_col, width_col, data_col
 //  );
-//  THError("Not implemented");
 }
 
 void col2im(THClState *state, THClTensor* col, const int channels,
@@ -71,16 +70,43 @@ void col2im(THClState *state, THClTensor* col, const int channels,
   int num_kernels = channels * height * width;
   // To avoid involving atomic operations, we will launch one kernel per
   // bottom dimension, and then in the kernel add up the top dimensions.
+
+  TemplatedKernel kernelBuilder(THClState_getCl(state));
+
+  std::string uniqueName = "SpatialConvolutionMM::col2im";
+  CLKernel *kernel = kernelBuilder.buildKernel(uniqueName, "SpatialConvolutionMM.cl",
+    SpatialConvolutionMM_getKernelTemplate(), "col2im_kernel");
+
+  THClKernels k(state, kernel);
+  k.in(num_kernels);
+  k.in(col);
+  k.in(height);
+  k.in(width);
+  k.in(channels);
+
+  k.in(patch_h);
+  k.in(patch_w);
+  k.in(pad_h);
+  k.in(pad_w);
+  k.in(stride_h);
+  k.in(stride_w);
+
+  k.in(height_col);
+  k.in(width_col);
+  k.out(im);
+
+  k.run(GET_BLOCKS(num_kernels), CL_NUM_THREADS);
+
 //  col2im_kernel <<<GET_BLOCKS(num_kernels), CL_NUM_THREADS, 0, stream>>> (
 //      num_kernels, data_col, height, width, channels,
 //      patch_h, patch_w, pad_h, pad_w, stride_h, stride_w,
 //      height_col, width_col, data_im
 //  );
-  THError("Not implemented");
+//  THError("Not implemented");
 }
 
 static int clnn_SpatialConvolutionMM_updateOutput(lua_State *L) {
-  cout << "clnn_SpatialConvolutionMM_updateOutput(lua_State *L)" << endl;
+//  cout << "clnn_SpatialConvolutionMM_updateOutput(lua_State *L)" << endl;
   THClState *state = getCltorchState(L);
   // Input
   THClTensor *input = (THClTensor*)luaT_checkudata(L, 2, "torch.ClTensor");
@@ -232,8 +258,10 @@ static int clnn_SpatialConvolutionMM_updateGradInput(lua_State *L) {
   int kH = luaT_getfieldcheckint(L, 1, "kH");
   int nInputPlane = luaT_getfieldcheckint(L, 1, "nInputPlane");
   int nOutputPlane = luaT_getfieldcheckint(L, 1, "nOutputPlane");
-  int padW = luaT_getfieldcheckint(L, 1, "padW");
-  int padH = luaT_getfieldcheckint(L, 1, "padH");
+//  int padW = luaT_getfieldcheckint(L, 1, "padW");
+//  int padH = luaT_getfieldcheckint(L, 1, "padH");
+  int padW = luaT_getfieldcheckint(L, 1, "padding");
+  int padH = luaT_getfieldcheckint(L, 1, "padding");
 
   THClTensor *weight = (THClTensor *)luaT_getfieldcheckudata(L, 1, "weight", "torch.ClTensor");
   THClTensor *gradColumns = (THClTensor*)luaT_getfieldcheckudata(L, 1, "finput", "torch.ClTensor");
@@ -334,8 +362,10 @@ static int clnn_SpatialConvolutionMM_accGradParameters(lua_State *L) {
   int kH = luaT_getfieldcheckint(L, 1, "kH");
   int nInputPlane = luaT_getfieldcheckint(L, 1, "nInputPlane");
   int nOutputPlane = luaT_getfieldcheckint(L, 1, "nOutputPlane");
-  int padW = luaT_getfieldcheckint(L, 1, "padW");
-  int padH = luaT_getfieldcheckint(L, 1, "padH");
+//  int padW = luaT_getfieldcheckint(L, 1, "padW");
+//  int padH = luaT_getfieldcheckint(L, 1, "padH");
+  int padW = luaT_getfieldcheckint(L, 1, "padding");
+  int padH = luaT_getfieldcheckint(L, 1, "padding");
   float scale = luaL_optnumber(L, 4, 1);
 
   THClTensor *gradWeight = (THClTensor *)luaT_getfieldcheckudata(L, 1, "gradWeight", "torch.ClTensor");
@@ -508,7 +538,8 @@ std::string SpatialConvolutionMM_getKernelTemplate() {
   "\n" 
   "kernel void col2im_kernel(const int n, global const float* col_data, int col_offset,\n" 
   "    const int height, const int width, const int channels, const int patch_h, const int patch_w,\n" 
-  "    const int pad_h, const int pad_w, const int stride_h, const int stride_w, const int height_col, const int width_col,\n" 
+  "    const int pad_h, const int pad_w, const int stride_h, const int stride_w,\n" 
+  "    const int height_col, const int width_col,\n" 
   "    global float* im_data, int im_offset) {\n" 
   "  global float *data_im = im_data + im_offset;\n" 
   "  global float *data_col = col_data + col_offset;\n" 

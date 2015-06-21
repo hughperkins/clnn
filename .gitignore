@@ -32,3 +32,7 @@
 
 *.pyc
 
+# this points to ~/torch/install/share/lua/5.1 , on my computer
+# dont think we need it in git :-)
+/share
+

@@ -86,7 +86,9 @@ print('toc', sys.toc())
 end
 
 if api == 'cl' then
+require 'cltorch'
 require 'clnn'
+cltorch.setTrace(1)
 local trainsetcl = {}
 function trainsetcl.size()
   return numBatches

@@ -134,6 +134,8 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
   int dW = luaT_getfieldcheckint(L, 1, "dW");
   int dH = luaT_getfieldcheckint(L, 1, "dH");
   bool atomic = (dW != kW) || (dH != kH);
+//  cout << "atomic=" << atomic << " kW=" << kW << " dW=" << dW << " kH=" << kH << " dH=" << dH << endl;
+//  cout << "input->nDimension=" << input->nDimension << endl;
 
   THClTensor *gradInput = (THClTensor *)luaT_getfieldcheckudata(L, 1, "gradInput", "torch.ClTensor");
   THClTensor *indices = (THClTensor *)luaT_getfieldcheckudata(L, 1, "indices", "torch.ClTensor");
@@ -218,11 +220,36 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
     else
     {
       // run updateGradInput kernel, accumulate gradients atomically
+
+      TemplatedKernel kernelBuilder(THClState_getCl(state));
+
+      std::string uniqueName = __FILE__ "maxgradinput";
+      CLKernel *kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
+        SpatialMaxPooling_getKernelTemplate(), "maxgradinput");
+
+      THClKernels k(state, kernel);
+      k.out(gradInput);
+      k.in(gradOutput);
+      k.in(indices);
+      k.in((int)(nbatch*nInputPlane*nOutputCols*nOutputRows));
+      k.in((int)0);
+
+      k.in((int)nInputPlane);
+      k.in((int)nInputRows);
+      k.in((int)nInputCols);
+
+      k.in((int)kH);
+      k.in((int)kW);
+      k.in((int)dH);
+      k.in((int)dW);
+
+      k.run(blocks, threads);
+
 //      maxgradinput <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (
 //        gradInput_data, gradOutput_data,
 //        indices_data+nbatch*nInputPlane*nOutputCols*nOutputRows, indices_data,
 //        nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
-      THError("not implemented");
+//      THError("not implemented");
     }
   }
 
@@ -334,60 +361,60 @@ std::string SpatialMaxPooling_getKernelTemplate() {
   " * Description:\n" 
   " *    this function computes the gradInput from weight and gradOutput\n" 
   " */\n" 
-  "//kernel void maxgradinput(global float *gradInput_data, int gradInput_offset,\n" 
-  "//    global float *gradOutput_data, int gradOutput_offset,\n" 
-  "//    global float *indices_data, int indices_offset,\n" 
-  "//    int indices_x_offset, int indices_y_offset,\n" 
-  "//   int input_n, int input_h, int input_w,\n" 
-  "//   int kH, int kW, int dH, int dW)\n" 
-  "//{\n" 
-  "//  global float *gradInput = gradInput_data + gradInput_offset;\n" 
-  "//  global float *gradOutput = gradOutput_data + gradOutput_offset;\n" 
-  "//  global float *indices_x = indices_data + indices_offset + indices_x_offset;\n" 
-  "//  global float *indices_y = indices_data + indices_offset + indices_y_offset;\n" 
+  "kernel void maxgradinput(global float *gradInput_data, int gradInput_offset,\n" 
+  "    global float *gradOutput_data, int gradOutput_offset,\n" 
+  "    global float *indices_data, int indices_offset,\n" 
+  "    int indices_x_offset, int indices_y_offset,\n" 
+  "   int input_n, int input_h, int input_w,\n" 
+  "   int kH, int kW, int dH, int dW)\n" 
+  "{\n" 
+  "  global float *gradInput = gradInput_data + gradInput_offset;\n" 
+  "  global float *gradOutput = gradOutput_data + gradOutput_offset;\n" 
+  "  global float *indices_x = indices_data + indices_offset + indices_x_offset;\n" 
+  "  global float *indices_y = indices_data + indices_offset + indices_y_offset;\n" 
   "\n" 
-  "//  // iterators\n" 
-  "//  int xx, yy;\n" 
+  "  // iterators\n" 
+  "  int xx, yy;\n" 
   "\n" 
-  "//  // output size\n" 
-  "//  int output_w = (input_w - kW) / dW + 1;\n" 
-  "//  int output_h = (input_h - kH) / dH + 1;\n" 
+  "  // output size\n" 
+  "  int output_w = (input_w - kW) / dW + 1;\n" 
+  "  int output_h = (input_h - kH) / dH + 1;\n" 
   "\n" 
-  "//  // compute offsets based on thread/block ID\n" 
-  "//  int o = get_group_id(0);\n" 
-  "//  int i = o;\n" 
-  "//  //int k = get_group_id(0) % input_n;\n" 
+  "  // compute offsets based on thread/block ID\n" 
+  "  int o = get_group_id(0);\n" 
+  "  int i = o;\n" 
+  "  //int k = get_group_id(0) % input_n;\n" 
   "\n" 
-  "//  int xx_start = get_local_id(0);\n" 
-  "//  int xx_end = output_w;\n" 
-  "//  int xx_step = get_local_size(0);\n" 
+  "  int xx_start = get_local_id(0);\n" 
+  "  int xx_end = output_w;\n" 
+  "  int xx_step = get_local_size(0);\n" 
   "\n" 
-  "//  int yy_start = get_local_size(1)*get_group_id(1) + get_local_id(1);\n" 
-  "//  int yy_end = output_h;\n" 
-  "//  int yy_step = get_local_size(1)*get_num_groups(1);\n" 
+  "  int yy_start = get_local_size(1)*get_group_id(1) + get_local_id(1);\n" 
+  "  int yy_end = output_h;\n" 
+  "  int yy_step = get_local_size(1)*get_num_groups(1);\n" 
   "\n" 
-  "//  // select input/output plane\n" 
-  "//  gradOutput = gradOutput + o*output_w*output_h;\n" 
-  "//  gradInput = gradInput + i*input_w*input_h;\n" 
-  "//  indices_x = indices_x + o*output_w*output_h;\n" 
-  "//  indices_y = indices_y + o*output_w*output_h;\n" 
+  "  // select input/output plane\n" 
+  "  gradOutput = gradOutput + o*output_w*output_h;\n" 
+  "  gradInput = gradInput + i*input_w*input_h;\n" 
+  "  indices_x = indices_x + o*output_w*output_h;\n" 
+  "  indices_y = indices_y + o*output_w*output_h;\n" 
   "\n" 
-  "//  // compute gradInput\n" 
-  "//  for(yy = yy_start; yy < yy_end; yy+=yy_step) {\n" 
-  "//    for(xx = xx_start; xx < xx_end; xx+=xx_step) {\n" 
-  "//      global float *ptr_gradInput = gradInput + yy*dH*input_w + xx*dW;\n" 
-  "//      global float *ptr_gradOutput = gradOutput + yy*output_w + xx;\n" 
-  "//      global float *ptr_ind_x = indices_x + yy*output_w + xx;\n" 
-  "//      global float *ptr_ind_y = indices_y + yy*output_w + xx;\n" 
-  "//      float z = *ptr_gradOutput;\n" 
+  "  // compute gradInput\n" 
+  "  for(yy = yy_start; yy < yy_end; yy+=yy_step) {\n" 
+  "    for(xx = xx_start; xx < xx_end; xx+=xx_step) {\n" 
+  "      global float *ptr_gradInput = gradInput + yy*dH*input_w + xx*dW;\n" 
+  "      global float *ptr_gradOutput = gradOutput + yy*output_w + xx;\n" 
+  "      global float *ptr_ind_x = indices_x + yy*output_w + xx;\n" 
+  "      global float *ptr_ind_y = indices_y + yy*output_w + xx;\n" 
+  "      float z = *ptr_gradOutput;\n" 
   "\n" 
-  "//      int argmax_x = (*ptr_ind_x)-1;\n" 
-  "//      int argmax_y = (*ptr_ind_y)-1;\n" 
+  "      int argmax_x = (*ptr_ind_x)-1;\n" 
+  "      int argmax_y = (*ptr_ind_y)-1;\n" 
   "\n" 
-  "//      ptr_gradInput[argmax_x + argmax_y*input_w] += z;\n" 
-  "//    }\n" 
-  "//  }\n" 
-  "//}\n" 
+  "      ptr_gradInput[argmax_x + argmax_y*input_w] += z;\n" 
+  "    }\n" 
+  "  }\n" 
+  "}\n" 
   "\n" 
   "/*\n" 
   " * Description:\n" 
@@ -446,7 +473,9 @@ std::string SpatialMaxPooling_getKernelTemplate() {
   "//      int argmax_y = (*ptr_ind_y)-1;\n" 
   "\n" 
   "//      // atomic add since different threads could update same variable\n" 
-  "//      atomicAdd(&(ptr_gradInput[argmax_x + argmax_y*input_w]), z);\n" 
+  "////      atomicAdd(&(ptr_gradInput[argmax_x + argmax_y*input_w]), z);\n" 
+  "//      // hmmm, this doesnt work with float :-(  need another way...\n" 
+  "//      atomic_add(&(ptr_gradInput[argmax_x + argmax_y*input_w]), z);\n" 
   "//    }\n" 
   "//  }\n" 
   "//}\n" 
