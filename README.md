@@ -35,6 +35,10 @@ I suppose all trainers work unchanged.  Tested however so far using:
 * Options:
   * Use env var `API` to choose `cpu`, `cuda`, or `cl`
   * Use env var `MODEL` to choose `linear` or `conv1`
+* eg run like this:
+```
+API=cl MODEL=conv1 ./run-mnist2.sh
+```
 
 # Timings
 
