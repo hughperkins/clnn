@@ -8,10 +8,13 @@
 
 // Kernel for fast unfold+copy
 // (borrowed from Caffe: https://github.com/BVLC/caffe/blob/master/src/caffe/layers/conv_layer.cu)
-kernel void im2col_kernel(const int n, const float* data_im,
+kernel void im2col_kernel(const int n, const global float* im_data, int im_offset,
     const int height, const int width, const int ksize_h, const int ksize_w, const int pad_h,
     const int pad_w, const int stride_h, const int stride_w, const int height_col, const int width_col,
-    float* data_col) {
+    global float* col_data, int col_offset) {
+  global float *data_im = im_data + im_offset;
+  global float *data_col = col_data + col_offset;
+
   CL_KERNEL_LOOP(index, n) {
     int w_out = index % width_col;
     index /= width_col;
@@ -34,10 +37,13 @@ kernel void im2col_kernel(const int n, const float* data_im,
   }
 }
 
-kernel void col2im_kernel(const int n, const float* data_col,
+kernel void col2im_kernel(const int n, global const float* col_data, int col_offset,
     const int height, const int width, const int channels, const int patch_h, const int patch_w,
     const int pad_h, const int pad_w, const int stride_h, const int stride_w, const int height_col, const int width_col,
-    float* data_im) {
+    global float* im_data, int im_offset) {
+  global float *data_im = im_data + im_offset;
+  global float *data_col = col_data + col_offset;
+
   CL_KERNEL_LOOP(index, n) {
     float val = 0;
     int w = index % width + pad_w;
