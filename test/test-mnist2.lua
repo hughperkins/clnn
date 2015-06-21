@@ -81,52 +81,57 @@ else
 end
 
 if api == 'cpu' then
-local criterion = nn.MSECriterion()
-local trainer = nn.StochasticGradient(model, criterion)
-trainer.maxIteration = maxIteration
-trainer.learningRate = learningRate
-sys.tic()
-trainer:train(trainset)
-print('toc', sys.toc())
+  local criterion = nn.MSECriterion()
+  local trainer = nn.StochasticGradient(model, criterion)
+  trainer.maxIteration = maxIteration
+  trainer.learningRate = learningRate
+  sys.tic()
+  trainer:train(trainset)
+  print('toc', sys.toc())
 end
 
 if api == 'cl' then
-require 'cltorch'
-require 'clnn'
-cltorch.setTrace(1)
-local trainsetcl = {}
-function trainsetcl.size()
-  return numBatches
-end
-for b=1,numBatches do
-  table.insert(trainsetcl, {trainset[b][1]:clone():cl(), trainset[b][2]:clone():cl()})
-end
-local modelcl = model:cl()
-local criterioncl = nn.MSECriterion():cl()
-local trainercl = nn.StochasticGradient(modelcl, criterioncl)
-trainercl.maxIteration = maxIteration
-trainercl.learningRate = learningRate
-  sys.tic()
-trainercl:train(trainsetcl)
-print('toc', sys.toc())
+  require 'cltorch'
+  require 'clnn'
+--  cltorch.setTrace(1)
+  local trainsetcl = {}
+  function trainsetcl.size()
+    return numBatches
+  end
+  for b=1,numBatches do
+    table.insert(trainsetcl, {trainset[b][1]:clone():cl(), trainset[b][2]:clone():cl()})
+  end
+  local modelcl = model:cl()
+  local criterioncl = nn.MSECriterion():cl()
+  local trainercl = nn.StochasticGradient(modelcl, criterioncl)
+  trainercl.maxIteration = 1
+  trainercl.learningRate = learningRate
+  for it=1,maxIteration do
+    sys.tic()
+    trainercl:train(trainsetcl)
+    print('toc', sys.toc())
+  end
 end
 
 if api == 'cuda' then
-require 'cunn'
-local trainsetcuda = {}
-function trainsetcuda.size()
-  return numBatches
+  require 'cunn'
+  local trainsetcuda = {}
+  function trainsetcuda.size()
+    return numBatches
+  end
+  for b=1,numBatches do
+    table.insert(trainsetcuda, {trainset[b][1]:clone():cuda(), trainset[b][2]:clone():cuda()})
+  end
+  local modelcuda = model:cuda()
+  local criterioncuda = nn.MSECriterion():cuda()
+  local trainercuda = nn.StochasticGradient(modelcuda, criterioncuda)
+  trainercuda.maxIteration = 1
+  trainercuda.learningRate = learningRate
+  for it=1,maxIteration do
+    sys.tic()
+    trainercuda:train(trainsetcuda)
+    print('toc', sys.toc())
+  end
 end
-for b=1,numBatches do
-  table.insert(trainsetcuda, {trainset[b][1]:clone():cuda(), trainset[b][2]:clone():cuda()})
-end
-local modelcuda = model:cuda()
-local criterioncuda = nn.MSECriterion():cuda()
-local trainercuda = nn.StochasticGradient(modelcuda, criterioncuda)
-trainercuda.maxIteration = maxIteration
-trainercuda.learningRate = learningRate
-sys.tic()
-trainercuda:train(trainsetcuda)
-print('toc', sys.toc())
-end
+
 

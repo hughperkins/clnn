@@ -12,6 +12,10 @@ I suppose all containers work unchanged.  Tested however so far on:
 
 *Weighted layers:*
 * nn.Linear (unchanged, since uses matrix operations on whatever tensors we feed it)
+* nn.SpatialConvolutionMM (not tested for correctness yet)
+
+*Pooling layers*
+* nn.SpatialMaxPooling (not tested for correctness yet)
 
 *Activation layers:*
 * nn.Tanh
@@ -27,7 +31,16 @@ I suppose all trainers work unchanged.  Tested however so far using:
 
 # Samples
 
-* For using a Linear layer on mnist, see [test/test-mnist2.lua](test/test-mnist2.lua)  (can run it by doing `API=cl ./run-mnist2.sh`.  Interchange `cl` for `cuda` or `cpu` to compare with cpu and cuda.  To save you the suspense, for some reason cuda is about ten times faster for now....)
+* For training on mnist, you can run `./run-mnist2.sh`
+* Options:
+  * Use env var `API` to choose `cpu`, `cuda`, or `cl`
+  * Use env var `MODEL` to choose `linear` or `conv1`
+
+# Timings
+
+Using the network in test/mnist2, and `MODEL=conv1`, following timings using an NVidia 940M, per epoch:
+* `API=cuda`: 3.2 seconds
+* `API=cl`: 13.6 seconds
 
 ## Installation
 
