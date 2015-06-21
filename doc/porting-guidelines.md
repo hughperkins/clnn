@@ -100,3 +100,5 @@ TemplatedKernel kernelBuilder(THClState_getCl(state));
     k.run(blocks, threads);
 ```
 
+Now build, and run it, and fix any issues :-P
+
