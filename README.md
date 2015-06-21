@@ -52,14 +52,14 @@ Using the network in [test/test-mnist2.lua](test-mnist2.lua), and `MODEL=conv1`,
 
 ## Soumith benchmark layers
 
-On an Nvidia 940M, using [test/test-perf.lua](test/test-perf.lua):
+On an NVidia 940M, using [test/test-perf.lua](test/test-perf.lua):
 
 | layer | direction | cuda time (seconds) | cl time (seconds) |
 |-------|-----------|---------------------|----------------|
-| l1    | forward   | 1.017               | 1.14    |
+| l1    | forward   | 1.02               | 1.14    |
 | l2    | forward   | out of mem          | out of mem     |
 | l3    | forward   | 0.85                | 1.19 |
-| l4    | forward   | 0.148                | 0.42 |
+| l4    | forward   | 0.15                | 0.42 |
 | l5    | forward   | 0.22                | 0.37 |
 
 | layer | direction | cuda time (seconds) | cl time (seconds) |
