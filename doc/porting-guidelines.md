@@ -102,3 +102,29 @@ TemplatedKernel kernelBuilder(THClState_getCl(state));
 
 Now build, and run it, and fix any issues :-P
 
+# Debugging
+
+I'm using OpenCL on an nVidia device, which means no kind of debugging or profiling available to me.
+
+What I tend to do is:
+- focus on a single thread, on a single workgroup
+- that's easy to do, just put:
+```
+if(get_global_id(0) == 0 && get_global_id(1) == 0 ) {
+  // only one thread here :-)
+}
+```
+- comment out anything that changes the output tensor
+```
+// out_data[i] = sum;
+```
+- use our single thread to write out interesting data to the output tensor, that we can then read from the lua, like
+```
+if(get_global_id(0) == 0 && get_global_id(1) == 0 ) {
+  for(int i = 0; i < 6; i++ ) {
+    out_data[i] = smem[i];
+  }   
+}
+```
+- it's a bit more painful than using `printf` and `cout` and stuff, but it's workable :-)
+
