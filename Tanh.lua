@@ -1,5 +1,6 @@
 function torch.ClTensor.nn.Tanh_updateOutput(self, input)
-  self.output = torch.tanh(input)
+  self.output:resize(input:size())
+  self.output:tanh(input)
   return self.output
 end
 
