@@ -1,7 +1,28 @@
 luaunit = require('luaunit')
 
 require 'nn'
+
+--print('1 torch.DoubleTensor.oldcopy', torch.DoubleTensor.cloldcopy)
+--print('1 torch.DoubleTensor.oldcopy', torch.DoubleTensor.clnewcopy)
+
+require 'cutorch'
+require 'cunn'
+require 'cltorch'
 require 'clnn'
+
+--print('torch.DoubleTensor.oldcopy', torch.DoubleTensor.cloldcopy)
+--print('torch.DoubleTensor.oldcopy', torch.DoubleTensor.clnewcopy)
+--function torch.DoubleTensor.copy(self, two)
+--  print('copy 2')
+--  print(torch.type(self))
+--  print(torch.type(two))
+--  torch.DoubleTensor.oldcopy(self, two)
+--  return self
+--end
+
+print(torch.Tensor{3,5,2})
+print(torch.Tensor{3,5,3}:cuda())
+print(torch.Tensor{3,5,1}:cl())
 
 function torch.Tensor.__eq(self, b)
 --  print('======= eq begin ====')
@@ -58,9 +79,10 @@ function torch.DoubleTensor.__eq(self, b)
 --    print('======= eq end TRUE ====')
     return true
   else
-    print('left\n', self)
-    print('right\n', b)
-    print('diff\n', self - b)
+--    print('left\n', self)
+--    print('right\n', b)
+    print('sum', sum)
+--    print('diff\n', self - b)
 --    print('======= eq end FALSE ====')
     return false
   end
@@ -126,6 +148,61 @@ end
 --function test_relu()
 --  _test_layer(nn.ReLU(), 4, 4)
 --end
+
+--local batchSize = 128
+local batchSize = 2
+
+local scenarios = {}
+table.insert(scenarios, {name='simple', inplanes=1, insize=2, outplanes=1, filtersize=1})
+table.insert(scenarios, {name='l1', inplanes=3, insize=128, outplanes=96, filtersize=11}) 
+--table.insert(scenarios, {name='l2', inplanes=64, insize=64, outplanes=128, filtersize=9})
+table.insert(scenarios, {name='l3', inplanes=128, insize=32, outplanes=128, filtersize=9})
+table.insert(scenarios, {name='l4', inplanes=128, insize=16, outplanes=128, filtersize=7})
+table.insert(scenarios, {name='l5', inplanes=384, insize=13, outplanes=384, filtersize=3})
+
+function _test_conv_scenario(scenario)
+  -- compare cuda and cl output, for same data
+  -- we probably need to take care to ensure weights are the same, somehow
+  collectgarbage()
+  local input = torch.Tensor(batchSize, scenario.inplanes, scenario.insize, scenario.insize):uniform()
+  local layer = nn.SpatialConvolutionMM(scenario.inplanes, scenario.outplanes,
+    scenario.filtersize, scenario.filtersize)
+  layer.padW = 0
+  layer.padH = 0
+
+  local layercl = layer:clone():cl()
+  local layercuda = layer:clone():cuda()
+  luaunit.assertEquals(layercl.weight:double(), layercuda.weight:double())
+--  print('weights same')
+  luaunit.assertEquals(layercl.bias:double(), layercuda.bias:double())
+--  print('bias same')
+
+--  print('calc cl out')
+  local inputcl = input:cl()
+--  print('input', torch.type(input))
+--  print('layer', layer)
+--  print('layer.output', layer.output)
+  local outputcl = layercl:updateOutput(inputcl):double()
+--  print('outputcl\n', outputcl)
+  collectgarbage()
+
+--  print('calc cuda out')
+  local inputcuda = input:cuda()
+  local outputcuda = layercuda:updateOutput(inputcuda):double()
+--  print('outputcuda\n', outputcuda)
+  collectgarbage()
+
+  luaunit.assertEquals(outputcl, outputcuda)
+  print('pass')
+  collectgarbage()
+end
+
+function test_conv_all()
+  for i, scenario in ipairs(scenarios) do
+    print(i, scenario.name)
+    _test_conv_scenario(scenario)
+  end
+end
 
 os.exit( luaunit.LuaUnit.run() )
 
