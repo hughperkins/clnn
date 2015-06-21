@@ -34,7 +34,9 @@ function torch.ClTensor.nn.MSECriterion_updateGradInput(self, input, target)
     size = torch.numel(input)
     norm = norm / size
   end
-  self.gradInput = (input - target) * norm
+  self.gradInput:resize(target:size())
+  self.gradInput:map2(input, target, "*out = " .. norm .. " * (*in1 - *in2)")
+--  self.gradInput = (input - target) * norm
   return self.gradInput
 end
 
