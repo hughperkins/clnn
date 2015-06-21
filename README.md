@@ -6,16 +6,23 @@ Note that the cltorch OpenCL backend for Torch has moved to [https://github.com/
 
 ## What works
 
-Layer types:
-* nn.Linear
+*Containers:*
+I suppose all containers work unchanged.  Tested however so far on:
+* nn.Sequential
+
+*Weighted layers:*
+* nn.Linear (unchanged, since uses matrix operations on whatever tensors we feed it)
+
+*Activation layers:*
 * nn.Tanh
 * nn.Sigmoid
 * nn.ReLU
 
-Criterion:
+*Criterion:*
 * nn.MSECriterion
 
-Trainers:
+*Trainers:*
+I suppose all trainers work unchanged.  Tested however so far using:
 * nn.StochasticGradient
 
 # Samples

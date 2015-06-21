@@ -4,19 +4,25 @@ require 'nn'
 require 'sys'
 local mnist = require 'mnist'
 
+api = os.getenv('API')
+local batchSize = 128
+local numBatches = 40
+learningRate = 0.01
+maxIteration = 7
+
+if api == nil then
+  print('Please set the "API" env var to your choice of api, being one of: cpu, cl, cuda')
+  print('eg, run like:')
+  print('  API=cpu ./run-mnist2.sh')
+  print('  API=cuda ./run-mnist2.sh')
+  print('  API=cl ./run-mnist2.sh')
+end
+
 local _trainset = mnist.traindataset()
 --local _testset = mnist.testdataset()
 
 local train_data = _trainset.data
 local train_labels = _trainset.label
-
-local batchSize = 128
---print('batch_labels\n', batch_labels)
-
---print(batch_labels[1])
---print(batch_data[1])
-
-local numBatches = 40
 
 local trainset = {}
 function trainset.size()
@@ -40,12 +46,6 @@ for b=1,numBatches do
   end
   table.insert(trainset, {batch_data, batch_labels})
 end
-
-api = os.getenv('API')
-print('api', api)
-
-learningRate = 0.01
-maxIteration = 3
 
 local net = nn.Sequential()
 net:add(nn.Linear(28*28,150))
@@ -76,7 +76,7 @@ local criterioncl = nn.MSECriterion():cl()
 local trainercl = nn.StochasticGradient(netcl, criterioncl)
 trainercl.maxIteration = maxIteration
 trainercl.learningRate = learningRate
-sys.tic()
+  sys.tic()
 trainercl:train(trainsetcl)
 print('toc', sys.toc())
 end
