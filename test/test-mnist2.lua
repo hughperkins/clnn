@@ -70,6 +70,7 @@ elseif netchoice == 'conv1' then
   model:add(nn.SpatialConvolutionMM(32, 64, 5, 5))
   model.modules[#model].padW = model.modules[#model].padding
   model.modules[#model].padH = model.modules[#model].padding
+  print('model.modules[#model].padding',  model.modules[#model].padding)
   model:add(nn.Tanh())
   model:add(nn.SpatialMaxPooling(2, 2, 2, 2))
   model:add(nn.Reshape(64*2*2))
