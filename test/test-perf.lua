@@ -58,15 +58,39 @@ function run_scenario(scenario)
   else
     error("unknown api ", api)
   end
-  layer:forward(input)
+  layer:updateOutput(input)
+  output = layer.output
   if api == 'cl' then cltorch.finish() end
   if api == 'cuda' then cutorch.synchronize() end
   for i=1,3 do
     sys.tic()
-    layer:forward(input)
+    layer:updateOutput(input)
     if api == 'cl' then cltorch.finish() end
     if api == 'cuda' then cutorch.synchronize() end
-    print('   sys.toc()', sys.toc())
+    print('   updateOutput sys.toc()', sys.toc())
+  end
+
+  -- and now back again, I suppose?
+  layer:updateGradInput(input, output)
+  if api == 'cl' then cltorch.finish() end
+  if api == 'cuda' then cutorch.synchronize() end
+  for i=1,3 do
+    sys.tic()
+    layer:updateGradInput(input, output)
+    if api == 'cl' then cltorch.finish() end
+    if api == 'cuda' then cutorch.synchronize() end
+    print('   updateGradInput sys.toc()', sys.toc())
+  end
+
+  layer:accGradParameters(input, output)
+  if api == 'cl' then cltorch.finish() end
+  if api == 'cuda' then cutorch.synchronize() end
+  for i=1,3 do
+    sys.tic()
+    layer:accGradParameters(input, output)
+    if api == 'cl' then cltorch.finish() end
+    if api == 'cuda' then cutorch.synchronize() end
+    print('   accGradParameters sys.toc()', sys.toc())
   end
 end
 
@@ -74,4 +98,5 @@ for i, scenario in ipairs(scenarios) do
   print(i, scenario.name)
   run_scenario(scenario)
 end
+
 

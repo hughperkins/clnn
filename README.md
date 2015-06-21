@@ -62,6 +62,14 @@ On an Nvidia 940M, using [test/test-perf.lua](test/test-perf.lua):
 | l4    | forward   | 0.148                | 0.42 |
 | l5    | forward   | 0.22                | 0.37 |
 
+| layer | direction | cuda time (seconds) | cl time (seconds) |
+|-------|-----------|---------------------|----------------|
+| l1    | backward  | 0.93+1.47 =2.4              | 1.25+1.43 = 2.68    |
+| l2    | backward   | didnt try          | didnt try    |
+| l3    | backward   | 0.84+0.64 =1.48                | 0.93+2.28=3.21 |
+| l4    | backward   | 0.11+0.11 =0.22               | 0.17+0.20=0.37 |
+| l5    | backward   | 0.13+0.16=0.29                | 0.23+0.91=1.14 |
+
 ## Installation
 
 ### Pre-requisites
