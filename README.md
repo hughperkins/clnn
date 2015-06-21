@@ -44,7 +44,7 @@ API=cl MODEL=conv1 ./run-mnist2.sh
 
 ## Mnist
 
-Using the network in [test/test-mnist2.lua](test-mnist2.lua), and `MODEL=conv1`, following timings using an NVidia 940M, per epoch:
+Using the network in [test/test-mnist2.lua](test/test-mnist2.lua), and `MODEL=conv1`, following timings using an NVidia 940M, per epoch:
 * `API=cuda`: 3.2 seconds
 * `API=cl`: 13.6 seconds
 
