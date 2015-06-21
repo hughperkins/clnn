@@ -33,8 +33,11 @@ I suppose all trainers work unchanged.  Tested however so far using:
 
 ### Pre-requisites
 
-* have installed [torch](https://github.com/torch/torch7), [nn](https://github.com/torch/nn), [cltorch](https://github.com/hughperkins/cltorch)
-* have activated the torch installation
+* have installed:
+  * [torch](https://github.com/torch/torch7)
+  * [nn](https://github.com/torch/nn)
+  * [cltorch](https://github.com/hughperkins/cltorch)
+* have an OpenCL-enabled GPU device available, and appropriate OpenCL-enabled drivers installed
 
 ### Procedure
 
