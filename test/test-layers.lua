@@ -149,8 +149,8 @@ end
 --  _test_layer(nn.ReLU(), 4, 4)
 --end
 
---local batchSize = 128
-local batchSize = 2
+local batchSize = 32
+-- local batchSize = 2
 
 local scenarios = {}
 table.insert(scenarios, {name='simple', inplanes=1, insize=2, outplanes=1, filtersize=1})
