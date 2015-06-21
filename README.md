@@ -49,3 +49,8 @@ luarocks make rocks/clnn-scm-1.rockspec
 
 You should now be able to use `require 'clnn'` from your lua scripts :-)
 
+# Porting guidelines
+
+Porting guidelines, for project maintainers, available here: [porting-guidelines.md](doc/porting-guidelines.md).
+
+
