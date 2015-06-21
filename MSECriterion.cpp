@@ -206,10 +206,10 @@ using namespace std;
 void clnn_MSECriterion_init(lua_State *L)
 {
 ////  cout << "clnn_MSECriterion_init" << endl;
-  luaT_pushmetatable(L, "torch.ClTensor");
+//  luaT_pushmetatable(L, "torch.ClTensor");
 ////  cout << "clnn_MSECriterion_init pushed metatable" << endl;
 //  luaT_registeratname(L, clnn_MSECriterion__, "nn");
 ////  cout << "clnn_MSECriterion_init done registeratname" << endl;
-  lua_pop(L,1);
+//  lua_pop(L,1);
 }
 

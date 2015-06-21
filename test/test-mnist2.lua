@@ -9,7 +9,7 @@ local batchSize = 128
 local numBatches = 40
 learningRate = 0.01
 maxIteration = 7
-netchoice = os.getenv('NET')
+netchoice = os.getenv('MODEL')
 if netchoice == nil then
   netchoice = 'linear'
 end

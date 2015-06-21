@@ -5,6 +5,9 @@ require 'nn'
 --print('nn.Module\n', nn.Module)
 
 require('cltorch')
+
+--torch.ClTensor.nn = {}
+
 clnn = paths.require("libclnn")
 
 
@@ -15,8 +18,6 @@ end
 function nn.Criterion:cl()
    return self:type('torch.ClTensor')
 end
-
-torch.ClTensor.nn = {}
 
 require 'MSECriterion'
 require 'Tanh'

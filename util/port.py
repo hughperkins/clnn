@@ -79,6 +79,8 @@ for filename in os.listdir(cunn_dir):
     contents = contents.replace('THCBlasState', 'THClBlasState')
     contents = contents.replace('cublasOperation_t', 'clblasTranspose')
     contents = contents.replace('cublas', 'clblas')
+    contents = contents.replace('Cutorch', 'Cltorch')
+    contents = contents.replace('cutorch', 'cltorch')
     contents = contents.replace('cunn', 'clnn')
  
     # line by line:
