@@ -11,7 +11,12 @@ import os
 cunn_dir = '../cunn'
 
 def process_block(block):
+    is_cl = False
     if block.find('__global__') >= 0 or block.find('__device__') >= 0:
+        is_cl = True
+    if block.find('blockIdx.x') >= 0:
+        is_cl = True
+    if is_cl:
         # kernel method, probably
         block = block.replace('gridDim.x', 'get_num_groups(0)')
         block = block.replace('gridDim.y', 'get_num_groups(1)')
@@ -74,6 +79,7 @@ for filename in os.listdir(cunn_dir):
     contents = contents.replace('THCBlasState', 'THClBlasState')
     contents = contents.replace('cublasOperation_t', 'clblasTranspose')
     contents = contents.replace('cublas', 'clblas')
+    contents = contents.replace('cunn', 'clnn')
  
     # line by line:
     new_contents = ''
