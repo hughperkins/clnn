@@ -71,6 +71,7 @@ function run_scenario(scenario)
   end
 
   -- and now back again, I suppose?
+  local backwards_timings = {}
   layer:updateGradInput(input, output)
   if api == 'cl' then cltorch.finish() end
   if api == 'cuda' then cutorch.synchronize() end
@@ -79,7 +80,9 @@ function run_scenario(scenario)
     layer:updateGradInput(input, output)
     if api == 'cl' then cltorch.finish() end
     if api == 'cuda' then cutorch.synchronize() end
-    print('   updateGradInput sys.toc()', sys.toc())
+    local time = sys.toc()
+    print('   updateGradInput sys.toc()', time)
+    backwards_timings[i] = time
   end
 
   layer:accGradParameters(input, output)
@@ -90,7 +93,12 @@ function run_scenario(scenario)
     layer:accGradParameters(input, output)
     if api == 'cl' then cltorch.finish() end
     if api == 'cuda' then cutorch.synchronize() end
-    print('   accGradParameters sys.toc()', sys.toc())
+    time = sys.toc()
+    print('   accGradParameters sys.toc()', time)
+    backwards_timings[i] = backwards_timings[i] + time
+  end
+  for i=1,3 do
+    print('   backwards', backwards_timings[i])
   end
 end
 
