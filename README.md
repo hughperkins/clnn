@@ -46,6 +46,8 @@ Using the network in test/mnist2, and `MODEL=conv1`, following timings using an 
 * `API=cuda`: 3.2 seconds
 * `API=cl`: 13.6 seconds
 
+(hmmm, interestingly, on this tiny network, DeepCL is actually faster than both.  2.3 seconds per epoch, using `./train numtrain=5120 numtest=-1 netdef=32c5-tanh-mp3-64c5-tanh-mp2-200n-tanh-10n`.)
+
 ## Installation
 
 ### Pre-requisites
