@@ -16,7 +16,7 @@ I suppose all containers work unchanged.  Tested however so far on:
 * nn.SpatialConvolutionMM
 
 *Pooling layers*
-* nn.SpatialMaxPooling
+* nn.SpatialMaxPooling (note: stride must match pooling size, for now)
 
 *Activation layers:*
 * nn.Tanh
