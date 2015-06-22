@@ -6,41 +6,31 @@ Note that the cltorch OpenCL backend for Torch has moved to [https://github.com/
 
 ## What works
 
-*Containers:*
-
-I suppose all containers work unchanged.  Tested however so far on:
-* nn.Sequential
-
 *Weighted layers:*
-* nn.Linear (unchanged, since uses matrix operations on whatever tensors we feed it)
+* nn.Linear
 * nn.SpatialConvolutionMM
 
 *Pooling layers*
 * nn.SpatialMaxPooling (note: stride must match pooling size, for now)
 
-*Activation layers:*
+*Transfer layers:*
 * nn.Tanh
 * nn.Sigmoid
 * nn.ReLU
+* nn.LogSoftMax
 
 *Criterion:*
 * nn.MSECriterion
+
+*Containers:*
+
+I suppose all containers work unchanged.  Tested however so far on:
+* nn.Sequential
 
 *Trainers:*
 
 I suppose all trainers work unchanged.  Tested however so far using:
 * nn.StochasticGradient
-
-# Samples
-
-* For training on mnist, you can run `./run-mnist2.sh`
-* Options:
-  * Use env var `API` to choose `cpu`, `cuda`, or `cl`
-  * Use env var `MODEL` to choose `linear` or `conv1`
-* eg run like this:
-```
-API=cl MODEL=conv1 ./run-mnist2.sh
-```
 
 # Timings
 
@@ -92,12 +82,21 @@ luarocks make rocks/clnn-scm-1.rockspec
 
 You should now be able to use `require 'clnn'` from your lua scripts :-)
 
+# Unit-tests
+
+* For all layers except SpatialConvolutionMM, please see:
+  * [test/test-layers.lua](test/test-layers.lua)
+* For SpatialConvolutionMM, please see:
+  * [test/test-spatialconvolution.lua](test/test-spatialconvolution.lua) (Needs `cunn` available, to do numerical comparison)
+
 # Porting guidelines
 
 Porting guidelines, for project maintainers, available here: [porting-guidelines.md](doc/porting-guidelines.md).
 
 # Recent changes
 
+* 23rd June:
+  * Added LogSoftMax layer (and unit test for this)
 * 22nd June:
   * Checked that SpatialConvolutionMM gives same results using clnn, compared with cunn
   * Checked that SpatialMaxPooling gives same results using clnn, compared with nn
