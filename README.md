@@ -31,11 +31,6 @@ I suppose all containers work unchanged.  Tested however so far on:
 I suppose all trainers work unchanged.  Tested however so far using:
 * nn.StochasticGradient
 
-*Original*
-
-Original layer types, not in nn, or cunn:
-* nn.FullyConnected(numNeurons)  [FullyConnected.lua](FullyConnected.lua)
-
 # Samples
 
 * For training on mnist, you can run `./run-mnist2.sh`
