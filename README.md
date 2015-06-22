@@ -15,7 +15,7 @@ I suppose all containers work unchanged.  Tested however so far on:
 * nn.SpatialConvolutionMM
 
 *Pooling layers*
-* nn.SpatialMaxPooling (not tested for correctness yet)
+* nn.SpatialMaxPooling
 
 *Activation layers:*
 * nn.Tanh
@@ -28,6 +28,10 @@ I suppose all containers work unchanged.  Tested however so far on:
 *Trainers:*
 I suppose all trainers work unchanged.  Tested however so far using:
 * nn.StochasticGradient
+
+*Original*
+Original layer types, not in nn, or cunn:
+* nn.FullyConnected(numNeurons)  [FullyConnected.lua](FullyConnected.lua)
 
 # Samples
 
@@ -98,6 +102,8 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 * 22nd June:
   * Checked that SpatialConvolutionMM gives same results using clnn, compared with cunn
+  * Checked that SpatialMaxPooling gives same results using clnn, compared with nn
+  * Created nn.FullyConnected layer type, which handles Reshape for us :-)
 * 21st June:
   * Got SpatialConvolutionMM and SpatialMaxPooling running
   * Ran Soumith benchmarks on SpatialConvolutionMM, for clnn and cunn, on NVidia 940M
