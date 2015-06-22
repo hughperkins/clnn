@@ -7,6 +7,7 @@ Note that the cltorch OpenCL backend for Torch has moved to [https://github.com/
 ## What works
 
 *Containers:*
+
 I suppose all containers work unchanged.  Tested however so far on:
 * nn.Sequential
 
@@ -26,10 +27,12 @@ I suppose all containers work unchanged.  Tested however so far on:
 * nn.MSECriterion
 
 *Trainers:*
+
 I suppose all trainers work unchanged.  Tested however so far using:
 * nn.StochasticGradient
 
 *Original*
+
 Original layer types, not in nn, or cunn:
 * nn.FullyConnected(numNeurons)  [FullyConnected.lua](FullyConnected.lua)
 
