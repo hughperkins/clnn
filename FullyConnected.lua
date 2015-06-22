@@ -9,7 +9,7 @@
 --               resources)
 --
 -- input:
---   4d tensor input(batchSize, inPlanes, inSize, inSize)
+--   4d tensor input(batchSize, inPlanes, inHeight, inWidth)
 --
 -- output:
 --   4d tensor output(batchSize, numNeurons, 1, 1)
