@@ -1,99 +1,53 @@
 luaunit = require('luaunit')
 
 require 'nn'
-
---print('1 torch.DoubleTensor.oldcopy', torch.DoubleTensor.cloldcopy)
---print('1 torch.DoubleTensor.oldcopy', torch.DoubleTensor.clnewcopy)
-
 require 'cutorch'
 require 'cunn'
 require 'cltorch'
 require 'clnn'
 
---print('torch.DoubleTensor.oldcopy', torch.DoubleTensor.cloldcopy)
---print('torch.DoubleTensor.oldcopy', torch.DoubleTensor.clnewcopy)
---function torch.DoubleTensor.copy(self, two)
---  print('copy 2')
---  print(torch.type(self))
---  print(torch.type(two))
---  torch.DoubleTensor.oldcopy(self, two)
---  return self
---end
-
-print(torch.Tensor{3,5,2})
-print(torch.Tensor{3,5,3}:cuda())
-print(torch.Tensor{3,5,1}:cl())
-
 function torch.Tensor.__eq(self, b)
---  print('======= eq begin ====')
---  print('self', self)
   diff = torch.ne(self, b)
---  print('diff', diff)
   sum = torch.sum(diff)
---  print('sum', sum)
   if sum == 0 then
---    print('======= eq end TRUE ====')
     return true
   else
-    print('left\n', self)
-    print('right\n', b)
-    print('diff\n', self - b)
---    print('======= eq end FALSE ====')
+    print('Tensor')
     return false
   end
 end
 
 function torch.FloatTensor.__eq(self, b)
---  print('======= eq begin ====')
---  print('self', self)
   diff = self - b
---  print('diff1\n', diff)
   diff = torch.abs(diff) - 0.0001
   diff = torch.gt(diff, 0)
---  print('diff', diff)
   sum = torch.sum(diff)
---  print('sum', sum)
   if sum == 0 then
---    print('======= eq end TRUE ====')
     return true
   else
-    print('left\n', self)
-    print('right\n', b)
-    print('diff\n', self - b)
---    print('======= eq end FALSE ====')
+    print('FloatTensor')
     return false
   end
 end
 
 function torch.DoubleTensor.__eq(self, b)
---  print('======= eq begin ====')
---  print('self', self)
+--  print('DoubleTensor eq')
   diff = self - b
---  print('diff1\n', diff)
   diff = torch.abs(diff) - 0.0001
   diff = torch.gt(diff, 0)
---  print('diff', diff)
   sum = torch.sum(diff)
---  print('sum', sum)
   if sum == 0 then
---    print('======= eq end TRUE ====')
     return true
   else
---    print('left\n', self)
---    print('right\n', b)
+    print('DoubleTensor')
     print('sum', sum)
---    print('diff\n', self - b)
---    print('======= eq end FALSE ====')
     return false
   end
 end
 
 function torch.ClTensor.__eq(self, b)
-  print('self', self)
   diff = torch.ne(self, b)
-  print('diff', diff)
   sum = torch.sum(diff)
-  print('sum', sum)
   if sum == 0 then
     return true
   else
@@ -109,26 +63,26 @@ function _test_layer(net, in_size, out_size)
   if out_size == nil then
     out_size = net.weight:size(1)
   end
-  print('net\n', net, 'in_size', in_size, 'out_size', out_size)
+--  print('net\n', net, 'in_size', in_size, 'out_size', out_size)
 --  local net = nn.Sigmoid()
   local input = torch.Tensor(N, in_size):uniform() - 0.5
   local output = net:forward(input)
-  print('output\n', output)
+--  print('output\n', output)
 
   local netCl = net:clone():cl()
   local inputCl = input:clone():cl()
   local outputCl = netCl:forward(inputCl)
-  print('outputCl\n', outputCl)
+--  print('outputCl\n', outputCl)
 
   luaunit.assertEquals(output, outputCl:double())
 
   local gradOutput = torch.Tensor(N, out_size):uniform() - 0.5
   local gradInput = net:backward(input, gradOutput)
-  print('gradInput\n', gradInput)
+--  print('gradInput\n', gradInput)
 
   local gradOutputCl = gradOutput:clone():cl()
   local gradInputCl = netCl:backward(inputCl, gradOutputCl)
-  print('gradInputcl\n', gradInputCl)
+--  print('gradInputcl\n', gradInputCl)
 
   luaunit.assertEquals(gradInput, gradInputCl:double())
 end
@@ -149,13 +103,13 @@ end
 --  _test_layer(nn.ReLU(), 4, 4)
 --end
 
-local batchSize = 32  
+local batchSize = 32
 -- local batchSize = 2
 
 local scenarios = {}
-table.insert(scenarios, {name='simple', inplanes=1, insize=2, outplanes=1, filtersize=1})
+table.insert(scenarios, {name='simple', inplanes=2, insize=5, outplanes=2, filtersize=3})
 table.insert(scenarios, {name='l1', inplanes=3, insize=128, outplanes=96, filtersize=11}) 
---table.insert(scenarios, {name='l2', inplanes=64, insize=64, outplanes=128, filtersize=9})
+----table.insert(scenarios, {name='l2', inplanes=64, insize=64, outplanes=128, filtersize=9})
 table.insert(scenarios, {name='l3', inplanes=128, insize=32, outplanes=128, filtersize=9})
 table.insert(scenarios, {name='l4', inplanes=128, insize=16, outplanes=128, filtersize=7})
 table.insert(scenarios, {name='l5', inplanes=384, insize=13, outplanes=384, filtersize=3})
@@ -163,27 +117,55 @@ table.insert(scenarios, {name='l5', inplanes=384, insize=13, outplanes=384, filt
 function _test_conv_scenario(scenario)
   -- compare cuda and cl output, for same data
   collectgarbage()
-  local input = torch.Tensor(batchSize, scenario.inplanes, scenario.insize, scenario.insize):uniform()
+  torch.manualSeed(41446)
   local layer = nn.SpatialConvolutionMM(scenario.inplanes, scenario.outplanes,
     scenario.filtersize, scenario.filtersize)
   layer.padW = 0
   layer.padH = 0
 
+  local input = torch.Tensor(batchSize, scenario.inplanes, scenario.insize, scenario.insize):uniform():add(-0.5)
+
   local layercl = layer:clone():cl()
   local inputcl = input:cl()
-  local outputcl = layercl:updateOutput(inputcl):double()
-  layercl = nil
-  inputcl = nil
+  local outputcl = layercl:updateOutput(inputcl)
+  layercl:updateGradInput(inputcl, outputcl)
+  local gradInputcl = layercl.gradInput:double()
+  layercl:zeroGradParameters()
+  layercl:accGradParameters(inputcl, outputcl)
+  local gradWeightcl = layercl.gradWeight:double()
+  local gradBiascl = layercl.gradBias:double()
+  local outputcl = outputcl:double()
+--  layercl = nil
+--  inputcl = nil
   collectgarbage()
 
   local layercuda = layer:clone():cuda()
   local inputcuda = input:cuda()
-  local outputcuda = layercuda:updateOutput(inputcuda):double()
-  layercuda = nil
-  inputcuda = nil
+  local outputcuda = layercuda:updateOutput(inputcuda)
+  layercuda:updateGradInput(inputcuda, outputcuda)
+  local gradInputcuda = layercuda.gradInput:double()
+  layercuda:zeroGradParameters()
+  layercuda:accGradParameters(inputcuda, outputcuda)
+  local gradWeightcuda = layercuda.gradWeight:double()
+  local gradBiascuda = layercuda.gradBias:double()
+  local outputcuda = outputcuda:double()
+--  layercuda = nil
+--  inputcuda = nil
   collectgarbage()
 
-  luaunit.assertEquals(outputcl, outputcuda)
+  luaunit.assertTrue(outputcl == outputcuda)
+  luaunit.assertTrue(gradInputcl == gradInputcuda)
+
+  weightnormalizer = 1 / torch.abs(gradWeightcuda):mean()
+  gradWeightcl:mul(weightnormalizer)
+  gradWeightcuda:mul(weightnormalizer)
+
+  biasnormalizer = 1 / gradBiascuda:mean()
+  gradBiascl:mul(biasnormalizer)
+  gradBiascuda:mul(biasnormalizer)
+
+  luaunit.assertTrue(gradBiascl == gradBiascuda)
+  luaunit.assertTrue(gradWeightcl == gradWeightcuda)
   print('pass')
   collectgarbage()
 end
@@ -195,5 +177,6 @@ function test_conv_all()
   end
 end
 
+--luaunit.LuaUnit.run()
 os.exit( luaunit.LuaUnit.run() )
 

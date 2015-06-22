@@ -12,7 +12,7 @@ I suppose all containers work unchanged.  Tested however so far on:
 
 *Weighted layers:*
 * nn.Linear (unchanged, since uses matrix operations on whatever tensors we feed it)
-* nn.SpatialConvolutionMM (not tested for correctness yet)
+* nn.SpatialConvolutionMM
 
 *Pooling layers*
 * nn.SpatialMaxPooling (not tested for correctness yet)
@@ -94,4 +94,11 @@ You should now be able to use `require 'clnn'` from your lua scripts :-)
 
 Porting guidelines, for project maintainers, available here: [porting-guidelines.md](doc/porting-guidelines.md).
 
+# Recent changes
+
+* 22nd June:
+  * Checked that SpatialConvolutionMM gives same results using clnn, compared with cunn
+* 21st June:
+  * Got SpatialConvolutionMM and SpatialMaxPooling running
+  * Ran Soumith benchmarks on SpatialConvolutionMM, for clnn and cunn, on NVidia 940M
 
