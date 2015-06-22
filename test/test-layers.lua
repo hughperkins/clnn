@@ -54,7 +54,7 @@ function torch.ClTensor.__eq(self, b)
 end
 
 function _testVectorLayer(net, in_size, out_size)
-  N = 10
+  N = 2
   if in_size == nil then
     in_size = net.weight:size(2)
   end
@@ -101,12 +101,16 @@ function test_relu()
   _testVectorLayer(nn.ReLU(), 4, 4)
 end
 
+function test_LogSoftMax()
+  _testVectorLayer(nn.LogSoftMax(), 4 , 4)
+end
+
 function _test4dLayer(net, inPlanes, inSize, outPlanes, outSize, debug)
   print('net', net)
   local batchSize = 32
 --  local numPlanes = 32
   if debug ~= nil then
-    batchSize = 2
+    batchSize = 1
 --    numPlanes = 2
   end
   local input = torch.Tensor(batchSize, inPlanes, inSize, inSize):uniform() - 0.5
@@ -142,7 +146,7 @@ function testTanhv2()
 end
 
 function testFullyConnected()
-  _test4dLayer(nn.FullyConnected(10), 32, 16, 10, 1, true)
+  _test4dLayer(nn.FullyConnected(10), 32, 16, 10, 1)
 end
 
 --luaunit.LuaUnit.run()

@@ -25,4 +25,5 @@ require 'Sigmoid'
 --require 'ReLU'
 require 'FullyConnected'
 require 'Threshold'
+require 'LogSoftMax'
 
