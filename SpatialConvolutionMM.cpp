@@ -7,19 +7,29 @@
 #include "THClBlas.h"
 #include "THClKernels.h"
 #include "templates/TemplatedKernel.h"
+#include "DeviceInfo.h"
 
 #include <iostream>
 #include <string>
 using namespace std;
 
 // Use 1024 threads per block, which requires cuda sm_2x or above
-const int CL_NUM_THREADS = 1024;
+//const int CL_NUM_THREADS = 1024;
+
+inline int getNumThreads(THClState *state) {
+  int blockSize = 1024;
+  int maxWorkgroupSize = ((easycl::DeviceInfo *)state->deviceInfoByDevice[state->currentDevice])->maxWorkGroupSize;
+  if( blockSize > maxWorkgroupSize ) {
+    blockSize = maxWorkgroupSize;
+  }
+  return blockSize;
+}
 
 std::string SpatialConvolutionMM_getKernelTemplate();
 
 // CL: number of blocks for threads.
-inline int GET_BLOCKS(const int N) {
-  return (N + CL_NUM_THREADS - 1) / CL_NUM_THREADS;
+inline int GET_BLOCKS(THClState *state, const int N) {
+  return (N + getNumThreads(state) - 1) / getNumThreads(state);
 }
 
 void im2col(THClState *state, THClTensor* im, const int channels,
@@ -52,7 +62,7 @@ void im2col(THClState *state, THClTensor* im, const int channels,
   k.in(width_col);
   k.out(col);
 
-  k.run(GET_BLOCKS(num_kernels), CL_NUM_THREADS);
+  k.run(GET_BLOCKS(state, num_kernels), getNumThreads(state));
 
   // Launch
 //  im2col_kernel <<<GET_BLOCKS(num_kernels), CL_NUM_THREADS, 0, stream>>> (
@@ -95,7 +105,7 @@ void col2im(THClState *state, THClTensor* col, const int channels,
   k.in(width_col);
   k.out(im);
 
-  k.run(GET_BLOCKS(num_kernels), CL_NUM_THREADS);
+  k.run(GET_BLOCKS(state, num_kernels), getNumThreads(state));
 
 //  col2im_kernel <<<GET_BLOCKS(num_kernels), CL_NUM_THREADS, 0, stream>>> (
 //      num_kernels, data_col, height, width, channels,
