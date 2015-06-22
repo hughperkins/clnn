@@ -53,7 +53,7 @@ function torch.ClTensor.__eq(self, b)
   end
 end
 
-function _test_layer(net, in_size, out_size)
+function _testVectorLayer(net, in_size, out_size)
   N = 10
   if in_size == nil then
     in_size = net.weight:size(2)
@@ -61,7 +61,7 @@ function _test_layer(net, in_size, out_size)
   if out_size == nil then
     out_size = net.weight:size(1)
   end
---  print('net\n', net, 'in_size', in_size, 'out_size', out_size)
+  print('net', net)
 --  local net = nn.Sigmoid()
   local input = torch.Tensor(N, in_size):uniform() - 0.5
   local output = net:forward(input)
@@ -86,22 +86,22 @@ function _test_layer(net, in_size, out_size)
 end
 
 function test_linear()
-  _test_layer(nn.Linear(4,3))
+  _testVectorLayer(nn.Linear(4,3))
 end
 
 function test_tanh()
-  _test_layer(nn.Tanh(), 4, 4)
+  _testVectorLayer(nn.Tanh(), 4, 4)
 end
 
 function test_sigmoid()
-  _test_layer(nn.Sigmoid(), 4, 4)
+  _testVectorLayer(nn.Sigmoid(), 4, 4)
 end
 
---function test_relu()
---  _test_layer(nn.ReLU(), 4, 4)
---end
+function test_relu()
+  _testVectorLayer(nn.ReLU(), 4, 4)
+end
 
-function _testLayerv2(net, inPlanes, inSize, outPlanes, outSize, debug)
+function _test4dLayer(net, inPlanes, inSize, outPlanes, outSize, debug)
   print('net', net)
   local batchSize = 32
 --  local numPlanes = 32
@@ -129,20 +129,20 @@ function _testLayerv2(net, inPlanes, inSize, outPlanes, outSize, debug)
 end
 
 function test_SpatialMaxPooling()
-  _testLayerv2(nn.SpatialMaxPooling(2,2,2,2), 32, 32, 32, 16)
-  _testLayerv2(nn.SpatialMaxPooling(3,3,3,3), 32, 48, 32, 16)
+  _test4dLayer(nn.SpatialMaxPooling(2,2,2,2), 32, 32, 32, 16)
+  _test4dLayer(nn.SpatialMaxPooling(3,3,3,3), 32, 48, 32, 16)
 end
 
 function testSigmoidv2()
-  _testLayerv2(nn.Sigmoid(), 32, 32, 32, 32)
+  _test4dLayer(nn.Sigmoid(), 32, 32, 32, 32)
 end
 
 function testTanhv2()
-  _testLayerv2(nn.Tanh(), 32, 32, 32, 32)
+  _test4dLayer(nn.Tanh(), 32, 32, 32, 32)
 end
 
 function testFullyConnected()
-  _testLayerv2(nn.FullyConnected(10), 32, 16, 10, 1, true)
+  _test4dLayer(nn.FullyConnected(10), 32, 16, 10, 1, true)
 end
 
 --luaunit.LuaUnit.run()

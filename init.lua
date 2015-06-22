@@ -22,6 +22,7 @@ end
 require 'MSECriterion'
 require 'Tanh'
 require 'Sigmoid'
-require 'ReLU'
+--require 'ReLU'
 require 'FullyConnected'
+require 'Threshold'
 

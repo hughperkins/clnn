@@ -106,7 +106,8 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 * 22nd June:
   * Checked that SpatialConvolutionMM gives same results using clnn, compared with cunn
   * Checked that SpatialMaxPooling gives same results using clnn, compared with nn
-  * Created nn.FullyConnected layer type, which handles Reshape for us :-)
+  * -Created nn.FullyConnected layer type, which handles Reshape for us :-)- (note: rethinking this...)
+  * Added ReLU, which was already marked as added but ... wasnt :-P  but now is :-) )
 * 21st June:
   * Got SpatialConvolutionMM and SpatialMaxPooling running
   * Ran Soumith benchmarks on SpatialConvolutionMM, for clnn and cunn, on NVidia 940M
