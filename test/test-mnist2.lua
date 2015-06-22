@@ -23,6 +23,11 @@ if api == nil then
 --  print('  API=cl ./run-mnist2.sh')
 end
 
+if api == 'cuda' then
+  require 'cunn'
+end
+require 'clnn'  -- provides nn.FullyConnected
+
 local _trainset = mnist.traindataset()
 --local _testset = mnist.testdataset()
 
@@ -57,6 +62,13 @@ if netchoice == 'linear' then
   model:add(nn.Linear(28*28,150))
   model:add(nn.Tanh())
   model:add(nn.Linear(150,10))
+elseif netchoice == 'linearfc' then
+--  model:add(nn.Linear(28*28,150))
+  model:add(nn.Reshape(128, 1, 28, 28))
+  model:add(nn.FullyConnected(150))
+  model:add(nn.Tanh())
+  model:add(nn.FullyConnected(10))
+--  model:add(nn.Linear(150,10))
 elseif netchoice == 'conv1' then
   model:add(nn.Reshape(128, 1, 28, 28))
 
@@ -73,10 +85,12 @@ elseif netchoice == 'conv1' then
   print('model.modules[#model].padding',  model.modules[#model].padding)
   model:add(nn.Tanh())
   model:add(nn.SpatialMaxPooling(2, 2, 2, 2))
-  model:add(nn.Reshape(64*2*2))
-  model:add(nn.Linear(64*2*2, 200))
+  model:add(nn.FullyConnected(200))
+--  model:add(nn.Reshape(64*2*2))
+--  model:add(nn.Linear(64*2*2, 200))
   model:add(nn.Tanh())
-  model:add(nn.Linear(200, 10))
+  model:add(nn.FullyConnected(10))
+--  model:add(nn.Linear(200, 10))
 else
   error('net choice not recongized', netchoice)
 end

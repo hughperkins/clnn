@@ -23,4 +23,5 @@ require 'MSECriterion'
 require 'Tanh'
 require 'Sigmoid'
 require 'ReLU'
+require 'FullyConnected'
 

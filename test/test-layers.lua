@@ -101,6 +101,50 @@ end
 --  _test_layer(nn.ReLU(), 4, 4)
 --end
 
+function _testLayerv2(net, inPlanes, inSize, outPlanes, outSize, debug)
+  print('net', net)
+  local batchSize = 32
+--  local numPlanes = 32
+  if debug ~= nil then
+    batchSize = 2
+--    numPlanes = 2
+  end
+  local input = torch.Tensor(batchSize, inPlanes, inSize, inSize):uniform() - 0.5
+  local gradOutput = torch.Tensor(batchSize, outPlanes, outSize, outSize):uniform() - 0.5
+
+  local output = net:forward(input)
+
+  local netCl = net:clone():cl()
+  local inputCl = input:clone():cl()
+  local outputCl = netCl:forward(inputCl)
+
+  luaunit.assertEquals(output, outputCl:double())
+
+  local gradInput = net:backward(input, gradOutput)
+
+  local gradOutputCl = gradOutput:clone():cl()
+  local gradInputCl = netCl:backward(inputCl, gradOutputCl)
+
+  luaunit.assertEquals(gradInput, gradInputCl:double())
+end
+
+function test_SpatialMaxPooling()
+  _testLayerv2(nn.SpatialMaxPooling(2,2,2,2), 32, 32, 32, 16)
+  _testLayerv2(nn.SpatialMaxPooling(3,3,3,3), 32, 48, 32, 16)
+end
+
+function testSigmoidv2()
+  _testLayerv2(nn.Sigmoid(), 32, 32, 32, 32)
+end
+
+function testTanhv2()
+  _testLayerv2(nn.Tanh(), 32, 32, 32, 32)
+end
+
+function testFullyConnected()
+  _testLayerv2(nn.FullyConnected(10), 32, 16, 10, 1, true)
+end
+
 --luaunit.LuaUnit.run()
 os.exit( luaunit.LuaUnit.run() )
 
