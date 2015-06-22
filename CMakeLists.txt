@@ -10,8 +10,8 @@ SET(CMAKE_C_FLAGS "-std=c99 -Werror=implicit-function-declaration -save-temps")
 SET(CMAKE_CXX_FLAGS "-std=c++0x -Wall")
 
 
-Find_package(Lua51 REQUIRED)
-include_directories(${LUA_INCLUDE_DIR})
+#Find_package(Lua51 REQUIRED)
+#include_directories(${LUA_INCLUDE_DIR})
 
 INCLUDE_DIRECTORIES("${Torch_INSTALL_INCLUDE}/THCl")
 INCLUDE_DIRECTORIES("${Torch_INSTALL_INCLUDE}/easycl")
