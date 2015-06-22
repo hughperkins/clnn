@@ -1,10 +1,13 @@
--- plan is to use like this:
--- model:add(FullyConnected(15)
--- ... where 15 is number of neurons
+-- Use like this:
 --
--- this would then take a 4d tensor input(batchSize, inPlanes, inSize, inSize)
+--    model:add(FullyConnected(15)
 --
--- ... and convert it to 4d tensor output(batchSize, numNeurons, 1, 1)
+-- ... where 15 is number of neurons (can be any positive integer, within the bounds of
+-- available memory and other resources)
+--
+-- this takes a 4d tensor input(batchSize, inPlanes, inSize, inSize)
+--
+-- ... and converts it to 4d tensor output(batchSize, numNeurons, 1, 1)
 
 local FullyConnected, parent = torch.class('nn.FullyConnected', 'nn.Sequential')
 
