@@ -140,9 +140,9 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
   THClTensor *gradInput = (THClTensor *)luaT_getfieldcheckudata(L, 1, "gradInput", "torch.ClTensor");
   THClTensor *indices = (THClTensor *)luaT_getfieldcheckudata(L, 1, "indices", "torch.ClTensor");
 
-  float *indices_data;
-  float *gradInput_data;
-  float *gradOutput_data;
+//  float *indices_data;
+//  float *gradInput_data;
+//  float *gradOutput_data;
 
   THAssert(THClTensor_checkGPU(state, 4, input, gradOutput, indices, gradInput));
 
@@ -150,18 +150,18 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
   gradOutput = THClTensor_newContiguous(state, gradOutput);
 
   if (input->nDimension == 3) {
-    long nInputCols = input->size[2];
-    long nInputRows = input->size[1];
+//    long nInputCols = input->size[2];
+//    long nInputRows = input->size[1];
     long nInputPlane = input->size[0];
-    long nOutputCols = gradOutput->size[2];
-    long nOutputRows = gradOutput->size[1];
+//    long nOutputCols = gradOutput->size[2];
+//    long nOutputRows = gradOutput->size[1];
 
     THClTensor_resizeAs(state, gradInput, input);
     THClTensor_zero(state, gradInput);
 
-    indices_data = THClTensor_data(state, indices);
-    gradOutput_data = THClTensor_data(state, gradOutput);
-    gradInput_data = THClTensor_data(state, gradInput);
+//    indices_data = THClTensor_data(state, indices);
+//    gradOutput_data = THClTensor_data(state, gradOutput);
+//    gradInput_data = THClTensor_data(state, gradInput);
 
     // cuda blocks & threads:
     int yblocks = (int)(16L / nInputPlane);
@@ -198,9 +198,9 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
     THClTensor_resizeAs(state, gradInput, input);
     THClTensor_zero(state, gradInput);
 
-    indices_data = THClTensor_data(state, indices);
-    gradOutput_data = THClTensor_data(state, gradOutput);
-    gradInput_data = THClTensor_data(state, gradInput);
+//    indices_data = THClTensor_data(state, indices);
+//    gradOutput_data = THClTensor_data(state, gradOutput);
+//    gradInput_data = THClTensor_data(state, gradInput);
 
     // cuda blocks & threads:
     int yblocks = (int)(16L / nInputPlane);
@@ -289,13 +289,13 @@ std::string SpatialMaxPooling_getKernelTemplate() {
   " */\n" 
   "kernel void maxpool(const global float *input_data, int input_offset,\n" 
   "    global float *output_data, int output_offset,\n" 
-  "    const global float *indices_data, int indices_offset,\n" 
+  "    global float *indices_data, int indices_offset,\n" 
   "    int indices_x_offset,\n" 
   "    int indices_y_offset,\n" 
   "    int input_n, int input_h, int input_w,\n" 
   "    int kH, int kW, int dH, int dW)\n" 
   "{\n" 
-  "  global float *input = input_data + input_offset;\n" 
+  "  global const float *input = input_data + input_offset;\n" 
   "  global float *output = output_data + output_offset;\n" 
   "  global float *indices_x = indices_data + indices_offset + indices_x_offset;\n" 
   "  global float *indices_y = indices_data + indices_offset + indices_y_offset;\n" 
@@ -330,7 +330,7 @@ std::string SpatialMaxPooling_getKernelTemplate() {
   "  for(yy = yy_start; yy < yy_end; yy+=yy_step) {\n" 
   "    for(xx = xx_start; xx < xx_end; xx+=xx_step) {\n" 
   "      // Compute the mean of the input image...\n" 
-  "      global float *ptr_input = input + yy*dH*input_w + xx*dW;\n" 
+  "      global const float *ptr_input = input + yy*dH*input_w + xx*dW;\n" 
   "      global float *ptr_output = output + yy*output_w + xx;\n" 
   "      global float *ptr_ind_x = indices_x + yy*output_w + xx;\n" 
   "      global float *ptr_ind_y = indices_y + yy*output_w + xx;\n" 
@@ -362,16 +362,16 @@ std::string SpatialMaxPooling_getKernelTemplate() {
   " *    this function computes the gradInput from weight and gradOutput\n" 
   " */\n" 
   "kernel void maxgradinput(global float *gradInput_data, int gradInput_offset,\n" 
-  "    global float *gradOutput_data, int gradOutput_offset,\n" 
-  "    global float *indices_data, int indices_offset,\n" 
+  "    global const float *gradOutput_data, int gradOutput_offset,\n" 
+  "    global const float *indices_data, int indices_offset,\n" 
   "    int indices_x_offset, int indices_y_offset,\n" 
   "   int input_n, int input_h, int input_w,\n" 
   "   int kH, int kW, int dH, int dW)\n" 
   "{\n" 
   "  global float *gradInput = gradInput_data + gradInput_offset;\n" 
-  "  global float *gradOutput = gradOutput_data + gradOutput_offset;\n" 
-  "  global float *indices_x = indices_data + indices_offset + indices_x_offset;\n" 
-  "  global float *indices_y = indices_data + indices_offset + indices_y_offset;\n" 
+  "  global const float *gradOutput = gradOutput_data + gradOutput_offset;\n" 
+  "  global const float *indices_x = indices_data + indices_offset + indices_x_offset;\n" 
+  "  global const float *indices_y = indices_data + indices_offset + indices_y_offset;\n" 
   "\n" 
   "  // iterators\n" 
   "  int xx, yy;\n" 
@@ -403,9 +403,9 @@ std::string SpatialMaxPooling_getKernelTemplate() {
   "  for(yy = yy_start; yy < yy_end; yy+=yy_step) {\n" 
   "    for(xx = xx_start; xx < xx_end; xx+=xx_step) {\n" 
   "      global float *ptr_gradInput = gradInput + yy*dH*input_w + xx*dW;\n" 
-  "      global float *ptr_gradOutput = gradOutput + yy*output_w + xx;\n" 
-  "      global float *ptr_ind_x = indices_x + yy*output_w + xx;\n" 
-  "      global float *ptr_ind_y = indices_y + yy*output_w + xx;\n" 
+  "      global const float *ptr_gradOutput = gradOutput + yy*output_w + xx;\n" 
+  "      global const float *ptr_ind_x = indices_x + yy*output_w + xx;\n" 
+  "      global const float *ptr_ind_y = indices_y + yy*output_w + xx;\n" 
   "      float z = *ptr_gradOutput;\n" 
   "\n" 
   "      int argmax_x = (*ptr_ind_x)-1;\n" 

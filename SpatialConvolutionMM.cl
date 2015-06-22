@@ -12,7 +12,7 @@ kernel void im2col_kernel(const int n, const global float* im_data, int im_offse
     const int height, const int width, const int ksize_h, const int ksize_w, const int pad_h,
     const int pad_w, const int stride_h, const int stride_w, const int height_col, const int width_col,
     global float* col_data, int col_offset) {
-  global float *data_im = im_data + im_offset;
+  global const float *data_im = im_data + im_offset;
   global float *data_col = col_data + col_offset;
 
   CL_KERNEL_LOOP(index, n) {
@@ -43,7 +43,7 @@ kernel void col2im_kernel(const int n, global const float* col_data, int col_off
     const int height_col, const int width_col,
     global float* im_data, int im_offset) {
   global float *data_im = im_data + im_offset;
-  global float *data_col = col_data + col_offset;
+  global const float *data_col = col_data + col_offset;
 
   CL_KERNEL_LOOP(index, n) {
     float val = 0;

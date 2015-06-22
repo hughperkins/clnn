@@ -7,7 +7,7 @@
  */
 kernel void maxpool(const global float *input_data, int input_offset,
     global float *output_data, int output_offset, 
-    const global float *indices_data, int indices_offset,
+    global float *indices_data, int indices_offset,
     int indices_x_offset,
     int indices_y_offset,
     int input_n, int input_h, int input_w,
@@ -15,8 +15,8 @@ kernel void maxpool(const global float *input_data, int input_offset,
 {
   global const float *input = input_data + input_offset;
   global float *output = output_data + output_offset;
-  global const float *indices_x = indices_data + indices_offset + indices_x_offset;
-  global const float *indices_y = indices_data + indices_offset + indices_y_offset;
+  global float *indices_x = indices_data + indices_offset + indices_x_offset;
+  global float *indices_y = indices_data + indices_offset + indices_y_offset;
 
   // iterators
   int xx, yy;
@@ -50,8 +50,8 @@ kernel void maxpool(const global float *input_data, int input_offset,
       // Compute the mean of the input image...
       global const float *ptr_input = input + yy*dH*input_w + xx*dW;
       global float *ptr_output = output + yy*output_w + xx;
-      global const float *ptr_ind_x = indices_x + yy*output_w + xx;
-      global const float *ptr_ind_y = indices_y + yy*output_w + xx;
+      global float *ptr_ind_x = indices_x + yy*output_w + xx;
+      global float *ptr_ind_y = indices_y + yy*output_w + xx;
       int argmax_x = -1;
       int argmax_y = -1;
       float max = -FLT_MAX;
