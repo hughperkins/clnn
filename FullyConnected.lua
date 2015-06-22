@@ -24,6 +24,10 @@ function FullyConnected:__init(neurons)
   self.neurons = neurons
 end
 
+function FullyConnected:__tostring__()
+  return 'nn.FullyConnected(' .. self.neurons .. ')'
+end
+
 function FullyConnected:updateOutput(input)
   if #self.modules == 0 then
     if( input:size():size() ~= 4) then
