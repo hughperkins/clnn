@@ -24,7 +24,7 @@ Note that the cltorch OpenCL backend for Torch has moved to [https://github.com/
 
 *Table layers*
 
-These 'just work'.  Tested with:
+These 'just work', since they are based on underlying torch operations, which are already implemented in [cltorch](https://github.com/hughperkins/cltorch).  Tested with:
 * nn.CMulTable
 * nn.CAddTable
 
@@ -34,12 +34,12 @@ These 'just work'.  Tested with:
 
 *Containers:*
 
-Containers 'just work'.  Tested with:
+Containers 'just work', since they just call standard operations on the contained modules.  Tested with:
 * nn.Sequential
 
 *Trainers:*
 
-Trainers 'just work'.  Tested with:
+Trainers 'just work', since they just call standard methods on the network to be trained.  Tested with:
 * nn.StochasticGradient
 
 # Timings
