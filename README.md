@@ -22,6 +22,12 @@ Note that the cltorch OpenCL backend for Torch has moved to [https://github.com/
 * nn.LogSoftMax
 * nn.Identity
 
+*Table layers*
+
+These 'just work'.  Tested with:
+* nn.CMulTable
+* nn.CAddTable
+
 *Criterions:*
 * nn.MSECriterion
 * nn.ClassNLLCriterion
@@ -99,6 +105,8 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 # Recent changes
 
+* 25th June:
+  * added tests for CMulTable and CAddTable, which pass
 * 24th June:
   * Added ClassNLLCriterion layer (and unit tests for this)
 * 23rd June:

@@ -64,7 +64,7 @@ end
 function _testLabelCriterionLayer(net)
   collectgarbage()
   print('testlabelcrtierionlayer')
-  N = 2
+  N = 8
   in_size = 10
   
   local input = torch.Tensor(N, in_size):uniform() - 0.5
@@ -147,7 +147,7 @@ end
 function _test4dLayer(net, inPlanes, inSize, outPlanes, outSize, debug)
   collectgarbage()
   print('net', net)
-  local batchSize = 32
+  local batchSize = 8
 --  local numPlanes = 32
   if debug ~= nil then
     batchSize = 1
@@ -192,6 +192,57 @@ end
 
 function testFullyConnected()
   _test4dLayer(nn.FullyConnected(10), 8, 8, 10, 1)
+end
+
+function _testTableLayer(net)
+  collectgarbage()
+  N = 2
+  print('net', net)
+
+  local num_tables = 2
+  local in_size = 5
+  local out_size = in_size
+  local t1 = torch.Tensor(N, in_size):uniform() * 2 - 1.0
+  local t2 = torch.Tensor(N, in_size):uniform() * 2 - 1.0
+--  print('t1\n', t1)
+--  print('t2\n', t2)
+
+  local input = {t1, t2}
+  local inputCl = {t1:cl(), t2:cl()}
+
+--  print('output\n', input)
+
+  local output = net:forward(input)
+--  print('output\n', output)
+
+  local netCl = net:clone():cl()
+  local t1Cl = t1:clone():cl()
+  local t2Cl = t2:clone():cl()
+  local outputCl = netCl:forward(inputCl)
+--  print('outputCl\n', outputCl)
+
+  luaunit.assertEquals(output, outputCl:double())
+
+  local gradOutput = torch.Tensor(N, out_size):uniform() * 2 - 0.5
+  local gradInput = net:backward(input, gradOutput)
+--  print('gradInput\n', gradInput[1], gradInput[2])
+
+  local gradOutputCl = gradOutput:clone():cl()
+  local gradInputCl = netCl:backward(inputCl, gradOutputCl)
+--  print('gradInputcl\n', gradInputCl[1], gradInputCl[2])
+
+  for i=1,num_tables do
+    luaunit.assertEquals(gradInput[i], gradInputCl[i]:double())
+  end
+  collectgarbage()
+end
+
+function testCMulTable()
+  _testTableLayer(nn.CMulTable())
+end
+
+function testCAddTable()
+  _testTableLayer(nn.CAddTable())
 end
 
 --luaunit.LuaUnit.run()
