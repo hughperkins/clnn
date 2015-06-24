@@ -4,6 +4,14 @@ require 'nn'
 require 'cltorch'
 require 'clnn'
 
+function assertFloatNear(a, b)
+  local diff = math.abs( a - b ) - 0.0001
+  if diff >= 0 then
+    print('fail different ', a, b)
+    luaunit.assertTrue( diff < 0 )
+  end
+end
+
 function torch.Tensor.__eq(self, b)
   diff = torch.ne(self, b)
   sum = torch.sum(diff)
@@ -53,8 +61,48 @@ function torch.ClTensor.__eq(self, b)
   end
 end
 
-function _testVectorLayer(net, in_size, out_size)
+function _testLabelCriterionLayer(net)
+  collectgarbage()
+  print('testlabelcrtierionlayer')
   N = 2
+  in_size = 10
+--  num_classes = 12
+  
+  local input = torch.Tensor(N, in_size):uniform() - 0.5
+  local target = torch.multinomial(torch.range(1,in_size), N, true)
+
+  print('input', input)
+  print('target', target)
+  local output = net:forward(input, target)
+
+  print('cl')
+  local netCl = net:clone():cl()
+  local inputCl = input:clone():cl()
+  local targetCl = target:clone():cl()
+  local outputCl = netCl:forward(inputCl, targetCl)
+
+  print('output\n', output)
+  print('outputcl\n', outputCl)
+--  luaunit.assertEquals(output, outputCl)
+  assertFloatNear(output, outputCl)
+
+--  local gradOutput = torch.Tensor(N, out_size):uniform() - 0.5
+  local gradInput = net:backward(input, target)
+
+  local gradOutputCl = gradOutput:clone():cl()
+  local gradInputCl = netCl:backward(inputCl, example_target)
+
+  luaunit.assertEquals(gradInput, gradInputCl:double())
+  collectgarbage()
+end
+
+function test_ClassNLLCriterion()
+  _testLabelCriterionLayer(nn.ClassNLLCriterion())
+end
+
+function _testVectorLayer(net, in_size, out_size)
+  collectgarbage()
+  N = 32
   if in_size == nil then
     in_size = net.weight:size(2)
   end
@@ -83,6 +131,7 @@ function _testVectorLayer(net, in_size, out_size)
 --  print('gradInputcl\n', gradInputCl)
 
   luaunit.assertEquals(gradInput, gradInputCl:double())
+  collectgarbage()
 end
 
 function test_linear()
@@ -106,6 +155,7 @@ function test_LogSoftMax()
 end
 
 function _test4dLayer(net, inPlanes, inSize, outPlanes, outSize, debug)
+  collectgarbage()
   print('net', net)
   local batchSize = 32
 --  local numPlanes = 32
@@ -130,6 +180,7 @@ function _test4dLayer(net, inPlanes, inSize, outPlanes, outSize, debug)
   local gradInputCl = netCl:backward(inputCl, gradOutputCl)
 
   luaunit.assertEquals(gradInput, gradInputCl:double())
+  collectgarbage()
 end
 
 function test_SpatialMaxPooling()
@@ -146,7 +197,7 @@ function testTanhv2()
 end
 
 function testFullyConnected()
-  _test4dLayer(nn.FullyConnected(10), 32, 16, 10, 1)
+  _test4dLayer(nn.FullyConnected(10), 8, 8, 10, 1)
 end
 
 --luaunit.LuaUnit.run()

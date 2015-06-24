@@ -19,11 +19,12 @@ function nn.Criterion:cl()
    return self:type('torch.ClTensor')
 end
 
-require 'MSECriterion'
 require 'Tanh'
 require 'Sigmoid'
---require 'ReLU'
 require 'FullyConnected'
 require 'Threshold'
 require 'LogSoftMax'
+
+require 'MSECriterion'
+require 'ClassNLLCriterion'
 

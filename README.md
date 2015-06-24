@@ -6,20 +6,22 @@ Note that the cltorch OpenCL backend for Torch has moved to [https://github.com/
 
 ## What works
 
-*Weighted layers:*
+*Simple layers:*
 * nn.Linear
+
+*Convolution layers:*
 * nn.SpatialConvolutionMM
 
 *Pooling layers*
 * nn.SpatialMaxPooling (note: stride must match pooling size, for now)
 
-*Transfer layers:*
+*Transfer function layers:*
 * nn.Tanh
 * nn.Sigmoid
 * nn.ReLU
 * nn.LogSoftMax
 
-*Criterion:*
+*Criterions:*
 * nn.MSECriterion
 
 *Containers:*
