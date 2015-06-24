@@ -20,6 +20,7 @@ Note that the cltorch OpenCL backend for Torch has moved to [https://github.com/
 * nn.Sigmoid
 * nn.ReLU
 * nn.LogSoftMax
+* nn.Identity
 
 *Criterions:*
 * nn.MSECriterion

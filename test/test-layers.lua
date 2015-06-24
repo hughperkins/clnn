@@ -182,6 +182,10 @@ function testSigmoidv2()
   _test4dLayer(nn.Sigmoid(), 32, 32, 32, 32)
 end
 
+function testIdentity()
+  _test4dLayer(nn.Identity(), 32, 32, 32, 32)
+end
+
 function testTanhv2()
   _test4dLayer(nn.Tanh(), 32, 32, 32, 32)
 end
