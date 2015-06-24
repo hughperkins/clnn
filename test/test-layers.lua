@@ -66,31 +66,21 @@ function _testLabelCriterionLayer(net)
   print('testlabelcrtierionlayer')
   N = 2
   in_size = 10
---  num_classes = 12
   
   local input = torch.Tensor(N, in_size):uniform() - 0.5
   local target = torch.multinomial(torch.range(1,in_size), N, true)
 
-  print('input', input)
-  print('target', target)
   local output = net:forward(input, target)
 
-  print('cl')
   local netCl = net:clone():cl()
   local inputCl = input:clone():cl()
   local targetCl = target:clone():cl()
   local outputCl = netCl:forward(inputCl, targetCl)
 
-  print('output\n', output)
-  print('outputcl\n', outputCl)
---  luaunit.assertEquals(output, outputCl)
   assertFloatNear(output, outputCl)
 
---  local gradOutput = torch.Tensor(N, out_size):uniform() - 0.5
   local gradInput = net:backward(input, target)
-
-  local gradOutputCl = gradOutput:clone():cl()
-  local gradInputCl = netCl:backward(inputCl, example_target)
+  local gradInputCl = netCl:backward(inputCl, targetCl)
 
   luaunit.assertEquals(gradInput, gradInputCl:double())
   collectgarbage()
