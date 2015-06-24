@@ -50,7 +50,7 @@ Using the network in [test/test-mnist2.lua](test/test-mnist2.lua), and `MODEL=co
 * `API=cuda`: 3.2 seconds
 * `API=cl`: 13.6 seconds
 
-(hmmm, interestingly, on this tiny network, DeepCL is actually faster than both.  2.3 seconds per epoch, using `./train numtrain=5120 numtest=-1 netdef=32c5-tanh-mp3-64c5-tanh-mp2-200n-tanh-10n`.)
+(hmmm, interestingly, on this tiny network, [DeepCL](https://github.com/hughperkins/DeepCL) is actually faster than both.  2.3 seconds per epoch, using `./train numtrain=5120 numtest=-1 netdef=32c5-tanh-mp3-64c5-tanh-mp2-200n-tanh-10n`.)
 
 ## Soumith benchmark layers
 
