@@ -34,12 +34,12 @@ These 'just work'.  Tested with:
 
 *Containers:*
 
-I suppose all containers work unchanged.  Tested however so far on:
+Containers 'just work'.  Tested with:
 * nn.Sequential
 
 *Trainers:*
 
-I suppose all trainers work unchanged.  Tested however so far using:
+Trainers 'just work'.  Tested with:
 * nn.StochasticGradient
 
 # Timings
