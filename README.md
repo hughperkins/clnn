@@ -85,6 +85,11 @@ On an NVidia 940M, using [test/test-perf.lua](test/test-perf.lua):
 | l4    | backward   | 0.11+0.11 =0.22               | 0.17+0.20=0.37 |
 | l5    | backward   | 0.13+0.16=0.29                | 0.23+0.91=1.14 |
 
+## Example network
+
+* Here is an OpenCL-enabled version of Karpathy's LSTM network: [https://github.com/hughperkins/char-rnn](https://github.com/hughperkins/char-rnn)
+* Simply add option `-opencl 1` to enable OpenCL :-)
+
 ## Installation
 
 ### Pre-requisites
