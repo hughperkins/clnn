@@ -119,6 +119,7 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 * 25th June:
   * added tests for CMulTable and CAddTable, which pass
+  * added test for Narrow, which passes
 * 24th June:
   * Added ClassNLLCriterion layer (and unit tests for this)
 * 23rd June:
