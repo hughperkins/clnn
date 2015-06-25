@@ -18,6 +18,7 @@ These mostly 'just work', since based on underlying tensor methods, already impl
 ### Miscellaneous modules
 
 * nn.Identity
+* nn.Dropout
 
 ### Convolution layers
 
@@ -121,6 +122,7 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
   * added tests for CMulTable and CAddTable, which pass
   * added test for Narrow, which passes
   * fix bug in cmakelists.txt, which meant that installation didnt work (it ran ok for me, so I didnt notice...)
+  * Dropout working now
 * 24th June:
   * Added ClassNLLCriterion layer (and unit tests for this)
 * 23rd June:
