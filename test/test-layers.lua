@@ -196,7 +196,7 @@ end
 
 function _testTableLayer(net)
   collectgarbage()
-  N = 2
+  N = 5
   print('net', net)
 
   local num_tables = 2
@@ -243,6 +243,41 @@ end
 
 function testCAddTable()
   _testTableLayer(nn.CAddTable())
+end
+
+function _testNarrow(net)
+  collectgarbage()
+  N = 2
+  print('net', net)
+  in_size = 12
+
+  local input =torch.Tensor(N, in_size):uniform() * 2 - 1.0
+  local inputCl = input:clone():cl()
+
+
+  local output = net:forward(input)
+  print('output\n', output)
+
+  local netCl = net:clone():cl()
+  local outputCl = netCl:forward(inputCl)
+
+  print('outputCl\n', outputCl)
+
+  luaunit.assertEquals(output, outputCl:double())
+
+  -- local gradOutput = torch.Tensor(N, out_size):uniform() * 2 - 0.5
+  local gradOutput = output:clone() * 3 + 0.1
+  local gradInput = net:backward(input, gradOutput)
+
+  local gradOutputCl = gradOutput:clone():cl()
+  local gradInputCl = netCl:backward(inputCl, gradOutputCl)
+
+  luaunit.assertEquals(gradInput, gradInputCl:double())
+  collectgarbage()
+end
+
+function testNarrow()
+  _testNarrow(nn.Narrow(2, 2, 5))
 end
 
 --luaunit.LuaUnit.run()

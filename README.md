@@ -6,38 +6,48 @@ Note that the cltorch OpenCL backend for Torch has moved to [https://github.com/
 
 ## What works
 
-*Simple layers:*
+### Parameterized Modules
 * nn.Linear
 
-*Convolution layers:*
-* nn.SpatialConvolutionMM
+### Basic Tensor methods
 
-*Pooling layers*
+These mostly 'just work', since based on underlying tensor methods, already implemented in [cltorch](https://github.com/hughperkins/cltorch).  Tested with:
+
+* nn.Narrow
+
+### Miscellaneous modules
+
+* nn.Identity
+
+### Convolution layers
+
+* nn.SpatialConvolutionMM
 * nn.SpatialMaxPooling (note: stride must match pooling size, for now)
 
-*Transfer function layers:*
+### Transfer function layers
+
 * nn.Tanh
 * nn.Sigmoid
 * nn.ReLU
 * nn.LogSoftMax
-* nn.Identity
 
-*Table layers*
+### Table layers
 
 These 'just work', since they are based on underlying torch operations, which are already implemented in [cltorch](https://github.com/hughperkins/cltorch).  Tested with:
 * nn.CMulTable
 * nn.CAddTable
 
-*Criterions:*
+### Criterions
+
 * nn.MSECriterion
 * nn.ClassNLLCriterion
 
-*Containers:*
+### Containers:
 
 Containers 'just work', since they just call standard operations on the contained modules.  Tested with:
 * nn.Sequential
 
-*Trainers:*
+### Trainers
 
 Trainers 'just work', since they just call standard methods on the network to be trained.  Tested with:
 * nn.StochasticGradient
