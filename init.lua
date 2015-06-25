@@ -19,12 +19,12 @@ function nn.Criterion:cl()
    return self:type('torch.ClTensor')
 end
 
-require 'Tanh'
-require 'Sigmoid'
-require 'FullyConnected'
-require 'Threshold'
-require 'LogSoftMax'
+include 'Tanh.lua'
+include 'Sigmoid.lua'
+include 'FullyConnected.lua'
+include 'Threshold.lua'
+include 'LogSoftMax.lua'
 
-require 'MSECriterion'
-require 'ClassNLLCriterion'
+include 'MSECriterion.lua'
+include 'ClassNLLCriterion.lua'
 
