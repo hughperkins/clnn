@@ -1,5 +1,5 @@
 function torch.ClTensor.nn.LogSoftMax_updateOutput(self, input)
-  cltorch.setTrace(1)
+--  cltorch.setTrace(1)
   if   input:dim() ~= 2 then
     error('LogSoftMax expects 2-d tensor currently')
   end
@@ -22,7 +22,7 @@ function torch.ClTensor.nn.LogSoftMax_updateOutput(self, input)
   self.output:cdiv(self.buffer)
   self.output:log()
 
-  cltorch.setTrace(0)
+--  cltorch.setTrace(0)
   return self.output
 end
 
@@ -33,7 +33,7 @@ function torch.ClTensor.nn.LogSoftMax_updateGradInput(self, input, gradOutput)
      self.gradInput:zero()
   end
 
-  cltorch.setTrace(1)
+--  cltorch.setTrace(1)
   self.maxbuffer:sum(gradOutput, 2)
   self.buffer:repeatTensor(self.maxbuffer, 1, self.vec_size)
   self.gradInput:copy(self.output)
@@ -42,7 +42,7 @@ function torch.ClTensor.nn.LogSoftMax_updateGradInput(self, input, gradOutput)
   self.gradInput:neg()
   self.gradInput:add(gradOutput)
 
-  cltorch.setTrace(0)
+--  cltorch.setTrace(0)
   return self.gradInput
 end
 
