@@ -4,7 +4,7 @@ require "torch"
 require 'nn'
 --print('nn.Module\n', nn.Module)
 
-require('cltorch')
+-- require('cltorch')
 
 --torch.ClTensor.nn = {}
 

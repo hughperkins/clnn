@@ -6,7 +6,7 @@ source = {
 }
 
 description = {
-   summary = "OpenCL backend for Torch",
+   summary = "OpenCL backend for Torch nn",
    detailed = [[
    ]],
    homepage = "https://github.com/hughperkins/clnn",

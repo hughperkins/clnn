@@ -1,4 +1,11 @@
 function torch.ClTensor.nn.Sigmoid_updateOutput(self, input)
+--  if self ~= nil then
+--    print('sigmoid self size', self:size())
+--  else
+--   print('self nil')
+--  end
+  self.output:resize(input:size())
+--  print('sigmoid input size', input:size())
   self.output:map(input, "*out = 1.0f / (1.0f + exp( - *in1))")
   return self.output
 end
