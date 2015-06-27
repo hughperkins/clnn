@@ -191,10 +191,6 @@ function testTanhv2()
   _test4dLayer(nn.Tanh(), 32, 32, 32, 32)
 end
 
---function testFullyConnected()
---  _test4dLayer(nn.FullyConnected(10), 8, 8, 10, 1)
---end
-
 function _testTableLayer(net)
   collectgarbage()
   N = 5
@@ -273,6 +269,9 @@ function _testNarrow(net)
   local gradOutputCl = gradOutput:clone():cl()
   local gradInputCl = netCl:backward(inputCl, gradOutputCl)
 
+  print('gradInput\n', gradInput)
+  print('gradInputCl\n', gradInputCl)
+
   luaunit.assertEquals(gradInput, gradInputCl:double())
   collectgarbage()
 end
@@ -282,7 +281,7 @@ function testNarrow()
 end
 
 --luaunit.LuaUnit.run()
-os.exit( luaunit.LuaUnit.run() )
+--os.exit( luaunit.LuaUnit.run() )
 --test_LogSoftMax()
-
+testNarrow()
 

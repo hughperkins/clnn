@@ -123,6 +123,10 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 # Recent changes
 
+* 27th June:
+  * removed FullyConnected for now
+* 26th June:
+  * fixed bug in Sigmoid, which wasnt resizing correctly
 * 25th June:
   * added tests for CMulTable and CAddTable, which pass
   * added test for Narrow, which passes

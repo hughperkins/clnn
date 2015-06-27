@@ -21,7 +21,6 @@ end
 
 include 'Tanh.lua'
 include 'Sigmoid.lua'
---include 'FullyConnected.lua'
 include 'Threshold.lua'
 include 'LogSoftMax.lua'
 

@@ -3,7 +3,7 @@ luaunit = require('luaunit')
 require 'nn'
 require 'cltorch'
 require 'clnn'
-require 'StatefulTimer'
+--require 'StatefulTimer'
 
 function _testVectorLayer(its, net, in_size, out_size)
 --  collectgarbage()
@@ -110,10 +110,46 @@ function testCMulTable()
   _testTableLayer(1000, nn.CMulTable())
 end
 
+function _testNarrow(its, net)
+  collectgarbage()
+  N = 50
+  print('net', net)
+  in_size = 384
+
+  local input =torch.Tensor(N, in_size):uniform() * 2 - 1.0
+  local inputCl = input:clone():cl()
+  local netCl = net:clone():cl()
+
+  local output = net:forward(input)
+  local outputCl = netCl:forward(inputCl)
+
+  local gradOutput = output:clone() * 3 + 0.1
+  local gradInput = net:backward(input, gradOutput)
+
+  local gradOutputCl = gradOutput:clone():cl()
+  local gradInputCl = netCl:backward(inputCl, gradOutputCl)
+
+  s = nn.StatefulTimer()
+  for it=1,its do
+    netCl:forward(inputCl)
+    s:state('f')
+    netCl:backward(inputCl, gradOutputCl)
+    s:state('b')
+  end
+  print(net, 'forward time', s.times['f'] / its)
+  print(net, 'backward time', s.times['b'] / its)
+  print(net, 'total', (s.times['b'] + s.times['f']) / its)
+end
+
+function testNarrow()
+  _testNarrow(300, nn.Narrow(2, 128, 128))
+end
+
 cltorch.setTrace(1)
 --luaunit.LuaUnit.run()
 --test_LogSoftMax()
-testCMulTable()
+--testCMulTable()
+testNarrow()
 cltorch.setTrace(0)
 
 
