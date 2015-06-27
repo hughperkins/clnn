@@ -1,8 +1,6 @@
 # clnn
 
-Experimental OpenCL backend for Torch nn neural networks library
-
-Note that the cltorch OpenCL backend for Torch has moved to [https://github.com/hughperkins/cltorch](https://github.com/hughperkins/cltorch)
+OpenCL backend for Torch nn neural networks library.
 
 ## What works
 
@@ -23,7 +21,7 @@ These mostly 'just work', since based on underlying tensor methods, already impl
 ### Convolution layers
 
 * nn.SpatialConvolutionMM
-* nn.SpatialMaxPooling (note: stride must match pooling size, for now)
+* nn.SpatialMaxPooling (note: stride must match pooling size)
 
 ### Transfer function layers
 
@@ -47,11 +45,13 @@ These 'just work', since they are based on underlying torch operations, which ar
 
 Containers 'just work', since they just call standard operations on the contained modules.  Tested with:
 * nn.Sequential
+* nngraph
 
 ### Trainers
 
 Trainers 'just work', since they just call standard methods on the network to be trained.  Tested with:
 * nn.StochasticGradient
+* optim
 
 # Timings
 
@@ -93,8 +93,6 @@ On an NVidia 940M, using [test/test-perf.lua](test/test-perf.lua):
   * cpu: 3.4s
   * clnn: 0.52s
   * cunn: 0.13s
-
-So, it's about 3 times slower than CUDA, on nVidia hardware.
 
 ## Installation
 
