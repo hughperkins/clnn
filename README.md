@@ -89,10 +89,14 @@ On an NVidia 940M, using [test/test-perf.lua](test/test-perf.lua):
 
 * Here is an OpenCL-enabled version of Karpathy's LSTM network: [https://github.com/hughperkins/char-rnn](https://github.com/hughperkins/char-rnn)
 * Simply add option `-opencl 1` to enable OpenCL :-)
-* It's a bit slow for now. Working on that :-)  Current comparison, using an NVidia 940M graphics card, and an Intel i5-5200U processor:
+* It's a bit slow for now. Working on that :-)  Current comparison, using an NVidia 940M graphics card, and an Intel i5-5200U processor.  These are timings per-batch
   * cpu: 3.4s
   * clnn: 1.5s
   * cunn: 0.13s :-P
+* Update: you can quadruple the throughput by putting the option `-batch_size 200`, which quadruples the throughput, but leaves the batch time unchanged.  Per-batch timings with batch_size 200:
+  * cpu: 4.7s
+  * clnn: 1.6s
+  * cunn: 0.25s
 
 ## Installation
 
