@@ -89,14 +89,12 @@ On an NVidia 940M, using [test/test-perf.lua](test/test-perf.lua):
 
 * Here is an OpenCL-enabled version of Karpathy's LSTM network: [https://github.com/hughperkins/char-rnn](https://github.com/hughperkins/char-rnn)
 * Simply add option `-opencl 1` to enable OpenCL :-)
-* It's a bit slow for now. Working on that :-)  Current comparison, using an NVidia 940M graphics card, and an Intel i5-5200U processor.  These are timings per-batch
+* Current comparison, using an NVidia 940M graphics card, and an Intel i5-5200U processor.  These are timings per-batch
   * cpu: 3.4s
-  * clnn: 1.5s
-  * cunn: 0.13s :-P
-* Update: you can quadruple the throughput by putting the option `-batch_size 200`, which quadruples the throughput, but leaves the batch time unchanged.  Per-batch timings with batch_size 200:
-  * cpu: 4.7s
-  * clnn: 1.6s
-  * cunn: 0.25s
+  * clnn: 0.52s
+  * cunn: 0.13s
+
+So, it's about 3 times slower than CUDA, on nVidia hardware.
 
 ## Installation
 
@@ -135,6 +133,7 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
   * mild perf improvement to LogSoftMax layer
   * removed FullyConnected for now
   * mild perf improvement to Narrow layer
+  * huge perf improvement :-)  Please update to latest version of [cltorch](http://github.com/hughperkins/cltorch) (should be at least commit 2f1e3e758fb or later)
 * 26th June:
   * fixed bug in Sigmoid, which wasnt resizing correctly
 * 25th June:
