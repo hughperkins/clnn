@@ -1,6 +1,8 @@
 # Porting guidelines
 
-To port a new layer from cunn, proceed approximately as follows:
+Update: actually, most layers can be efficiently ported by using the cltorch methods directly from lua.  A notable exception to this is the convolutional layers.
+
+Anyway, if you do want/need to port a layer that can't be efficiently implemented using cltorch methods, directly in lua, here are some guidelines for how you might proceed.
 
 ## Add the files, and get them building
 
