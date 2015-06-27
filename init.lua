@@ -23,6 +23,7 @@ include 'Tanh.lua'
 include 'Sigmoid.lua'
 include 'Threshold.lua'
 include 'LogSoftMax.lua'
+include 'Narrow.lua'
 
 include 'MSECriterion.lua'
 include 'ClassNLLCriterion.lua'

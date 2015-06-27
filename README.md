@@ -126,6 +126,7 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 * 27th June:
   * mild perf improvement to LogSoftMax layer
   * removed FullyConnected for now
+  * mild perf improvement to Narrow layer
 * 26th June:
   * fixed bug in Sigmoid, which wasnt resizing correctly
 * 25th June:

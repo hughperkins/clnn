@@ -280,7 +280,7 @@ function testNarrow()
   _testNarrow(nn.Narrow(2, 2, 5))
 end
 
---luaunit.LuaUnit.run()
+luaunit.LuaUnit.run()
 --os.exit( luaunit.LuaUnit.run() )
 --test_LogSoftMax()
 testNarrow()

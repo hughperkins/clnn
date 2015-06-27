@@ -22,7 +22,8 @@ message("Torch_INSTALL_LIB ${Torch_INSTALL_LIB}")
 
 set(src init.cpp MSECriterion.cpp utils.c SpatialConvolutionMM.cpp SpatialMaxPooling.cpp )
 set(luasrc init.lua MSECriterion.lua Tanh.lua Sigmoid.lua Threshold.lua
-  LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua)
+  LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua
+  Narrow.lua)
 ADD_TORCH_PACKAGE(clnn "${src}" "${luasrc}" )
 
 if(DEV_RUN_COG)
