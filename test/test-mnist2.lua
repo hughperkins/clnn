@@ -12,7 +12,7 @@ maxIteration = 7
 
 netchoice = os.getenv('MODEL')
 if netchoice == nil then
-  netchoice = 'linear'
+  netchoice = 'conv1'
 end
 
 if api == nil then

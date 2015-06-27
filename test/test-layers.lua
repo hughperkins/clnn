@@ -214,8 +214,8 @@ function _testTableLayer(net)
   local output = net:forward(input)
 --  print('output\n', output)
 
-  local t1Cl = t1:clone():cl()
-  local t2Cl = t2:clone():cl()
+--  local t1Cl = t1:clone():cl()
+--  local t2Cl = t2:clone():cl()
   local outputCl = netCl:forward(inputCl)
 --  print('outputCl\n', outputCl)
 
@@ -254,11 +254,11 @@ function _testNarrow(net)
   local netCl = net:clone():cl()
 
   local output = net:forward(input)
-  print('output\n', output)
+--  print('output\n', output)
 
   local outputCl = netCl:forward(inputCl)
 
-  print('outputCl\n', outputCl)
+--  print('outputCl\n', outputCl)
 
   luaunit.assertEquals(output, outputCl:double())
 
@@ -269,8 +269,8 @@ function _testNarrow(net)
   local gradOutputCl = gradOutput:clone():cl()
   local gradInputCl = netCl:backward(inputCl, gradOutputCl)
 
-  print('gradInput\n', gradInput)
-  print('gradInputCl\n', gradInputCl)
+--  print('gradInput\n', gradInput)
+--  print('gradInputCl\n', gradInputCl)
 
   luaunit.assertEquals(gradInput, gradInputCl:double())
   collectgarbage()
@@ -283,5 +283,5 @@ end
 luaunit.LuaUnit.run()
 --os.exit( luaunit.LuaUnit.run() )
 --test_LogSoftMax()
-testNarrow()
+-- testNarrow()
 

@@ -78,7 +78,7 @@ function _testTableLayer(its, net)
   local netCl = net:clone():cl()
 
   local num_tables = 2
-  local in_size = 5
+  local in_size = 500
   local out_size = in_size
   local t1 = torch.Tensor(N, in_size):uniform() * 2 - 1.0
   local t2 = torch.Tensor(N, in_size):uniform() * 2 - 1.0
@@ -94,6 +94,7 @@ function _testTableLayer(its, net)
   local gradOutputCl = gradOutput:clone():cl()
   local gradInputCl = netCl:backward(inputCl, gradOutputCl)
 
+  s1 = nn.StatefulTimer()
   s = nn.StatefulTimer()
   for it=1,its do
     netCl:forward(inputCl)
@@ -104,6 +105,8 @@ function _testTableLayer(its, net)
   print(net, 'forward time', s.times['f'] / its)
   print(net, 'backward time', s.times['b'] / its)
   print(net, 'total', (s.times['b'] + s.times['f']) / its)
+  s1:state(net:__tostring() .. ':all')
+  s1:dump()
 end
 
 function testCMulTable()
@@ -148,8 +151,8 @@ end
 cltorch.setTrace(1)
 --luaunit.LuaUnit.run()
 --test_LogSoftMax()
---testCMulTable()
-testNarrow()
+testCMulTable()
+--testNarrow()
 cltorch.setTrace(0)
 
 
