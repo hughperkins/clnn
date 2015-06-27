@@ -89,6 +89,10 @@ On an NVidia 940M, using [test/test-perf.lua](test/test-perf.lua):
 
 * Here is an OpenCL-enabled version of Karpathy's LSTM network: [https://github.com/hughperkins/char-rnn](https://github.com/hughperkins/char-rnn)
 * Simply add option `-opencl 1` to enable OpenCL :-)
+* It's a bit slow for now. Working on that :-)  Current comparison, using an NVidia 940M graphics card, and an Intel i5-5200U processor:
+  * cpu: 3.4s
+  * clnn: 1.5s
+  * cunn: 0.13s :-P
 
 ## Installation
 
