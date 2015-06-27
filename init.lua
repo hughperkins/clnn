@@ -21,10 +21,12 @@ end
 
 include 'Tanh.lua'
 include 'Sigmoid.lua'
-include 'FullyConnected.lua'
+--include 'FullyConnected.lua'
 include 'Threshold.lua'
 include 'LogSoftMax.lua'
 
 include 'MSECriterion.lua'
 include 'ClassNLLCriterion.lua'
+
+include 'StatefulTimer.lua'
 

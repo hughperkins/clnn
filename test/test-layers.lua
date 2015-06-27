@@ -100,12 +100,13 @@ function _testVectorLayer(net, in_size, out_size)
     out_size = net.weight:size(1)
   end
   print('net', net)
+  local netCl = net:clone():cl()
+
 --  local net = nn.Sigmoid()
   local input = torch.Tensor(N, in_size):uniform() - 0.5
   local output = net:forward(input)
 --  print('output\n', output)
 
-  local netCl = net:clone():cl()
   local inputCl = input:clone():cl()
   local outputCl = netCl:forward(inputCl)
 --  print('outputCl\n', outputCl)
@@ -155,10 +156,10 @@ function _test4dLayer(net, inPlanes, inSize, outPlanes, outSize, debug)
   end
   local input = torch.Tensor(batchSize, inPlanes, inSize, inSize):uniform() - 0.5
   local gradOutput = torch.Tensor(batchSize, outPlanes, outSize, outSize):uniform() - 0.5
+  local netCl = net:clone():cl()
 
   local output = net:forward(input)
 
-  local netCl = net:clone():cl()
   local inputCl = input:clone():cl()
   local outputCl = netCl:forward(inputCl)
 
@@ -190,14 +191,16 @@ function testTanhv2()
   _test4dLayer(nn.Tanh(), 32, 32, 32, 32)
 end
 
-function testFullyConnected()
-  _test4dLayer(nn.FullyConnected(10), 8, 8, 10, 1)
-end
+--function testFullyConnected()
+--  _test4dLayer(nn.FullyConnected(10), 8, 8, 10, 1)
+--end
 
 function _testTableLayer(net)
   collectgarbage()
   N = 5
   print('net', net)
+
+  local netCl = net:clone():cl()
 
   local num_tables = 2
   local in_size = 5
@@ -215,7 +218,6 @@ function _testTableLayer(net)
   local output = net:forward(input)
 --  print('output\n', output)
 
-  local netCl = net:clone():cl()
   local t1Cl = t1:clone():cl()
   local t2Cl = t2:clone():cl()
   local outputCl = netCl:forward(inputCl)
@@ -253,12 +255,11 @@ function _testNarrow(net)
 
   local input =torch.Tensor(N, in_size):uniform() * 2 - 1.0
   local inputCl = input:clone():cl()
-
+  local netCl = net:clone():cl()
 
   local output = net:forward(input)
   print('output\n', output)
 
-  local netCl = net:clone():cl()
   local outputCl = netCl:forward(inputCl)
 
   print('outputCl\n', outputCl)
@@ -282,4 +283,6 @@ end
 
 --luaunit.LuaUnit.run()
 os.exit( luaunit.LuaUnit.run() )
+--test_LogSoftMax()
+
 
