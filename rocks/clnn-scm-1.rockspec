@@ -6,7 +6,7 @@ source = {
 }
 
 description = {
-   summary = "OpenCL backend for Torch nn",
+   summary = "Torch OpenCL Neural Network Implementation",
    detailed = [[
    ]],
    homepage = "https://github.com/hughperkins/clnn",
@@ -15,6 +15,8 @@ description = {
 
 dependencies = {
    "torch >= 7.0",
+   "nn >= 1.0",
+   "cltorch >= 1.0"
 }
 
 build = {
