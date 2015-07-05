@@ -445,7 +445,7 @@ function clnntest.Sigmoid_backward()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-clnntest.Sigmoid_transposed = function()
+x_clnntest.Sigmoid_transposed = function()
       pointwise_transposed(nn.Sigmoid(), 'Sigmoid')
 end
 
