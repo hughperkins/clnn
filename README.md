@@ -127,6 +127,15 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 # Recent changes
 
+* 6th July:
+  * lots of new activations added: `Sqrt`, `Square`, `Exp`, `Abs`, `LogSigmoid`, `HardTanh`  (provided by Sergey Zagoruyko)
+  * SpatialMaxPooling:
+    * added implicit floor max pooling (provided by Sergey)
+    * added 3d forward (from Sergey)
+  * added tests from cunn (thank you Sergey)
+  * bug fixes:
+    * SpatialConvolutionMM updated to match current nn (Sergey)
+    * fixed bug in ReLU for in-place forward
 * 27th June:
   * mild perf improvement to LogSoftMax layer
   * removed FullyConnected for now
