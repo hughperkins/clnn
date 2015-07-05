@@ -29,5 +29,7 @@ include 'MSECriterion.lua'
 include 'ClassNLLCriterion.lua'
 
 include 'StatefulTimer.lua'
- include 'CMulTable.lua'
+include 'CMulTable.lua'
+
+include 'test.lua'
 

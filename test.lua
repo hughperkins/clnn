@@ -6,7 +6,12 @@ local times = {}
 
 --e.g.: th -lclnn -e "nn.testcl{'copies'}"
 
-function clnntest.copies()
+x_clnntest = {} -- assign to this to exclude from tests
+                -- I guess we can have an option to include
+                -- the _x assigned methods to the targets
+                -- just for one session
+
+function x_clnntest.copies()
    -- test vector
    local t = torch.ClTensor(100,10)
 
@@ -138,7 +143,7 @@ function clnntest.Tanh_backward()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-clnntest.Tanh_transposed = function()
+x_clnntest.Tanh_transposed = function()
       pointwise_transposed(nn.Tanh(), 'Tanh', 1.5e-7)
 end
 
@@ -701,7 +706,7 @@ function clnntest.Sqrt_zero()
                            0.000001, "Sqrt_zero CPU and GPU not equivalent")
 end
 
-clnntest.Sqrt_transposed = function()
+x_clnntest.Sqrt_transposed = function()
       pointwise_transposed(nn.Sqrt(), 'Sqrt')
 end
 
@@ -774,7 +779,7 @@ clnntest.Square_transposed = function()
       pointwise_transposed(nn.Square(), 'Square')
 end
 
-function clnntest.Max_forward()
+function x_clnntest.Max_forward()
    local size1 = math.random(1,1000)
    local size2 = math.random(2,100)
 
@@ -808,7 +813,7 @@ function clnntest.Max_forward()
    mytester:assertlt(error:abs():max(), 1e-8, 'error on indices ')
 end
 
-function clnntest.Max_backward()
+function x_clnntest.Max_backward()
    local size1 = math.random(1,1000)
    local size2 = math.random(2,100)
 
@@ -844,7 +849,7 @@ function clnntest.Max_backward()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-function clnntest.Min_forward()
+function x_clnntest.Min_forward()
    local size1 = math.random(1,1000)
    local size2 = math.random(2,100)
 
@@ -878,7 +883,7 @@ function clnntest.Min_forward()
    mytester:assertlt(error:abs():max(), 1e-8, 'error on indices ')
 end
 
-function clnntest.Min_backward()
+function x_clnntest.Min_backward()
    local size1 = math.random(1,1000)
    local size2 = math.random(2,100)
 
@@ -1254,7 +1259,7 @@ function clnntest.SpatialConvolutionMM_backward_batch()
    mytester:assertlt(berror:abs():max(), precision_backward, 'error on bias (backward) ')
 end
 
-function clnntest.SpatialSubSampling_forward()
+function x_clnntest.SpatialSubSampling_forward()
    local from = math.random(1,64)
    local to = from
    local ki = math.random(2,4)
@@ -1296,7 +1301,7 @@ function clnntest.SpatialSubSampling_forward()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function clnntest.SpatialSubSampling_forward_batch()
+function x_clnntest.SpatialSubSampling_forward_batch()
    local bs = math.random(4,10)
    local from = math.random(1,64)
    local to = from
@@ -1339,7 +1344,7 @@ function clnntest.SpatialSubSampling_forward_batch()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function clnntest.SpatialSubSampling_backward()
+function x_clnntest.SpatialSubSampling_backward()
    local from = math.random(1,64)
    local to = from
    local ki = math.random(2,4)
@@ -1398,7 +1403,7 @@ function clnntest.SpatialSubSampling_backward()
    mytester:assertlt(berror:abs():max(), precision_backward, 'error on bias (backward) ')
 end
 
-function clnntest.SpatialSubSampling_backward_batch()
+function x_clnntest.SpatialSubSampling_backward_batch()
    local bs = math.random(4,10)
    local from = math.random(1,64)
    local to = from
@@ -1541,7 +1546,7 @@ function clnntest.SpatialMaxPooling_forward_batch()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function clnntest.SpatialMaxPooling_backward()
+function x_clnntest.SpatialMaxPooling_backward()
    local from = math.random(1,64)
    local to = from
    local ki = math.random(2,4)
@@ -1641,7 +1646,7 @@ function clnntest.SpatialMaxPooling_backward_batch()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-function clnntest.SpatialMaxPooling_backward_batch_atomic()
+function x_clnntest.SpatialMaxPooling_backward_batch_atomic()
    local bs = math.random(4,10)
    local from = math.random(1,64)
    local to = from
@@ -1692,7 +1697,7 @@ function clnntest.SpatialMaxPooling_backward_batch_atomic()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-function clnntest.SpatialAveragePooling_forward()
+function x_clnntest.SpatialAveragePooling_forward()
    local from = math.random(1,64)
    local to = from
    local ki = math.random(2,4)
@@ -1732,7 +1737,7 @@ function clnntest.SpatialAveragePooling_forward()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function clnntest.SpatialAveragePooling_forward_batch()
+function x_clnntest.SpatialAveragePooling_forward_batch()
    local bs = math.random(4,10)
    local from = math.random(1,64)
    local to = from
@@ -1773,7 +1778,7 @@ function clnntest.SpatialAveragePooling_forward_batch()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function clnntest.SpatialAveragePooling_backward()
+function x_clnntest.SpatialAveragePooling_backward()
    local from = math.random(1,64)
    local to = from
    local ki = math.random(2,4)
@@ -1822,7 +1827,7 @@ function clnntest.SpatialAveragePooling_backward()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-function clnntest.SpatialAveragePooling_backward_batch()
+function x_clnntest.SpatialAveragePooling_backward_batch()
    local bs = math.random(4,10)
    local from = math.random(1,64)
    local to = from
@@ -1872,7 +1877,7 @@ function clnntest.SpatialAveragePooling_backward_batch()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-function clnntest.SpatialAdaptiveMaxPooling_forward()
+function x_clnntest.SpatialAdaptiveMaxPooling_forward()
    local from = math.random(1,64)
    local to = from
    local outi = math.random(2,64)
@@ -1910,7 +1915,7 @@ function clnntest.SpatialAdaptiveMaxPooling_forward()
    mytester:asserteq(error_ind:max(), 0, 'error on indices (forward) ')
 end
 
-function clnntest.SpatialAdaptiveMaxPooling_forward_batch()
+function x_clnntest.SpatialAdaptiveMaxPooling_forward_batch()
    local bs = math.random(4,10)
    local from = math.random(1,64)
    local to = from
@@ -1947,7 +1952,7 @@ function clnntest.SpatialAdaptiveMaxPooling_forward_batch()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function clnntest.SpatialAdaptiveMaxPooling_backward()
+function x_clnntest.SpatialAdaptiveMaxPooling_backward()
    local from = math.random(1,64)
    local to = from
    local outi = math.random(2,64)
@@ -1992,7 +1997,7 @@ function clnntest.SpatialAdaptiveMaxPooling_backward()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-function clnntest.SpatialAdaptiveMaxPooling_backward_batch()
+function x_clnntest.SpatialAdaptiveMaxPooling_backward_batch()
    local bs = math.random(4,10)
    local from = math.random(1,64)
    local to = from
@@ -2038,7 +2043,7 @@ function clnntest.SpatialAdaptiveMaxPooling_backward_batch()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-function clnntest.SpatialLPPooling_forward()
+function x_clnntest.SpatialLPPooling_forward()
    local from = math.random(1,64)
    local to = from
    local pnorm = 2
@@ -2079,7 +2084,7 @@ function clnntest.SpatialLPPooling_forward()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function clnntest.SpatialLPPooling_backward()
+function x_clnntest.SpatialLPPooling_backward()
    local from = math.random(1,64)
    local to = from
    local pnorm = 2
@@ -2129,7 +2134,7 @@ function clnntest.SpatialLPPooling_backward()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-function clnntest.mse()
+function x_clnntest.mse()
    for sizeAverage = 0, 1 do
       local size = math.random(3000,5000)
       local input = torch.randn(size,1,1)
@@ -2177,7 +2182,7 @@ function clnntest.mse()
    end
 end
 
-function clnntest.distkldiv()
+function x_clnntest.distkldiv()
    for sizeAverage = 0, 1 do
       local size = math.random(3000,5000)
       local input = torch.randn(size,1,1)
@@ -2208,7 +2213,7 @@ function clnntest.distkldiv()
    end
 end
 
-function clnntest.SoftMax_forward()
+function x_clnntest.SoftMax_forward()
    local size = math.random(1,100)
 
    local tm = {}
@@ -2238,7 +2243,7 @@ function clnntest.SoftMax_forward()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function clnntest.SoftMax_backward()
+function x_clnntest.SoftMax_backward()
    local size = math.random(1,100)
 
    local tm = {}
@@ -2273,7 +2278,7 @@ function clnntest.SoftMax_backward()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-function clnntest.LogSoftMax_forward()
+function x_clnntest.LogSoftMax_forward()
    local size = math.random(1,256)
 
    local tm = {}
@@ -2303,7 +2308,7 @@ function clnntest.LogSoftMax_forward()
    mytester:assertlt(error:abs():max(), precision_forward*10, 'error on state (forward) ')
 end
 
-function clnntest.LogSoftMax_backward()
+function x_clnntest.LogSoftMax_backward()
    local size = math.random(1,256)
 
    local tm = {}
@@ -2405,7 +2410,7 @@ function clnntest.LogSoftMax_backward_batch()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-function clnntest.TemporalConvolution_forward()
+function x_clnntest.TemporalConvolution_forward()
    local from = math.random(1,64) -- inputFrameSize
    local to = math.random(1,64) -- outputFrameSize
    local ki = math.random(3,15) -- kernelWidth (kW)
@@ -2443,7 +2448,7 @@ function clnntest.TemporalConvolution_forward()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function clnntest.TemporalConvolution_forward_batch()
+function x_clnntest.TemporalConvolution_forward_batch()
    local bs = math.random(4,16)
    local from = math.random(1,64)
    local to = math.random(1,64)
@@ -2482,7 +2487,7 @@ function clnntest.TemporalConvolution_forward_batch()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function clnntest.TemporalConvolution_backward()
+function x_clnntest.TemporalConvolution_backward()
   local from = math.random(1,64)
    local to = math.random(1,64)
    local ki = math.random(3,15)
@@ -2538,7 +2543,7 @@ function clnntest.TemporalConvolution_backward()
    mytester:assertlt(berror:abs():max(), precision_backward, 'error on bias (backward) ')
 end
 
-function clnntest.TemporalConvolution_backward_batch()
+function x_clnntest.TemporalConvolution_backward_batch()
    local bs = math.random(4,16)
    local from = math.random(1,64)
    local to = math.random(1,64)
@@ -2644,7 +2649,7 @@ function clnntest.Dropout_forward()
 end
 ]]--
 
-function clnntest.SoftPlus_forward()
+function x_clnntest.SoftPlus_forward()
    local size = math.random(1,100)
 
    local tm = {}
@@ -2674,7 +2679,7 @@ function clnntest.SoftPlus_forward()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function clnntest.SoftPlus_backward()
+function x_clnntest.SoftPlus_backward()
    local size = math.random(1,100)
 
    local tm = {}
@@ -2709,7 +2714,7 @@ function clnntest.SoftPlus_backward()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-function clnntest.SpatialUpSamplingNearest_forward()
+function x_clnntest.SpatialUpSamplingNearest_forward()
    local f = torch.random(3, 15)
    local h = torch.random(3, 15)
    local w = torch.random(3, 15)
@@ -2743,7 +2748,7 @@ function clnntest.SpatialUpSamplingNearest_forward()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function clnntest.SpatialUpSamplingNearest_forward_batch()
+function x_clnntest.SpatialUpSamplingNearest_forward_batch()
    local nbatch = torch.random(3, 15)
    local f = torch.random(3, 15)
    local h = torch.random(3, 15)
@@ -2779,7 +2784,7 @@ function clnntest.SpatialUpSamplingNearest_forward_batch()
 
 end
 
-function clnntest.SpatialUpSamplingNearest_backward()
+function x_clnntest.SpatialUpSamplingNearest_backward()
    local f = torch.random(3, 15)
    local h = torch.random(3, 15)
    local w = torch.random(3, 15)
@@ -2822,7 +2827,7 @@ function clnntest.SpatialUpSamplingNearest_backward()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-function clnntest.SpatialUpSamplingNearest_backward_batch()
+function x_clnntest.SpatialUpSamplingNearest_backward_batch()
    local nbatch = torch.random(3, 15)
    local f = torch.random(3, 15)
    local h = torch.random(3, 15)
@@ -2866,7 +2871,7 @@ function clnntest.SpatialUpSamplingNearest_backward_batch()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-function clnntest.l1cost()
+function x_clnntest.l1cost()
    local size = math.random(300,500)
    local input = torch.randn(size)
    local mod = nn.L1Cost()
@@ -2894,7 +2899,7 @@ function clnntest.l1cost()
 end
 
 
-function clnntest.ClassNLLCriterionSingleTarget()
+function x_clnntest.ClassNLLCriterionSingleTarget()
    local size = math.random(3000,5000)
    local input = torch.randn(size)
    local target = 1
@@ -2955,7 +2960,7 @@ function clnntest.ClassNLLCriterionMultipleTarget()
    mytester:assertlt(gerr:abs():max(), precision_forward, 'error  on gradInput')
 end
 
-function clnntest.TemporalMaxPooling()
+function x_clnntest.TemporalMaxPooling()
    local input = torch.rand(16, 18, 3)
    local settings = {{2, 2}, {3, 3}, {4, 2}, {2, 4}, {3, 5}}
 
@@ -2989,7 +2994,7 @@ function clnntest.TemporalMaxPooling()
    end
 end
 
-function clnntest.VolumetricConvolution_forward_single()
+function x_clnntest.VolumetricConvolution_forward_single()
    local from = math.random(1,32)
    local to = math.random(1,8) * 8
    local ki = math.random(3,15)
@@ -3035,7 +3040,7 @@ function clnntest.VolumetricConvolution_forward_single()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function clnntest.VolumetricConvolution_forward_batch()
+function x_clnntest.VolumetricConvolution_forward_batch()
    local bs = math.random(1,4) * 4
    local from = math.random(1,8)
    local to = math.random(1,4) * 4
@@ -3082,7 +3087,7 @@ function clnntest.VolumetricConvolution_forward_batch()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function clnntest.VolumetricConvolution_backward_single()
+function x_clnntest.VolumetricConvolution_backward_single()
    local from = math.random(1,4)
    local to = math.random(1,3) * 8
    local ki = math.random(3,8)
@@ -3144,7 +3149,7 @@ function clnntest.VolumetricConvolution_backward_single()
    mytester:assertlt(berror:abs():max(), precision_backward, 'error on bias (backward) ')
 end
 
-function clnntest.VolumetricConvolution_backward_batch()
+function x_clnntest.VolumetricConvolution_backward_batch()
    local bs = math.random(1,4) * 4
    local from = math.random(1,4)
    local to = math.random(1,3) * 8
@@ -3240,7 +3245,7 @@ function clnntest.CMul_forward_batch()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) batch ')
 end
 
-function clnntest.CMul_backward_batch()
+function x_clnntest.CMul_backward_batch()
    local bs = math.random(8,32)
    local nini = math.random(1,100)
    local ninj = math.random(1,100)
@@ -3287,7 +3292,7 @@ function clnntest.CMul_backward_batch()
    mytester:assertlt(werror:abs():max(), precision_backward, 'error on weight (backward) ')
 end
 
-function clnntest.PReLU_forward()
+function x_clnntest.PReLU_forward()
     local nOutputPlane = 8
     local w = math.random(1,100)
     local h = math.random(1,100)
@@ -3319,7 +3324,7 @@ function clnntest.PReLU_forward()
     mytester:assertlt(error:abs():max(), precision_forward, 'error on state')
 end
 
-function clnntest.PReLU_backward()
+function x_clnntest.PReLU_backward()
     local nOutputPlane = 8
     local w = math.random(1,10)
     local h = math.random(1,10)
