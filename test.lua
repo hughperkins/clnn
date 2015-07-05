@@ -2343,7 +2343,7 @@ function x_clnntest.LogSoftMax_backward()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-function clnntest.LogSoftMax_forward_batch()
+function x_clnntest.LogSoftMax_forward_batch()
    local size = math.random(1,256)
    local bs = math.random(32,256)
 
