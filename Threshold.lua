@@ -5,7 +5,7 @@ function torch.ClTensor.nn.Threshold_updateOutput(self, input)
 --  print('torch.nn.ReLU
 --  self.output:map(input, "*out = *in1 > 0.0f ? *in1 : 0.0f")
   if self.inplace then
-    self.input:apply("*out = (*out > " .. self.threshold .. ") ? *out : " .. self.val)
+    input:apply("*out = (*out > " .. self.threshold .. ") ? *out : " .. self.val)
     self.output = input
   else
     self.output:resize(input:size())

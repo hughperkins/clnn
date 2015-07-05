@@ -36,3 +36,6 @@
 # dont think we need it in git :-)
 /share
 
+# temp files
+*~
+
