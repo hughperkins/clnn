@@ -128,10 +128,8 @@ static int clnn_SpatialConvolutionMM_updateOutput(lua_State *L) {
   int kH = luaT_getfieldcheckint(L, 1, "kH");
   int nInputPlane = luaT_getfieldcheckint(L, 1, "nInputPlane");
   int nOutputPlane = luaT_getfieldcheckint(L, 1, "nOutputPlane");
-//  int padW = luaT_getfieldcheckint(L, 1, "padW");
-//  int padH = luaT_getfieldcheckint(L, 1, "padH");
-  int padW = luaT_getfieldcheckint(L, 1, "padding");
-  int padH = luaT_getfieldcheckint(L, 1, "padding");
+  int padW = luaT_getfieldcheckint(L, 1, "padW");
+  int padH = luaT_getfieldcheckint(L, 1, "padH");
 
 //  cout << "dW=" << dW << " dH=" << dH << " kW=" << kW << " kH=" << kH 
 //    << " nInputPlane=" << nInputPlane << " nOutputPlane=" << nOutputPlane
@@ -268,10 +266,8 @@ static int clnn_SpatialConvolutionMM_updateGradInput(lua_State *L) {
   int kH = luaT_getfieldcheckint(L, 1, "kH");
   int nInputPlane = luaT_getfieldcheckint(L, 1, "nInputPlane");
   int nOutputPlane = luaT_getfieldcheckint(L, 1, "nOutputPlane");
-//  int padW = luaT_getfieldcheckint(L, 1, "padW");
-//  int padH = luaT_getfieldcheckint(L, 1, "padH");
-  int padW = luaT_getfieldcheckint(L, 1, "padding");
-  int padH = luaT_getfieldcheckint(L, 1, "padding");
+  int padW = luaT_getfieldcheckint(L, 1, "padW");
+  int padH = luaT_getfieldcheckint(L, 1, "padH");
 
   THClTensor *weight = (THClTensor *)luaT_getfieldcheckudata(L, 1, "weight", "torch.ClTensor");
   THClTensor *gradColumns = (THClTensor*)luaT_getfieldcheckudata(L, 1, "finput", "torch.ClTensor");
@@ -372,10 +368,8 @@ static int clnn_SpatialConvolutionMM_accGradParameters(lua_State *L) {
   int kH = luaT_getfieldcheckint(L, 1, "kH");
   int nInputPlane = luaT_getfieldcheckint(L, 1, "nInputPlane");
   int nOutputPlane = luaT_getfieldcheckint(L, 1, "nOutputPlane");
-//  int padW = luaT_getfieldcheckint(L, 1, "padW");
-//  int padH = luaT_getfieldcheckint(L, 1, "padH");
-  int padW = luaT_getfieldcheckint(L, 1, "padding");
-  int padH = luaT_getfieldcheckint(L, 1, "padding");
+  int padW = luaT_getfieldcheckint(L, 1, "padW");
+  int padH = luaT_getfieldcheckint(L, 1, "padH");
   float scale = luaL_optnumber(L, 4, 1);
 
   THClTensor *gradWeight = (THClTensor *)luaT_getfieldcheckudata(L, 1, "gradWeight", "torch.ClTensor");
