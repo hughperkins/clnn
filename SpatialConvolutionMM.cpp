@@ -492,7 +492,7 @@ static const struct luaL_Reg clnn_SpatialConvolutionMM__ [] = {
 
 void clnn_SpatialConvolutionMM_init(lua_State *L)
 {
-  cout << "registering spatialconvolutionmm" << endl;
+//  cout << "registering spatialconvolutionmm" << endl;
   luaT_pushmetatable(L, "torch.ClTensor");
   luaT_registeratname(L, clnn_SpatialConvolutionMM__, "nn");
   lua_pop(L,1);
