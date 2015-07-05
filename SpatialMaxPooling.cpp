@@ -37,8 +37,8 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
     long nInputCols = input->size[2];
     long nInputRows = input->size[1];
     long nInputPlane = input->size[0];
-    long nOutputCols = (nInputCols - kW) / dW + 1;
-    long nOutputRows = (nInputRows - kH) / dH + 1;
+    long nOutputCols = floor(float(nInputCols - kW) / float(dW) + 1);
+    long nOutputRows = floor(float(nInputRows - kH) / float(dH) + 1);
 
     luaL_argcheck(L, nInputCols >= kW && nInputRows >= kH, 2, "input image smaller than kernel size");
 
@@ -62,14 +62,34 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
 //      input_data, output_data,
 //      indices_data+nInputPlane*nOutputCols*nOutputRows, indices_data,
 //      nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
-    THError("not implemented");
+    //THError("not implemented");
+    TemplatedKernel kernelBuilder(THClState_getCl(state));
+
+    std::string uniqueName = __FILE__ "maxpool";
+    CLKernel *kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
+      SpatialMaxPooling_getKernelTemplate(), "maxpool");
+
+    THClKernels k(state, kernel);
+    k.in(input);
+    k.out(output);
+    k.out(indices);
+    k.in((int)(nInputPlane*nOutputCols*nOutputRows));
+    k.in((int)0);
+    k.in((int)nInputPlane);
+    k.in((int)nInputRows);
+    k.in((int)nInputCols);
+    k.in((int)kH);
+    k.in((int)kW);
+    k.in((int)dH);
+    k.in((int)dW);
+    k.run(blocks, threads);
   } else {
     long nInputCols = input->size[3];
     long nInputRows = input->size[2];
     long nInputPlane = input->size[1];
     long nbatch = input->size[0];
-    long nOutputCols = (nInputCols - kW) / dW + 1;
-    long nOutputRows = (nInputRows - kH) / dH + 1;
+    long nOutputCols = floor(float(nInputCols - kW) / float(dW) + 1);
+    long nOutputRows = floor(float(nInputRows - kH) / float(dH) + 1);
 
     luaL_argcheck(L, nInputCols >= kW && nInputRows >= kH, 2, "input image smaller than kernel size");
 

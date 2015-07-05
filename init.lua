@@ -20,7 +20,7 @@ function nn.Criterion:cl()
 end
 
 include 'Tanh.lua'
-include 'Sigmoid.lua'
+include 'Pointwise.lua'
 include 'Threshold.lua'
 include 'LogSoftMax.lua'
 include 'Narrow.lua'
