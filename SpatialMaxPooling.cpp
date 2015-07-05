@@ -37,8 +37,8 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
     long nInputCols = input->size[2];
     long nInputRows = input->size[1];
     long nInputPlane = input->size[0];
-    long nOutputCols = (nInputCols - kW) / dW + 1;
-    long nOutputRows = (nInputRows - kH) / dH + 1;
+    long nOutputCols = floor(float(nInputCols - kW) / float(dW) + 1);
+    long nOutputRows = floor(float(nInputRows - kH) / float(dH) + 1);
 
     luaL_argcheck(L, nInputCols >= kW && nInputRows >= kH, 2, "input image smaller than kernel size");
 
@@ -68,8 +68,8 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
     long nInputRows = input->size[2];
     long nInputPlane = input->size[1];
     long nbatch = input->size[0];
-    long nOutputCols = (nInputCols - kW) / dW + 1;
-    long nOutputRows = (nInputRows - kH) / dH + 1;
+    long nOutputCols = floor(float(nInputCols - kW) / float(dW) + 1);
+    long nOutputRows = floor(float(nInputRows - kH) / float(dH) + 1);
 
     luaL_argcheck(L, nInputCols >= kW && nInputRows >= kH, 2, "input image smaller than kernel size");
 

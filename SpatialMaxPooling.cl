@@ -22,8 +22,8 @@ kernel void maxpool(const global float *input_data, int input_offset,
   int xx, yy;
 
   // output size
-  const int output_w = (input_w - kW) / dW + 1;
-  const int output_h = (input_h - kH) / dH + 1;
+  const int output_w = floor((float)(input_w - kW) / dW + 1);
+  const int output_h = floor((float)(input_h - kH) / dH + 1);
 
   // compute offsets based on thread/block ID
   int o = get_group_id(0);
@@ -95,8 +95,8 @@ kernel void maxgradinput(global float *gradInput_data, int gradInput_offset,
   int xx, yy;
 
   // output size
-  int output_w = (input_w - kW) / dW + 1;
-  int output_h = (input_h - kH) / dH + 1;
+  const int output_w = floor((float)(input_w - kW) / dW + 1);
+  const int output_h = floor((float)(input_h - kH) / dH + 1);
 
   // compute offsets based on thread/block ID
   int o = get_group_id(0);
