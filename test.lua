@@ -51,30 +51,30 @@ local function pointwise_transposed(proto_module, name, max_error)
    if name == 'Sqrt' then
       input:uniform(0.1, 1)
    end
-   local inputCUDA = input:clone():cl()
+   local inputCl = input:clone():cl()
 
    local cl_module = proto_module:clone():cl()
 
    -- transpose the inputs and DON'T make contiguous
    input = input:transpose(1, 2)
-   inputCUDA = inputCUDA:transpose(1, 2)
+   inputCl = inputCl:transpose(1, 2)
 
    local output = proto_module:forward(input)
-   local outputCUDA = cl_module:forward(inputCUDA)
+   local outputCl = cl_module:forward(inputCl)
 
-   local error = outputCUDA:float() - output
+   local error = outputCl:float() - output
    mytester:assertlt(error:abs():max(), max_error, 'error on state (forward) ')
 
    local gradOutput = torch.Tensor(11, 19):uniform(-1, 1)
-   local gradOutputCUDA = gradOutput:clone():cl()
+   local gradOutputCl = gradOutput:clone():cl()
 
    gradOutput = gradOutput:transpose(1, 2)
-   gradOutputCUDA = gradOutputCUDA:transpose(1, 2)
+   gradOutputCl = gradOutputCl:transpose(1, 2)
 
    local gradInput = proto_module:backward(input, gradOutput)
-   local gradInputCUDA  = cl_module:backward(inputCUDA, gradOutputCUDA)
+   local gradInputCl  = cl_module:backward(inputCl, gradOutputCl)
 
-   local error = gradInputCUDA:float() - gradInput
+   local error = gradInputCl:float() - gradInput
    mytester:assertlt(error:abs():max(), max_error,  'error on state (backward) ')
 end
 
