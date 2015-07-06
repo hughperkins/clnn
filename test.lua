@@ -1062,6 +1062,18 @@ function clnntest.CMul_forward_batch()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) batch ')
 end
 
+clnntest.Tanh_transposed = function()
+      pointwise_transposed(nn.Tanh(), 'Tanh', 1.5e-7)
+end
+
+clnntest.Sigmoid_transposed = function()
+      pointwise_transposed(nn.Sigmoid(), 'Sigmoid', 1.5e-07)
+end
+
+clnntest.Sqrt_transposed = function()
+      pointwise_transposed(nn.Sqrt(), 'Sqrt', 1.5e-07)
+end
+
 -- ======= Failing tests go in this section ====================================
 
 function x_clnntest.copies()
@@ -1092,10 +1104,6 @@ function x_clnntest.copies()
    tc = tc:transpose(1,2)
    local t2 = tc:float()
    mytester:asserteq(t:transpose(1,2):add(-1,t2):abs():max(), 0, 'host copy, plus transpoe')
-end
-
-x_clnntest.Tanh_transposed = function()
-      pointwise_transposed(nn.Tanh(), 'Tanh', 1.5e-7)
 end
 
 --[[
@@ -1261,14 +1269,6 @@ function clnntest.WeightedEuclidean_backward_batch()
    mytester:assertlt(derror:abs():max(), precision_backward, 'error on diagCov (backward) ')
 end
 ]]--
-
-x_clnntest.Sigmoid_transposed = function()
-      pointwise_transposed(nn.Sigmoid(), 'Sigmoid')
-end
-
-x_clnntest.Sqrt_transposed = function()
-      pointwise_transposed(nn.Sqrt(), 'Sqrt')
-end
 
 function x_clnntest.Max_forward()
    local size1 = math.random(1,1000)
