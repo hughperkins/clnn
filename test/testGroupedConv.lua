@@ -12,8 +12,8 @@ local padi = 2
 local padj = 2
 local outi = 28
 local outj = 28
-local ini = (outi-1)*si+ki
-local inj = (outj-1)*sj+kj
+local ini = (outi-padi*2-1)*si+ki
+local inj = (outj-padj*2-1)*sj+kj
 
 local groups = 4
 
@@ -39,6 +39,9 @@ local rescl = gconv:forward(input)
 --a:reset()
 --for i = 1,nloop do
   rescl = gconv:forward(input)
+
+print('rescl', rescl)
+
 --end
 --cltorch.synchronize()
 --tm.gpu = a:time().real
