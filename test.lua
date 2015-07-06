@@ -3420,4 +3420,10 @@ function clnn.tests.printExcluded()
     print('  ' .. k)
   end
 end
+function clnn.tests.printIncluded()
+  print('Included tests:')
+  for k,v in pairs(clnntest) do
+    print('  ' .. k)
+  end
+end
 
