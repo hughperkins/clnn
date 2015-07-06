@@ -6,7 +6,7 @@ local times = {}
 
 --e.g.: th -lclnn -e "nn.testcl{'copies'}"
 
-x_clnntest = {} -- assign to this to exclude from tests
+local x_clnntest = {} -- assign to this to exclude from tests
                 -- I guess we can have an option to include
                 -- the _x assigned methods to the targets
                 -- just for one session
@@ -3405,3 +3405,19 @@ function nn.testcl(tests, print_timing, n_loop, seed)
        print ' ------------------------------------------------------------------------------------------------'
    end
 end
+
+print('clnn', clnn)
+--if clnn == nil then
+--  clnn = {}
+--end
+
+clnn.test = nn.testcl
+
+clnn.tests = {}
+function clnn.tests.printExcluded()
+  print('Excluded tests:')
+  for k,v in pairs(x_clnntest) do
+    print('  ' .. k)
+  end
+end
+
