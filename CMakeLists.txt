@@ -20,7 +20,7 @@ message("Torch_INSTALL_LIB ${Torch_INSTALL_LIB}")
 
 #add_library( clnn SHARED init.cpp )
 
-set(src init.cpp MSECriterion.cpp utils.c SpatialConvolutionMM.cpp SpatialMaxPooling.cpp )
+set(src init.cpp utils.c SpatialConvolutionMM.cpp SpatialMaxPooling.cpp )
 set(luasrc init.lua MSECriterion.lua Tanh.lua Pointwise.lua Threshold.lua
   LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua
   Narrow.lua CMulTable.lua test.lua)
