@@ -40,7 +40,10 @@ local rescl = gconv:forward(input)
 --for i = 1,nloop do
   rescl = gconv:forward(input)
 
-print('rescl', rescl)
+--print('rescl', rescl)
+
+local gradInput = gconv:updateGradInput(input, rescl)
+print('gradInput', gradInput)
 
 --end
 --cltorch.synchronize()

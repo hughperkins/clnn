@@ -31,6 +31,7 @@ function nn.SpatialConvolutionMM:__init(nInputPlane, nOutputPlane, kW, kH, dW, d
     self.convs[group] = self.new(self.groupInputPlane, self.groupOutputPlane, kW, kH, dW, dH, padW, padH)
   end
 --  print('created spatialconvolutionmm, groups=', groups)
+  return self
 end
 
 function nn.SpatialConvolutionMM:updateOutput(input)
@@ -77,8 +78,16 @@ function nn.SpatialConvolutionMM:updateGradInput(input, target)
     return self:baseUpdateGradInput(input, target)
   end
   self.gradInput:resizeAs(input)
-  self.gradInput:zero()
 
+  for group=1,self.groups do
+    inputslice = input:narrow(2, self.groupInputPlane * (group-1) + 1, self.groupInputPlane)
+--    print('types', torch.type(input), torch.type(self.convs[group]), torch.type(self.convs[group].weight))
+--    print('child nInputPlane', self.convs[group].nInputPlane)
+--    print('inputslice size', inputslice:size())
+    targetslice = target:narrow(2, self.groupOutputPlane * (group-1) + 1, self.groupOutputPlane)
+    self.convs[group].gradInput = self.gradInput:narrow(2, self.groupInputPlane * (group-1) + 1, self.groupInputPlane)
+    self.convs[group]:updateGradInput(inputslice, targetslice)
+  end
 
   return self.gradInput
 end
