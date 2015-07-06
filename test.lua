@@ -13,35 +13,7 @@ local x_clnntest = {} -- assign to this to exclude from tests
                 -- the _x assigned methods to the targets
                 -- just for one session
 
-function x_clnntest.copies()
-   -- test vector
-   local t = torch.ClTensor(100,10)
-
-   -- simple copy
-   t:normal()
-   local t2 = t:clone()
-   mytester:asserteq( t:add(-1,t2):abs():max(), 0, 'simple copy')
-
-   -- transpose copy
-   t:normal()
-   local t3 = t:transpose(1,2)
-   local t4 = t3:clone()
-   mytester:asserteq( t3:add(-1,t4):abs():max(), 0, 'transpose copy')
-
-   -- unfold copy
-   t:normal()
-   local t5 = t:unfold(2,5,1)
-   local t6 = t5:clone()
-   mytester:asserteq( t5:add(-1,t6):abs():max(), 0, 'transpose copy')
-
-   -- host copy
-   t = torch.FloatTensor(100,10)
-   t:normal()
-   local tc = t:cl()
-   tc = tc:transpose(1,2)
-   local t2 = tc:float()
-   mytester:asserteq(t:transpose(1,2):add(-1,t2):abs():max(), 0, 'host copy, plus transpoe')
-end
+-- ======= Working tests go in this section ====================================
 
 local function pointwise_transposed(proto_module, name, max_error)
    max_error = max_error or 1e-7
@@ -145,10 +117,6 @@ function clnntest.Tanh_backward()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-x_clnntest.Tanh_transposed = function()
-      pointwise_transposed(nn.Tanh(), 'Tanh', 1.5e-7)
-end
-
 function clnntest.Abs_forward()
    local size = math.random(1,100)
 
@@ -218,170 +186,6 @@ clnntest.Abs_transposed = function()
       pointwise_transposed(nn.Abs(), 'Abs')
 end
 
---[[
-function clnntest.Euclidean_forward_batch()
-   local bs = math.random(8,32)
-   local nin = math.random(1,100)
-   local nout = math.random(1,100)
-
-   local tm = {}
-   local title = string.format('Euclidean forward %d %d -> %d %d', bs, nin, bs, nout)
-   times[title] = tm
-
-   local input = torch.randn(bs, nin)
-   local sconv = nn.Euclidean(nin, nout)
-   local groundtruth = sconv:forward(input)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundtruth = sconv:forward(input)
-   end
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   local gconv = sconv:clone():cl()
-   local rescl = gconv:forward(input)
-   a:reset()
-   for i = 1,nloop do
-      rescl = gconv:forward(input)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local error = rescl:float() - groundtruth
-   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) batch ')
-end
-
-function clnntest.Euclidean_backward_batch()
-   local bs = math.random(8,32)
-   local nin = math.random(1,100)
-   local nout = math.random(1,100)
-
-   local tm = {}
-   local title = string.format('Euclidean backward %d %d <- %d %d', bs, nin, bs, nout)
-   times[title] = tm
-
-   local input = torch.randn(bs, nin)
-   local gradOutput = torch.randn(bs, nout)
-   local sconv = nn.Euclidean(nin, nout)
-   sconv:forward(input)
-   sconv:zeroGradParameters()
-   local groundgrad = sconv:backward(input, gradOutput)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      sconv:zeroGradParameters()
-      groundgrad = sconv:backward(input, gradOutput)
-   end
-   local groundweight = sconv.gradWeight
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   gradOutput = gradOutput:cl()
-   local gconv = sconv:clone():cl()
-   gconv:forward(input)
-   gconv:zeroGradParameters()
-   local rescl = gconv:backward(input, gradOutput)
-   a:reset()
-   for i = 1,nloop do
-      gconv:zeroGradParameters()
-      rescl = gconv:backward(input, gradOutput)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local weightcl = gconv.gradWeight
-
-   local error = rescl:float() - groundgrad
-   local werror = weightcl:float() - groundweight
-
-   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
-   mytester:assertlt(werror:abs():max(), precision_backward, 'error on weight (backward) ')
-end
-]]--
-
---[[
-function clnntest.WeightedEuclidean_forward_batch()
-   local bs = math.random(8,32)
-   local nin = math.random(1,100)
-   local nout = math.random(1,100)
-
-   local tm = {}
-   local title = string.format('WeightedEuclidean forward %d %d -> %d %d', bs, nin, bs, nout)
-   times[title] = tm
-
-   local input = torch.randn(bs, nin)
-   local sconv = nn.WeightedEuclidean(nin, nout)
-   local groundtruth = sconv:forward(input)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundtruth = sconv:forward(input)
-   end
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   local gconv = sconv:clone():cl()
-   local rescl = gconv:forward(input)
-   a:reset()
-   for i = 1,nloop do
-      rescl = gconv:forward(input)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local error = rescl:float() - groundtruth
-   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) batch ')
-end
-
-function clnntest.WeightedEuclidean_backward_batch()
-   local bs = math.random(8,32)
-   local nin = math.random(1,100)
-   local nout = math.random(1,100)
-
-   local tm = {}
-   local title = string.format('WeightedEuclidean backward %d %d <- %d %d', bs, nin, bs, nout)
-   times[title] = tm
-
-   local input = torch.randn(bs, nin)
-   local gradOutput = torch.randn(bs, nout)
-   local sconv = nn.WeightedEuclidean(nin, nout)
-   sconv:forward(input)
-   sconv:zeroGradParameters()
-   local groundgrad = sconv:backward(input, gradOutput)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      sconv:zeroGradParameters()
-      groundgrad = sconv:backward(input, gradOutput)
-   end
-   local groundweight = sconv.gradWeight
-   local grounddiagCov = sconv.gradDiagCov
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   gradOutput = gradOutput:cl()
-   local gconv = sconv:clone():cl()
-   gconv:forward(input)
-   gconv:zeroGradParameters()
-   local rescl = gconv:backward(input, gradOutput)
-   a:reset()
-   for i = 1,nloop do
-      gconv:zeroGradParameters()
-      rescl = gconv:backward(input, gradOutput)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local weightcl = gconv.gradWeight
-   local diagCovcl = gconv.gradDiagCov
-
-   local error = rescl:float() - groundgrad
-   local werror = weightcl:float() - groundweight
-   local derror = diagCovcl:float() - grounddiagCov
-
-   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
-   mytester:assertlt(werror:abs():max(), precision_backward, 'error on weight (backward) ')
-   mytester:assertlt(derror:abs():max(), precision_backward, 'error on diagCov (backward) ')
-end
-]]--
-
 function clnntest.Sigmoid_forward()
    local size = math.random(1,100)
 
@@ -445,10 +249,6 @@ function clnntest.Sigmoid_backward()
    local error = rescl:float() - groundgrad
 
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
-end
-
-x_clnntest.Sigmoid_transposed = function()
-      pointwise_transposed(nn.Sigmoid(), 'Sigmoid')
 end
 
 function clnntest.LogSigmoid_forward()
@@ -708,10 +508,6 @@ function clnntest.Sqrt_zero()
                            0.000001, "Sqrt_zero CPU and GPU not equivalent")
 end
 
-x_clnntest.Sqrt_transposed = function()
-      pointwise_transposed(nn.Sqrt(), 'Sqrt')
-end
-
 function clnntest.Square_forward()
    local size = math.random(1,100)
 
@@ -781,146 +577,6 @@ clnntest.Square_transposed = function()
       pointwise_transposed(nn.Square(), 'Square')
 end
 
-function x_clnntest.Max_forward()
-   local size1 = math.random(1,1000)
-   local size2 = math.random(2,100)
-
-   local tm = {}
-   local title = string.format('Max forward %dx%d', size1, size2)
-   times[title] = tm
-
-   local input = torch.randn(size1,size2)
-   local sconv = nn.Max(2)
-   local groundtruth = sconv:forward(input)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundtruth = sconv:forward(input)
-   end
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   local gconv = nn.Max(2):cl()
-   local rescl = gconv:forward(input)
-   a:reset()
-   for i = 1,nloop do
-      rescl = gconv:forward(input)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local error = rescl:float() - groundtruth
-   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
-
-   local error = gconv.indices:float() - sconv.indices
-   mytester:assertlt(error:abs():max(), 1e-8, 'error on indices ')
-end
-
-function x_clnntest.Max_backward()
-   local size1 = math.random(1,1000)
-   local size2 = math.random(2,100)
-
-   local tm = {}
-   local title = string.format('Max.backward %dx%d', size1, size2)
-   times[title] = tm
-
-   local input = torch.randn(size1,size2)
-   local gradOutput = torch.randn(size1)
-   local sconv = nn.Max(2)
-   sconv:forward(input)
-   local groundgrad = sconv:backward(input, gradOutput)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundgrad = sconv:backward(input, gradOutput)
-   end
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   gradOutput = gradOutput:cl()
-   local gconv = sconv:clone():cl()
-   gconv:forward(input)
-   local rescl = gconv:backward(input, gradOutput)
-   a:reset()
-   for i = 1,nloop do
-      rescl = gconv:backward(input, gradOutput)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local error = rescl:float() - groundgrad
-
-   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
-end
-
-function x_clnntest.Min_forward()
-   local size1 = math.random(1,1000)
-   local size2 = math.random(2,100)
-
-   local tm = {}
-   local title = string.format('Min forward %dx%d', size1, size2)
-   times[title] = tm
-
-   local input = torch.randn(size1,size2)
-   local sconv = nn.Min(2)
-   local groundtruth = sconv:forward(input)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundtruth = sconv:forward(input)
-   end
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   local gconv = nn.Min(2):cl()
-   local rescl = gconv:forward(input)
-   a:reset()
-   for i = 1,nloop do
-      rescl = gconv:forward(input)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local error = rescl:float() - groundtruth
-   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
-
-   local error = gconv.indices:float() - sconv.indices
-   mytester:assertlt(error:abs():max(), 1e-8, 'error on indices ')
-end
-
-function x_clnntest.Min_backward()
-   local size1 = math.random(1,1000)
-   local size2 = math.random(2,100)
-
-   local tm = {}
-   local title = string.format('Min.backward %dx%d', size1, size2)
-   times[title] = tm
-
-   local input = torch.randn(size1,size2)
-   local gradOutput = torch.randn(size1)
-   local sconv = nn.Min(2)
-   sconv:forward(input)
-   local groundgrad = sconv:backward(input, gradOutput)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundgrad = sconv:backward(input, gradOutput)
-   end
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   gradOutput = gradOutput:cl()
-   local gconv = sconv:clone():cl()
-   gconv:forward(input)
-   local rescl = gconv:backward(input, gradOutput)
-   a:reset()
-   for i = 1,nloop do
-      rescl = gconv:backward(input, gradOutput)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local error = rescl:float() - groundgrad
-
-   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
-end
-
 function clnntest.Sum_forward()
    local size1 = math.random(1,1000)
    local size2 = math.random(2,100)
@@ -987,75 +643,6 @@ function clnntest.Sum_backward()
 
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
-
---[[
-function clnntest.Mean_forward()
-   local size1 = math.random(1,1000)
-   local size2 = math.random(2,100)
-
-   local tm = {}
-   local title = string.format('Mean forward %dx%d', size1, size2)
-   times[title] = tm
-
-   local input = torch.randn(size1,size2)
-   local sconv = nn.Mean(2)
-   local groundtruth = sconv:forward(input)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundtruth = sconv:forward(input)
-   end
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   local gconv = nn.Mean(2):cl()
-   local rescl = gconv:forward(input)
-   a:reset()
-   for i = 1,nloop do
-      rescl = gconv:forward(input)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local error = rescl:float() - groundtruth
-   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
-end
-
-function clnntest.Mean_backward()
-   local size1 = math.random(1,1000)
-   local size2 = math.random(2,100)
-
-   local tm = {}
-   local title = string.format('Mean.backward %dx%d', size1, size2)
-   times[title] = tm
-
-   local input = torch.randn(size1,size2)
-   local gradOutput = torch.randn(size1)
-   local sconv = nn.Mean(2)
-   sconv:forward(input)
-   local groundgrad = sconv:backward(input, gradOutput)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundgrad = sconv:backward(input, gradOutput)
-   end
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   gradOutput = gradOutput:cl()
-   local gconv = sconv:clone():cl()
-   gconv:forward(input)
-   local rescl = gconv:backward(input, gradOutput)
-   a:reset()
-   for i = 1,nloop do
-      rescl = gconv:backward(input, gradOutput)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local error = rescl:float() - groundgrad
-
-   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
-end
-]]--
 
 function clnntest.SpatialConvolutionMM_forward_single()
    local from = math.random(1,32)
@@ -1261,6 +848,606 @@ function clnntest.SpatialConvolutionMM_backward_batch()
    mytester:assertlt(berror:abs():max(), precision_backward, 'error on bias (backward) ')
 end
 
+function clnntest.LogSoftMax_backward_batch()
+   local size = math.random(1,256)
+   local bs = math.random(32,256)
+
+   local tm = {}
+   local title = string.format('LogSoftMax.backward batch %d x %d -> %d x %d', bs, size, bs, size)
+   times[title] = tm
+
+   local input = torch.randn(bs, size)
+   local gradOutput = torch.randn(bs, size)
+   local sconv = nn.LogSoftMax()
+   sconv:forward(input)
+   local groundgrad = sconv:backward(input, gradOutput)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundgrad = sconv:backward(input, gradOutput)
+   end
+   tm.cpu = a:time().real
+
+   input = input:cl()
+   gradOutput = gradOutput:cl()
+   local gconv = sconv:clone():cl()
+   gconv:forward(input)
+   local rescl = gconv:backward(input, gradOutput)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:backward(input, gradOutput)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+
+   local error = rescl:float() - groundgrad
+
+   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
+end
+
+function clnntest.SpatialMaxPooling_forward()
+   local from = math.random(1,64)
+   local to = from
+   local ki = math.random(2,4)
+   local kj = math.random(2,4)
+   local si = math.random(1,4)
+   local sj = math.random(1,4)
+   local outi = math.random(32,256)
+   local outj = math.random(32,256)
+   local ini = (outi-1)*si+ki
+   local inj = (outj-1)*sj+kj
+
+   local tm = {}
+   local title = string.format('SpatialMaxPooling.forward %dx%dx%d o %dx%d -> %dx%dx%d',
+                               from, inj, ini, kj, ki, to, outj, outi)
+   times[title] = tm
+
+   local input = torch.randn(from,inj,ini)
+   local sconv = nn.SpatialMaxPooling(ki,kj,si,sj)
+   local groundtruth = sconv:forward(input)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundtruth = sconv:forward(input)
+   end
+   tm.cpu = a:time().real
+
+   input = input:cl()
+   local gconv = nn.SpatialMaxPooling(ki,kj,si,sj):cl()
+   local rescl = gconv:forward(input)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:forward(input)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+
+   local error = rescl:float() - groundtruth
+   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
+   local error_ind = gconv.indices:float() - sconv.indices
+   mytester:asserteq(error_ind:max(), 0, 'error on indices (forward) ')
+end
+
+function clnntest.SpatialMaxPooling_forward_batch()
+   local bs = math.random(4,10)
+   local from = math.random(1,64)
+   local to = from
+   local ki = math.random(2,4)
+   local kj = math.random(2,4)
+   local si = math.random(2,4)
+   local sj = math.random(2,4)
+   local outi = math.random(32,256)
+   local outj = math.random(32,256)
+   local ini = (outi-1)*si+ki
+   local inj = (outj-1)*sj+kj
+
+   local tm = {}
+   local title = string.format('SpatialMaxPooling.forward %dx%dx%dx%d o %dx%d -> %dx%dx%dx%d',
+                               bs, from, inj, ini, kj, ki, bs, to, outj, outi)
+   times[title] = tm
+
+   local input = torch.randn(bs,from,inj,ini)
+   local sconv = nn.SpatialMaxPooling(ki,kj,si,sj)
+   local groundtruth = sconv:forward(input)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundtruth = sconv:forward(input)
+   end
+   tm.cpu = a:time().real
+
+   input = input:cl()
+   local gconv = nn.SpatialMaxPooling(ki,kj,si,sj):cl()
+   local rescl = gconv:forward(input)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:forward(input)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+
+   local error = rescl:float() - groundtruth
+   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
+end
+
+function clnntest.ClassNLLCriterionMultipleTarget()
+   local size = math.random(3000,5000)
+   local input = torch.randn(size, size)
+   local target = torch.randperm(size)
+   local mod = nn.ClassNLLCriterion()
+
+   local tm = {}
+   local title = string.format('ClassNLLCriterionMultiTarget %d ',size)
+   times[title] = tm
+
+   local a = torch.Timer()
+   local fout = mod:forward(input, target)
+   local fgin = mod:backward(input, target):clone()
+   tm.cpu = a:time().real
+
+   local cinput = input:cl()
+   local ctarget = target:cl()
+   local cmod = nn.ClassNLLCriterion():cl()
+   a:reset()
+   local cout = cmod:forward(cinput,ctarget)
+   local cgin = cmod:backward(cinput,ctarget)
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+
+   mytester:assertlt(
+       math.abs(fout-cout), precision_forward, 'error on output')
+
+   local gerr = cgin:float() - fgin
+   mytester:assertlt(gerr:abs():max(), precision_forward, 'error  on gradInput')
+end
+
+function clnntest.CMul_forward_batch()
+   local bs = math.random(8,32)
+   local nini = math.random(1,100)
+   local ninj = math.random(1,100)
+   local nink = math.random(1,100)
+
+   local tm = {}
+   local title = string.format('CMul forward %d %d %d %d', bs, nini, ninj, nink)
+   times[title] = tm
+
+   local input = torch.randn(bs, nini, ninj, nink)
+   local sconv = nn.CMul(nini, ninj, nink)
+   local groundtruth = sconv:forward(input)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundtruth = sconv:forward(input)
+   end
+   tm.cpu = a:time().real
+
+   input = input:cl()
+   local gconv = sconv:clone():cl()
+   local rescl = gconv:forward(input)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:forward(input)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+
+   local error = rescl:float() - groundtruth
+   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) batch ')
+end
+
+-- ======= Failing tests go in this section ====================================
+
+function x_clnntest.copies()
+   -- test vector
+   local t = torch.ClTensor(100,10)
+
+   -- simple copy
+   t:normal()
+   local t2 = t:clone()
+   mytester:asserteq( t:add(-1,t2):abs():max(), 0, 'simple copy')
+
+   -- transpose copy
+   t:normal()
+   local t3 = t:transpose(1,2)
+   local t4 = t3:clone()
+   mytester:asserteq( t3:add(-1,t4):abs():max(), 0, 'transpose copy')
+
+   -- unfold copy
+   t:normal()
+   local t5 = t:unfold(2,5,1)
+   local t6 = t5:clone()
+   mytester:asserteq( t5:add(-1,t6):abs():max(), 0, 'transpose copy')
+
+   -- host copy
+   t = torch.FloatTensor(100,10)
+   t:normal()
+   local tc = t:cl()
+   tc = tc:transpose(1,2)
+   local t2 = tc:float()
+   mytester:asserteq(t:transpose(1,2):add(-1,t2):abs():max(), 0, 'host copy, plus transpoe')
+end
+
+x_clnntest.Tanh_transposed = function()
+      pointwise_transposed(nn.Tanh(), 'Tanh', 1.5e-7)
+end
+
+--[[
+function clnntest.Euclidean_forward_batch()
+   local bs = math.random(8,32)
+   local nin = math.random(1,100)
+   local nout = math.random(1,100)
+
+   local tm = {}
+   local title = string.format('Euclidean forward %d %d -> %d %d', bs, nin, bs, nout)
+   times[title] = tm
+
+   local input = torch.randn(bs, nin)
+   local sconv = nn.Euclidean(nin, nout)
+   local groundtruth = sconv:forward(input)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundtruth = sconv:forward(input)
+   end
+   tm.cpu = a:time().real
+
+   input = input:cl()
+   local gconv = sconv:clone():cl()
+   local rescl = gconv:forward(input)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:forward(input)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+
+   local error = rescl:float() - groundtruth
+   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) batch ')
+end
+
+function clnntest.Euclidean_backward_batch()
+   local bs = math.random(8,32)
+   local nin = math.random(1,100)
+   local nout = math.random(1,100)
+
+   local tm = {}
+   local title = string.format('Euclidean backward %d %d <- %d %d', bs, nin, bs, nout)
+   times[title] = tm
+
+   local input = torch.randn(bs, nin)
+   local gradOutput = torch.randn(bs, nout)
+   local sconv = nn.Euclidean(nin, nout)
+   sconv:forward(input)
+   sconv:zeroGradParameters()
+   local groundgrad = sconv:backward(input, gradOutput)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      sconv:zeroGradParameters()
+      groundgrad = sconv:backward(input, gradOutput)
+   end
+   local groundweight = sconv.gradWeight
+   tm.cpu = a:time().real
+
+   input = input:cl()
+   gradOutput = gradOutput:cl()
+   local gconv = sconv:clone():cl()
+   gconv:forward(input)
+   gconv:zeroGradParameters()
+   local rescl = gconv:backward(input, gradOutput)
+   a:reset()
+   for i = 1,nloop do
+      gconv:zeroGradParameters()
+      rescl = gconv:backward(input, gradOutput)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+
+   local weightcl = gconv.gradWeight
+
+   local error = rescl:float() - groundgrad
+   local werror = weightcl:float() - groundweight
+
+   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
+   mytester:assertlt(werror:abs():max(), precision_backward, 'error on weight (backward) ')
+end
+]]--
+
+--[[
+function clnntest.WeightedEuclidean_forward_batch()
+   local bs = math.random(8,32)
+   local nin = math.random(1,100)
+   local nout = math.random(1,100)
+
+   local tm = {}
+   local title = string.format('WeightedEuclidean forward %d %d -> %d %d', bs, nin, bs, nout)
+   times[title] = tm
+
+   local input = torch.randn(bs, nin)
+   local sconv = nn.WeightedEuclidean(nin, nout)
+   local groundtruth = sconv:forward(input)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundtruth = sconv:forward(input)
+   end
+   tm.cpu = a:time().real
+
+   input = input:cl()
+   local gconv = sconv:clone():cl()
+   local rescl = gconv:forward(input)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:forward(input)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+
+   local error = rescl:float() - groundtruth
+   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) batch ')
+end
+
+function clnntest.WeightedEuclidean_backward_batch()
+   local bs = math.random(8,32)
+   local nin = math.random(1,100)
+   local nout = math.random(1,100)
+
+   local tm = {}
+   local title = string.format('WeightedEuclidean backward %d %d <- %d %d', bs, nin, bs, nout)
+   times[title] = tm
+
+   local input = torch.randn(bs, nin)
+   local gradOutput = torch.randn(bs, nout)
+   local sconv = nn.WeightedEuclidean(nin, nout)
+   sconv:forward(input)
+   sconv:zeroGradParameters()
+   local groundgrad = sconv:backward(input, gradOutput)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      sconv:zeroGradParameters()
+      groundgrad = sconv:backward(input, gradOutput)
+   end
+   local groundweight = sconv.gradWeight
+   local grounddiagCov = sconv.gradDiagCov
+   tm.cpu = a:time().real
+
+   input = input:cl()
+   gradOutput = gradOutput:cl()
+   local gconv = sconv:clone():cl()
+   gconv:forward(input)
+   gconv:zeroGradParameters()
+   local rescl = gconv:backward(input, gradOutput)
+   a:reset()
+   for i = 1,nloop do
+      gconv:zeroGradParameters()
+      rescl = gconv:backward(input, gradOutput)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+
+   local weightcl = gconv.gradWeight
+   local diagCovcl = gconv.gradDiagCov
+
+   local error = rescl:float() - groundgrad
+   local werror = weightcl:float() - groundweight
+   local derror = diagCovcl:float() - grounddiagCov
+
+   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
+   mytester:assertlt(werror:abs():max(), precision_backward, 'error on weight (backward) ')
+   mytester:assertlt(derror:abs():max(), precision_backward, 'error on diagCov (backward) ')
+end
+]]--
+
+x_clnntest.Sigmoid_transposed = function()
+      pointwise_transposed(nn.Sigmoid(), 'Sigmoid')
+end
+
+x_clnntest.Sqrt_transposed = function()
+      pointwise_transposed(nn.Sqrt(), 'Sqrt')
+end
+
+function x_clnntest.Max_forward()
+   local size1 = math.random(1,1000)
+   local size2 = math.random(2,100)
+
+   local tm = {}
+   local title = string.format('Max forward %dx%d', size1, size2)
+   times[title] = tm
+
+   local input = torch.randn(size1,size2)
+   local sconv = nn.Max(2)
+   local groundtruth = sconv:forward(input)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundtruth = sconv:forward(input)
+   end
+   tm.cpu = a:time().real
+
+   input = input:cl()
+   local gconv = nn.Max(2):cl()
+   local rescl = gconv:forward(input)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:forward(input)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+
+   local error = rescl:float() - groundtruth
+   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
+
+   local error = gconv.indices:float() - sconv.indices
+   mytester:assertlt(error:abs():max(), 1e-8, 'error on indices ')
+end
+
+function x_clnntest.Max_backward()
+   local size1 = math.random(1,1000)
+   local size2 = math.random(2,100)
+
+   local tm = {}
+   local title = string.format('Max.backward %dx%d', size1, size2)
+   times[title] = tm
+
+   local input = torch.randn(size1,size2)
+   local gradOutput = torch.randn(size1)
+   local sconv = nn.Max(2)
+   sconv:forward(input)
+   local groundgrad = sconv:backward(input, gradOutput)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundgrad = sconv:backward(input, gradOutput)
+   end
+   tm.cpu = a:time().real
+
+   input = input:cl()
+   gradOutput = gradOutput:cl()
+   local gconv = sconv:clone():cl()
+   gconv:forward(input)
+   local rescl = gconv:backward(input, gradOutput)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:backward(input, gradOutput)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+
+   local error = rescl:float() - groundgrad
+
+   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
+end
+
+function x_clnntest.Min_forward()
+   local size1 = math.random(1,1000)
+   local size2 = math.random(2,100)
+
+   local tm = {}
+   local title = string.format('Min forward %dx%d', size1, size2)
+   times[title] = tm
+
+   local input = torch.randn(size1,size2)
+   local sconv = nn.Min(2)
+   local groundtruth = sconv:forward(input)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundtruth = sconv:forward(input)
+   end
+   tm.cpu = a:time().real
+
+   input = input:cl()
+   local gconv = nn.Min(2):cl()
+   local rescl = gconv:forward(input)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:forward(input)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+
+   local error = rescl:float() - groundtruth
+   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
+
+   local error = gconv.indices:float() - sconv.indices
+   mytester:assertlt(error:abs():max(), 1e-8, 'error on indices ')
+end
+
+function x_clnntest.Min_backward()
+   local size1 = math.random(1,1000)
+   local size2 = math.random(2,100)
+
+   local tm = {}
+   local title = string.format('Min.backward %dx%d', size1, size2)
+   times[title] = tm
+
+   local input = torch.randn(size1,size2)
+   local gradOutput = torch.randn(size1)
+   local sconv = nn.Min(2)
+   sconv:forward(input)
+   local groundgrad = sconv:backward(input, gradOutput)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundgrad = sconv:backward(input, gradOutput)
+   end
+   tm.cpu = a:time().real
+
+   input = input:cl()
+   gradOutput = gradOutput:cl()
+   local gconv = sconv:clone():cl()
+   gconv:forward(input)
+   local rescl = gconv:backward(input, gradOutput)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:backward(input, gradOutput)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+
+   local error = rescl:float() - groundgrad
+
+   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
+end
+
+--[[
+function clnntest.Mean_forward()
+   local size1 = math.random(1,1000)
+   local size2 = math.random(2,100)
+
+   local tm = {}
+   local title = string.format('Mean forward %dx%d', size1, size2)
+   times[title] = tm
+
+   local input = torch.randn(size1,size2)
+   local sconv = nn.Mean(2)
+   local groundtruth = sconv:forward(input)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundtruth = sconv:forward(input)
+   end
+   tm.cpu = a:time().real
+
+   input = input:cl()
+   local gconv = nn.Mean(2):cl()
+   local rescl = gconv:forward(input)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:forward(input)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+
+   local error = rescl:float() - groundtruth
+   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
+end
+
+function clnntest.Mean_backward()
+   local size1 = math.random(1,1000)
+   local size2 = math.random(2,100)
+
+   local tm = {}
+   local title = string.format('Mean.backward %dx%d', size1, size2)
+   times[title] = tm
+
+   local input = torch.randn(size1,size2)
+   local gradOutput = torch.randn(size1)
+   local sconv = nn.Mean(2)
+   sconv:forward(input)
+   local groundgrad = sconv:backward(input, gradOutput)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundgrad = sconv:backward(input, gradOutput)
+   end
+   tm.cpu = a:time().real
+
+   input = input:cl()
+   gradOutput = gradOutput:cl()
+   local gconv = sconv:clone():cl()
+   gconv:forward(input)
+   local rescl = gconv:backward(input, gradOutput)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:backward(input, gradOutput)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+
+   local error = rescl:float() - groundgrad
+
+   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
+end
+]]--
+
 function x_clnntest.SpatialSubSampling_forward()
    local from = math.random(1,64)
    local to = from
@@ -1463,89 +1650,6 @@ function x_clnntest.SpatialSubSampling_backward_batch()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
    mytester:assertlt(werror:abs():max(), precision_backward, 'error on weight (backward) ')
    mytester:assertlt(berror:abs():max(), precision_backward, 'error on bias (backward) ')
-end
-
-function clnntest.SpatialMaxPooling_forward()
-   local from = math.random(1,64)
-   local to = from
-   local ki = math.random(2,4)
-   local kj = math.random(2,4)
-   local si = math.random(1,4)
-   local sj = math.random(1,4)
-   local outi = math.random(32,256)
-   local outj = math.random(32,256)
-   local ini = (outi-1)*si+ki
-   local inj = (outj-1)*sj+kj
-
-   local tm = {}
-   local title = string.format('SpatialMaxPooling.forward %dx%dx%d o %dx%d -> %dx%dx%d',
-                               from, inj, ini, kj, ki, to, outj, outi)
-   times[title] = tm
-
-   local input = torch.randn(from,inj,ini)
-   local sconv = nn.SpatialMaxPooling(ki,kj,si,sj)
-   local groundtruth = sconv:forward(input)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundtruth = sconv:forward(input)
-   end
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   local gconv = nn.SpatialMaxPooling(ki,kj,si,sj):cl()
-   local rescl = gconv:forward(input)
-   a:reset()
-   for i = 1,nloop do
-      rescl = gconv:forward(input)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local error = rescl:float() - groundtruth
-   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
-   local error_ind = gconv.indices:float() - sconv.indices
-   mytester:asserteq(error_ind:max(), 0, 'error on indices (forward) ')
-end
-
-function clnntest.SpatialMaxPooling_forward_batch()
-   local bs = math.random(4,10)
-   local from = math.random(1,64)
-   local to = from
-   local ki = math.random(2,4)
-   local kj = math.random(2,4)
-   local si = math.random(2,4)
-   local sj = math.random(2,4)
-   local outi = math.random(32,256)
-   local outj = math.random(32,256)
-   local ini = (outi-1)*si+ki
-   local inj = (outj-1)*sj+kj
-
-   local tm = {}
-   local title = string.format('SpatialMaxPooling.forward %dx%dx%dx%d o %dx%d -> %dx%dx%dx%d',
-                               bs, from, inj, ini, kj, ki, bs, to, outj, outi)
-   times[title] = tm
-
-   local input = torch.randn(bs,from,inj,ini)
-   local sconv = nn.SpatialMaxPooling(ki,kj,si,sj)
-   local groundtruth = sconv:forward(input)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundtruth = sconv:forward(input)
-   end
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   local gconv = nn.SpatialMaxPooling(ki,kj,si,sj):cl()
-   local rescl = gconv:forward(input)
-   a:reset()
-   for i = 1,nloop do
-      rescl = gconv:forward(input)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local error = rescl:float() - groundtruth
-   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
 function x_clnntest.SpatialMaxPooling_backward()
@@ -2376,42 +2480,6 @@ function x_clnntest.LogSoftMax_forward_batch()
    mytester:assertlt(error:abs():max(), precision_forward*10, 'error on state (forward) ')
 end
 
-function clnntest.LogSoftMax_backward_batch()
-   local size = math.random(1,256)
-   local bs = math.random(32,256)
-
-   local tm = {}
-   local title = string.format('LogSoftMax.backward batch %d x %d -> %d x %d', bs, size, bs, size)
-   times[title] = tm
-
-   local input = torch.randn(bs, size)
-   local gradOutput = torch.randn(bs, size)
-   local sconv = nn.LogSoftMax()
-   sconv:forward(input)
-   local groundgrad = sconv:backward(input, gradOutput)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundgrad = sconv:backward(input, gradOutput)
-   end
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   gradOutput = gradOutput:cl()
-   local gconv = sconv:clone():cl()
-   gconv:forward(input)
-   local rescl = gconv:backward(input, gradOutput)
-   a:reset()
-   for i = 1,nloop do
-      rescl = gconv:backward(input, gradOutput)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local error = rescl:float() - groundgrad
-
-   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
-end
-
 function x_clnntest.TemporalConvolution_forward()
    local from = math.random(1,64) -- inputFrameSize
    local to = math.random(1,64) -- outputFrameSize
@@ -2931,37 +2999,6 @@ function x_clnntest.ClassNLLCriterionSingleTarget()
    mytester:assertlt(gerr:abs():max(), precision_forward, 'error  on gradInput')
 end
 
-function clnntest.ClassNLLCriterionMultipleTarget()
-   local size = math.random(3000,5000)
-   local input = torch.randn(size, size)
-   local target = torch.randperm(size)
-   local mod = nn.ClassNLLCriterion()
-
-   local tm = {}
-   local title = string.format('ClassNLLCriterionMultiTarget %d ',size)
-   times[title] = tm
-
-   local a = torch.Timer()
-   local fout = mod:forward(input, target)
-   local fgin = mod:backward(input, target):clone()
-   tm.cpu = a:time().real
-
-   local cinput = input:cl()
-   local ctarget = target:cl()
-   local cmod = nn.ClassNLLCriterion():cl()
-   a:reset()
-   local cout = cmod:forward(cinput,ctarget)
-   local cgin = cmod:backward(cinput,ctarget)
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   mytester:assertlt(
-       math.abs(fout-cout), precision_forward, 'error on output')
-
-   local gerr = cgin:float() - fgin
-   mytester:assertlt(gerr:abs():max(), precision_forward, 'error  on gradInput')
-end
-
 function x_clnntest.TemporalMaxPooling()
    local input = torch.rand(16, 18, 3)
    local settings = {{2, 2}, {3, 3}, {4, 2}, {2, 4}, {3, 5}}
@@ -3212,39 +3249,6 @@ function x_clnntest.VolumetricConvolution_backward_batch()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
    mytester:assertlt(werror:abs():max(), precision_backward, 'error on weight (backward) ')
    mytester:assertlt(berror:abs():max(), precision_backward, 'error on bias (backward) ')
-end
-
-function clnntest.CMul_forward_batch()
-   local bs = math.random(8,32)
-   local nini = math.random(1,100)
-   local ninj = math.random(1,100)
-   local nink = math.random(1,100)
-
-   local tm = {}
-   local title = string.format('CMul forward %d %d %d %d', bs, nini, ninj, nink)
-   times[title] = tm
-
-   local input = torch.randn(bs, nini, ninj, nink)
-   local sconv = nn.CMul(nini, ninj, nink)
-   local groundtruth = sconv:forward(input)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundtruth = sconv:forward(input)
-   end
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   local gconv = sconv:clone():cl()
-   local rescl = gconv:forward(input)
-   a:reset()
-   for i = 1,nloop do
-      rescl = gconv:forward(input)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local error = rescl:float() - groundtruth
-   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) batch ')
 end
 
 function x_clnntest.CMul_backward_batch()
