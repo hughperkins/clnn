@@ -28,6 +28,12 @@ These mostly 'just work', since based on underlying tensor methods, already impl
 * nn.Tanh
 * nn.Sigmoid
 * nn.ReLU
+* nn.Exp
+* nn.Sqrt
+* nn.Square
+* nn.Abs
+* nn.LogSigmoid
+* nn.HardTanh
 * nn.LogSoftMax (mini-batches only, ie expects to receive a 2d ClTensor)
 
 ### Table layers
