@@ -31,5 +31,7 @@ include 'ClassNLLCriterion.lua'
 include 'StatefulTimer.lua'
 include 'CMulTable.lua'
 
+include 'SpatialConvolutionMM.lua'
+
 include 'test.lua'
 
