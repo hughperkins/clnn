@@ -5,6 +5,8 @@ local nloop = 1
 local times = {}
 
 --e.g.: th -lclnn -e "nn.testcl{'copies'}"
+--      th -lclnn -e 'clnn.tests.printExcluded()'
+--      th -lclnn -e 'clnn.tests.printIncluded()'
 
 local x_clnntest = {} -- assign to this to exclude from tests
                 -- I guess we can have an option to include
