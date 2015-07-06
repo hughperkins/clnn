@@ -3365,7 +3365,8 @@ function x_clnntest.PReLU_backward()
 end
 
 local function setUp()
-   cltorch.setDevice(1)
+--   cltorch.setDevice(1)
+  initSeed(123456, false)
 end
 
 for k,v in pairs(clnntest) do
@@ -3375,10 +3376,15 @@ for k,v in pairs(clnntest) do
    end
 end
 
-function initSeed(seed)
+function initSeed(seed, echo)
+  if echo == nil then
+    echo = true
+  end
    seed = seed or os.time()
    -- ensure that you can reproduce a failing test
-   print('seed: ', seed)
+   if echo then
+     print('seed: ', seed)
+   end
    math.randomseed(seed)
    torch.manualSeed(seed)
    --cltorch.manualSeedAll(seed)
@@ -3388,7 +3394,7 @@ function nn.testcl(tests, print_timing, n_loop, seed)
    nloop = n_loop or nloop
    local oldtype = torch.getdefaulttensortype()
    torch.setdefaulttensortype('torch.FloatTensor')
-   initSeed(seed)
+   -- initSeed(seed)
    mytester = torch.Tester()
    mytester:add(clnntest)
    mytester:run(tests)
@@ -3405,11 +3411,6 @@ function nn.testcl(tests, print_timing, n_loop, seed)
        print ' ------------------------------------------------------------------------------------------------'
    end
 end
-
-print('clnn', clnn)
---if clnn == nil then
---  clnn = {}
---end
 
 clnn.test = nn.testcl
 
