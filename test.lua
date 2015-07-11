@@ -1026,7 +1026,7 @@ function clnntest.ClassNLLCriterionMultipleTarget()
        math.abs(fout-cout), precision_forward, 'error on output')
 
    local gerr = cgin:float() - fgin
-   mytester:assertlt(gerr:abs():max(), precision_forward, 'error  on gradInput')
+   mytester:assertlt(gerr:abs():max(), precision_forward * 3, 'error  on gradInput')
 end
 
 function clnntest.CMul_forward_batch()
