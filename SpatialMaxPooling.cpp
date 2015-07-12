@@ -5,7 +5,6 @@
 #include "THClTensor.h"
 #include "THClTensorMath.h"
 #include "THClBlas.h"
-#include "EasyCL.h"
 #include "THClKernels.h"
 #include "templates/TemplatedKernel.h"
 
@@ -64,16 +63,11 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
 //      indices_data+nInputPlane*nOutputCols*nOutputRows, indices_data,
 //      nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
     //THError("not implemented");
-    EasyCL *cl = input->storage->cl;
+    TemplatedKernel kernelBuilder(THClState_getCl(state));
+
     std::string uniqueName = __FILE__ "maxpool";
-    CLKernel *kernel = 0;
-    if(cl->kernelExists(uniqueName)) {
-      kernel = cl->getKernel(uniqueName);
-    } else {
-      TemplatedKernel kernelBuilder(cl);
-      kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-        SpatialMaxPooling_getKernelTemplate(), "maxpool");
-    }
+    CLKernel *kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
+      SpatialMaxPooling_getKernelTemplate(), "maxpool");
 
     THClKernels k(state, kernel);
     k.in(input);
@@ -116,16 +110,11 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
 
     // run maxpool kernel
 
-    EasyCL *cl = input->storage->cl;
+    TemplatedKernel kernelBuilder(THClState_getCl(state));
+
     std::string uniqueName = __FILE__ "maxpool";
-    CLKernel *kernel = 0;
-    if(cl->kernelExists(uniqueName)) {
-      kernel = cl->getKernel(uniqueName);
-    } else {
-      TemplatedKernel kernelBuilder(cl);
-      kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-        SpatialMaxPooling_getKernelTemplate(), "maxpool");
-    }
+    CLKernel *kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
+      SpatialMaxPooling_getKernelTemplate(), "maxpool");
 
     THClKernels k(state, kernel);
     k.in(input);
@@ -252,16 +241,11 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
     {
       // run updateGradInput kernel, accumulate gradients atomically
 
-      EasyCL *cl = input->storage->cl;
+      TemplatedKernel kernelBuilder(THClState_getCl(state));
+
       std::string uniqueName = __FILE__ "maxgradinput";
-      CLKernel *kernel = 0;
-      if(cl->kernelExists(uniqueName)) {
-        kernel = cl->getKernel(uniqueName);
-      } else {
-        TemplatedKernel kernelBuilder(cl);
-        kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-          SpatialMaxPooling_getKernelTemplate(), "maxgradinput");
-      }
+      CLKernel *kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
+        SpatialMaxPooling_getKernelTemplate(), "maxgradinput");
 
       THClKernels k(state, kernel);
       k.out(gradInput);
