@@ -8,6 +8,7 @@
 #include "THClKernels.h"
 #include "templates/TemplatedKernel.h"
 #include "DeviceInfo.h"
+#include "EasyCL.h"
 
 #include <iostream>
 #include <string>
@@ -41,11 +42,16 @@ void im2col(THClState *state, THClTensor* im, const int channels,
   int width_col = (width + 2 * pad_w - ksize_w) / stride_w + 1;
   int num_kernels = channels * height_col * width_col;
 
-  TemplatedKernel kernelBuilder(THClState_getCl(state));
-
   std::string uniqueName = "SpatialConvolutionMM::im2col";
-  CLKernel *kernel = kernelBuilder.buildKernel(uniqueName, "SpatialConvolutionMM.cl",
-    SpatialConvolutionMM_getKernelTemplate(), "im2col_kernel");
+  EasyCL *cl = im->storage->cl;
+  CLKernel *kernel = 0;
+  if(cl->kernelExists(uniqueName)) {
+    kernel = cl->getKernel(uniqueName);
+  } else {
+    TemplatedKernel kernelBuilder(cl);
+    kernel = kernelBuilder.buildKernel(uniqueName, "SpatialConvolutionMM.cl",
+      SpatialConvolutionMM_getKernelTemplate(), "im2col_kernel");
+  }
 
   THClKernels k(state, kernel);
   k.in(num_kernels);
@@ -81,11 +87,16 @@ void col2im(THClState *state, THClTensor* col, const int channels,
   // To avoid involving atomic operations, we will launch one kernel per
   // bottom dimension, and then in the kernel add up the top dimensions.
 
-  TemplatedKernel kernelBuilder(THClState_getCl(state));
-
+  EasyCL *cl = im->storage->cl;
   std::string uniqueName = "SpatialConvolutionMM::col2im";
-  CLKernel *kernel = kernelBuilder.buildKernel(uniqueName, "SpatialConvolutionMM.cl",
-    SpatialConvolutionMM_getKernelTemplate(), "col2im_kernel");
+  CLKernel *kernel = 0;
+  if(cl->kernelExists(uniqueName)) {
+    kernel = cl->getKernel(uniqueName);
+  } else {
+    TemplatedKernel kernelBuilder(cl);
+    kernel = kernelBuilder.buildKernel(uniqueName, "SpatialConvolutionMM.cl",
+      SpatialConvolutionMM_getKernelTemplate(), "col2im_kernel");
+  }
 
   THClKernels k(state, kernel);
   k.in(num_kernels);
