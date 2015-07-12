@@ -59,9 +59,9 @@ Trainers 'just work', since they just call standard methods on the network to be
 * nn.StochasticGradient
 * optim
 
-# Timings
+## Timings
 
-## Mnist
+### Mnist
 
 Using the network in [test/test-mnist2.lua](test/test-mnist2.lua), and `MODEL=conv1`, following timings using an NVidia 940M, per epoch:
 * `API=cuda`: 3.2 seconds
@@ -71,7 +71,7 @@ Note that this network is a bit unfair on clnn, since these are really tiny laye
 
 (hmmm, interestingly, on this tiny network, [DeepCL](https://github.com/hughperkins/DeepCL) is actually faster than both.  2.3 seconds per epoch, using `./train numtrain=5120 numtest=-1 netdef=32c5-tanh-mp3-64c5-tanh-mp2-200n-tanh-10n`.)
 
-## Soumith benchmark layers
+### Soumith benchmark layers
 
 On an NVidia 940M, using [test/test-perf.lua](test/test-perf.lua):
 
@@ -108,6 +108,8 @@ On an NVidia 940M, using [test/test-perf.lua](test/test-perf.lua):
   * [torch](https://github.com/torch/torch7)
   * [nn](https://github.com/torch/nn)
   * [cltorch](https://github.com/hughperkins/cltorch)
+* have updated, right now, cltorch, to latest version, eg `luarocks install cltorch`
+  * any weird build issues on clnn, or seg faults etc, please verify cltorch is latest version before raising issue
 * have an OpenCL-enabled GPU device available, and appropriate OpenCL-enabled drivers installed
 
 ### Procedure
@@ -120,18 +122,23 @@ luarocks make rocks/clnn-scm-1.rockspec
 
 You should now be able to use `require 'clnn'` from your lua scripts :-)
 
-# Unit-tests
+## Updating
+
+* Please update to latest version of cltorch before updating to latest version of clnn
+* If you update cltorch, please afterwards also update clnn
+
+## Unit-tests
 
 * For all layers except SpatialConvolutionMM, please see:
   * [test/test-layers.lua](test/test-layers.lua)
 * For SpatialConvolutionMM, please see:
   * [test/test-spatialconvolution.lua](test/test-spatialconvolution.lua) (Needs `cunn` available, to do numerical comparison)
 
-# Porting guidelines
+## Porting guidelines
 
 Porting guidelines, for project maintainers, available here: [porting-guidelines.md](doc/porting-guidelines.md).
 
-# Recent changes
+## Recent changes
 
 * 6th July:
   * lots of new activations added: `Sqrt`, `Square`, `Exp`, `Abs`, `LogSigmoid`, `HardTanh`  (provided by Sergey Zagoruyko)
