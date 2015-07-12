@@ -194,8 +194,8 @@ static int clnn_SpatialConvolutionMM_updateOutput(lua_State *L) {
   }
 
   // Helpers
-  THClTensor *input_n = THClTensor_new(state);
-  THClTensor *output_n = THClTensor_new(state);
+  THClTensor *input_n = THClTensor_newv2(state, input->storage->device);
+  THClTensor *output_n = THClTensor_newv2(state, input->storage->device);
 
   // For each elt in batch, do:
   for (int elt = 0; elt < batchSize; elt ++) {
@@ -311,9 +311,9 @@ static int clnn_SpatialConvolutionMM_updateGradInput(lua_State *L) {
   THClTensor_resize2d(state, gradColumns, nInputPlane*kW*kH, outputHeight*outputWidth);
 
   // Helpers
-  THClTensor *input_n = THClTensor_new(state);
-  THClTensor *gradInput_n = THClTensor_new(state);
-  THClTensor *gradOutput_n = THClTensor_new(state);
+  THClTensor *input_n = THClTensor_newv2(state, input->storage->device);
+  THClTensor *gradInput_n = THClTensor_newv2(state, input->storage->device);
+  THClTensor *gradOutput_n = THClTensor_newv2(state, input->storage->device);
 
   // For each elt in batch, do:
   for (int elt = 0; elt < batchSize; elt ++) {
@@ -419,8 +419,8 @@ static int clnn_SpatialConvolutionMM_accGradParameters(lua_State *L) {
   THClTensor_resize2d(state, columns, nInputPlane*kW*kH, outputHeight*outputWidth);
 
   // Helpers
-  THClTensor *input_n = THClTensor_new(state);
-  THClTensor *gradOutput_n = THClTensor_new(state);
+  THClTensor *input_n = THClTensor_newv2(state, input->storage->device);
+  THClTensor *gradOutput_n = THClTensor_newv2(state, input->storage->device);
 
   // For each elt in batch, do:
   for (int elt = 0; elt < batchSize; elt ++) {
