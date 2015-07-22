@@ -141,7 +141,7 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 ## Recent changes
 
 * 22nd July:
-  * Performance improvements in underlying [cltorch](https://github.com/hughperkins/cltorch) mean that times for [char-rnn](http://github.com/karpath/char-rnn) are now around 2-3 times faster on NVIDIA and AMD GPUs
+  * Performance improvements in underlying [cltorch](https://github.com/hughperkins/cltorch) mean that times for [char-rnn](http://github.com/karpathy/char-rnn) are now around 2-3 times faster on NVIDIA and AMD GPUs
 * 6th July:
   * lots of new activations added: `Sqrt`, `Square`, `Exp`, `Abs`, `LogSigmoid`, `HardTanh`  (provided by Sergey Zagoruyko)
   * SpatialMaxPooling:
