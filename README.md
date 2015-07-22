@@ -97,7 +97,7 @@ On an NVidia 940M, using [test/test-perf.lua](test/test-perf.lua):
 * Simply add option `-opencl 1` to enable OpenCL :-)
 * Current comparison, using an NVidia 940M graphics card, and an Intel i5-5200U processor.  These are timings per-batch
   * cpu: 3.4s
-  * clnn: 0.52s
+  * clnn: 0.27s
   * cunn: 0.13s
 
 ## Installation
@@ -140,6 +140,8 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 ## Recent changes
 
+* 22nd July:
+  * Performance improvements in underlying [cltorch](https://github.com/hughperkins/cltorch) mean that times for [char-rnn](http://github.com/karpath/char-rnn) are now around 2-3 times faster on NVIDIA and AMD GPUs
 * 6th July:
   * lots of new activations added: `Sqrt`, `Square`, `Exp`, `Abs`, `LogSigmoid`, `HardTanh`  (provided by Sergey Zagoruyko)
   * SpatialMaxPooling:
