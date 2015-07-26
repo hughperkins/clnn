@@ -80,3 +80,76 @@ print('diff', diff)
 assert(diff == 0)
 
 
+-- fuse them...
+-- lets assume we've already done the search, and determined that the sigmoid and tanh are adjacent, and can be fused
+-- and we know their sequence (these are both just standard graph-search type algos; I'm sure I can do this bit)
+-- mind you, we need to actually get their refs / node ids here
+local n1 = nil
+local n2 = nil -- this is the second, that eats the first
+local n1_pos = nil
+local n2_pos = nil
+for i, node in ipairs(g2.forwardnodes) do
+  if node.data.module ~= nil and torch.type(node.data.module) ~= 'nn.Identity' then
+    if n1 == nil then
+      n1 = node
+      n1_pos = i
+      print('n1 is', n1.data.module)
+    elseif n2 == nil then
+      n2 = node
+      n2_pos = i
+      print('n2 is', n2.data.module)
+    else
+      error('shouldnt be here')
+    end
+  end
+end
+
+local n1_forward = n1.data.module.forwardExpression
+local n2_forward = n2.data.module.forwardExpression
+print('n1 forward', n1_forward)
+print('n2 forward', n2_forward)
+
+tempvar = 't1'
+n1_forward = n1_forward:gsub('{{output}}', 'float ' .. tempvar)
+n2_forward = n2_forward:gsub('{{input}}', tempvar)
+
+print('n1 forward', n1_forward)
+print('n2 forward', n2_forward)
+
+local fused_forward_exp = n1_forward .. '\n' .. n2_forward
+print('fused_forward', fused_forward)
+
+function removeNodeByData(parent, node, data)
+  print('node.data.module', node.data.module)
+  if node.data == data then
+    print 'found module'
+    for i,child in ipairs(node.children) do
+      parent.children[#parent.children + 1] = child
+    end
+  else
+    for i,child in ipairs(node.children) do
+      print('child', child)
+      removeNodeByData(node, child, data)
+    end
+  end
+end
+
+local fusedModule = nn.Apply(1, 1, fused_forward_exp, '')
+removeNodeByData(nil, g2.innode, n2.data)
+
+table.remove(g2.forwardnodes, n2_pos)
+n1.data.module = fusedModule
+n1.children = n2.children
+
+-- walk the fg and remove it, I guess?
+
+graph.dot(g2.innode, '', 'g2innode_fused.fg')
+graph.dot(g2.fg, '', 'g2_fused.fg')
+
+output2 = g2:forward(inputs[1])
+print('output1', output1)
+print('output2', output2)
+diff = (output2 - output1):abs():sum()
+print('diff', diff)
+assert(diff == 0)
+
