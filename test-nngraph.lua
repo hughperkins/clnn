@@ -19,16 +19,6 @@ n5.data.annotations.name = 'n5'
 n6.data.annotations.name = 'n6'
 n7.data.annotations.name = 'n7'
 
-function walkGraph(g)
-  for i,node in ipairs(g.nodes) do
-    children = ''
-    for j,child in ipairs(node.children) do
---      children = children .. child.data .. ' '
-    end
-    print(i, node.data, ':', children)
-  end
-end
-
 function removeNodeByWalk(node, data)
   print('removeNodeByWalk', node.data.annotations.name)
   for i, child in ipairs(node.children) do
@@ -42,34 +32,10 @@ function removeNodeByWalk(node, data)
           node.children[childchild] = #node.children
         end
       end
-      -- child.children = {}
---      return
     end
   end
   for i, child in ipairs(node.children) do
     removeNodeByWalk(child, data)
-  end
-end
-
-function walkNodes(prefix, node)
-  print(prefix, node.data.module)
-  for i, child in ipairs(node.children) do
-    walkNodes(prefix .. '  ', child)
-  end
-end
-
---g = n1:graph()
-
-graph.dot(g.fg, '', 'base.fg') 
-graph.dot(g.bg, '', 'base.bg') 
-
-function walkAddParents(node)
-  for i, child in ipairs(node.children) do
-    child.parents = child.parents or {}
-    child.parents[#child.parents + 1] = node
-  end
-  for i, child in ipairs(node.children) do
-    walkAddParents(child)
   end
 end
 
@@ -103,13 +69,8 @@ if os.getenv('NODE') ~= nil then
       print('got targetdata')
     end
   end
---  local targetnode = loadstring('return n' .. nodenum)()
---  print('targetnode', targetnode.data.annotations.name)
   removeNodeByWalk(newbg, targetdata)
-  --removeNodeFromGraph(g, targetnode.data)
 end
-
---graph.dot(newbg:graph(), '', 'nt')
 
 g3 = nn.gModule({x3}, {newbg})
 
