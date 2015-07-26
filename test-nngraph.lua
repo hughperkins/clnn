@@ -39,44 +39,51 @@ function removeNodeByWalk(node, data)
   end
 end
 
-g2 = g:clone()
 
 -- x3 is last but one node
 -- just walk, and choose last but one...
 
-newbg = g2.bg.nodes[2]
-thisnode = newbg
-x3 = newbg
-while #thisnode.children > 0 do
-  x3 = thisnode
-  thisnode = thisnode.children[1]
-end
-print('x3', x3.data.annotations.name)
+function graphGetNodes(g)
+  g2 = g:clone()
+  newbg = g2.bg.nodes[2]
+  thisnode = newbg
+  x = newbg
+  while #thisnode.children > 0 do
+    x = thisnode
+    thisnode = thisnode.children[1]
+  end
 
-thisnode = newbg
-while thisnode.data ~= x3.data do
-  thisnode = thisnode.children[1]
+  thisnode = newbg
+  while thisnode.data ~= x.data do
+    thisnode = thisnode.children[1]
+  end
+  thisnode.children = {}
+
+  for i, node in ipairs(newbg) do
+    node.data.mapindex = nil
+  end
+
+  return x, newbg
 end
-thisnode.children = {}
+
+x, newnodes = graphGetNodes(g)
+print('x', torch.type(x))
+print('newnodes', torch.type(newnodes))
 
 if os.getenv('NODE') ~= nil then
   local nodenum = os.getenv('NODE')
   local targetname = 'n' .. nodenum
   local targetdata = nil
-  for i, node in ipairs(newbg:graph().nodes) do
+  for i, node in ipairs(newnodes:graph().nodes) do
     if node.data.annotations.name == targetname then
       targetdata = node.data
       print('got targetdata')
     end
   end
-  removeNodeByWalk(newbg, targetdata)
+  removeNodeByWalk(newnodes, targetdata)
 end
 
-g3 = nn.gModule({x3}, {newbg})
-
-for i, node in ipairs(newbg) do
-  node.data.mapindex = nil
-end
+g3 = nn.gModule({x}, {newnodes})
 
 graph.dot(g3.fg, '', 'n')
 
