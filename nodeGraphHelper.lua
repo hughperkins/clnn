@@ -26,11 +26,25 @@ function nodeGraphHelper.nameNode(node, name)
 end
 
 function nodeGraphHelper.walkAddDataIds(node, dataId)
-  dataId = dataId or 1
-  node.data.id = dataId
-  dataId = dataId + 1
+  dataId = dataId or 0
+  if node.data.id == nil then
+    dataId = dataId + 1
+    node.data.id = dataId
+  end
   for i, child in ipairs(node.children) do
     dataId = nodeGraphHelper.walkAddDataIds(child, dataId)
+  end
+  return dataId
+end
+
+function nodeGraphHelper.walkReverseAddDataIds(node, dataId)
+  dataId = dataId or 0
+  if node.data.id == nil then
+    dataId = dataId + 1
+    node.data.id = dataId
+  end
+  for i, child in ipairs(node.parents) do
+    dataId = nodeGraphHelper.walkReverseAddDataIds(child, dataId)
   end
   return dataId
 end
@@ -54,6 +68,7 @@ function nodeGraphHelper.nodeToString(node)
 end
 
 function nodeGraphHelper.walkAddParents(node)
+  node.parents = node.parents or {}
   for i, child in ipairs(node.children) do
     nodeGraphHelper.addNodeLink(child, node, 'parents')
     nodeGraphHelper.walkAddParents(child)
@@ -65,6 +80,14 @@ function nodeGraphHelper.printGraph(node, prefix)
   print(prefix .. nodeGraphHelper.nodeToString(node))
   for i, child in ipairs(node.children) do
     nodeGraphHelper.printGraph(child, prefix .. '  ')
+  end
+end
+
+function nodeGraphHelper.reversePrintGraph(node, prefix)
+  prefix = prefix or ''
+  print(prefix .. nodeGraphHelper.nodeToString(node))
+  for i, child in ipairs(node.parents) do
+    nodeGraphHelper.reversePrintGraph(child, prefix .. '  ')
   end
 end
 

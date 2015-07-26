@@ -29,15 +29,19 @@ local inputs = {in1, in2, in3}
 --print('gradInput\n', gradInput, gradInput[1], gradInput[2], gradInput[3])
 
 local x = nn.Identity()()
-local m1 = nn.Tanh()(x)
-local m2 = nn.Sigmoid()(m1)
+local n1 = nn.Tanh()(x)
+local n2 = nn.Sigmoid()(n1)
+local n3 = nn.Sigmoid()(x)
+local n4 = nn.CAddTable()({n2, n3})
 
 ngh.nameNode(x, 'x')
-ngh.nameNode(m1, 'm1')
-ngh.nameNode(m2, 'm2')
+ngh.nameNode(n1, 'n1')
+ngh.nameNode(n2, 'n2')
+ngh.nameNode(n3, 'n3')
+ngh.nameNode(n4, 'n4')
 
 --local m3 = nn.Tanh()(m2)
-g = nn.gModule({x}, {m2})
+g = nn.gModule({x}, {n4})
 g2 = g:clone()
 g:cl()
 g2:cl()
@@ -75,11 +79,14 @@ end
 
 x3, nodes3 = gh.graphGetNodes(g2)
 
-ngh.walkAddDataIds(nodes3)
 ngh.walkAddParents(nodes3)
+--ngh.walkAddDataIds(nodes3)
+--ngh.walkReverseAddDataIds(nodes3)
+ngh.walkReverseAddDataIds(x3)
 print('x3', ngh.nodeToString(x3))
 print('nodes3', ngh.nodeToString(nodes3))
 ngh.printGraph(nodes3)
+ngh.reversePrintGraph(x3)
 ngh.walkApply(nodes3, function(node) print(ngh.nodeToString(node) .. ' ' .. tostring(node.parents ~= nil)) end)
 print('x3.parents[1]', ngh.nodeToString(x3.parents[1]))
 
