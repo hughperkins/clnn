@@ -51,25 +51,28 @@ function Apply:__init(numInputs, numOutputs, forwardExpression, backwardExpressi
   ]]
   be = backwardExpression
   for i=1,numInputs do
-    be = be:gsub('{{input' .. i .. '}}', 'input' .. i .. '_data[n]')
+--    be = be:gsub('{{input' .. i .. '}}', 'input' .. i .. '_data[n]')
     be = be:gsub('{{gradInput' .. i .. '}}', 'gradInput' .. i .. '_data[n]')
   end
-  be = be:gsub('{{input}}', 'input1_data[n]')
+--  be = be:gsub('{{input}}', 'input1_data[n]')
   be = be:gsub('{{gradInput}}', 'gradInput1_data[n]')
   for o=1,numOutputs do
     be = be:gsub('{{gradOutput' .. o .. '}}', 'gradOutput' .. o .. '_data[n]')
+    be = be:gsub('{{output' .. o .. '}}', 'output' .. o .. '_data[n]')
   end
   be = be:gsub('{{gradOutput}}', 'gradOutput1_data[n]')
+  be = be:gsub('{{output}}', 'output1_data[n]')
   self.backwardSrc = self.backwardSrc .. be
   self.backwardExpression = backwardExpression
   local inputs = {}  -- this is certainly gratuitously duplicated
   for i=1,numInputs do
-    inputs['input' .. i] = 'ClTensor'
+--    inputs['input' .. i] = 'ClTensor'
     inputs['gradOutput' .. i] = 'ClTensor'
   end
   inputs['N'] = 'int'
   local outputs = {}
   for i=1,numOutputs do
+    inputs['output' .. i] = 'ClTensor'
     outputs['gradInput' .. i] = 'ClTensor'
   end
   self.backwardKernel = torch.ClKernel({output=outputs, input=inputs, src=self.backwardSrc})
@@ -108,6 +111,12 @@ end
 
 function Apply:updateGradInput(inputs, gradOutputs)
   print('Apply:updateGradInput')
+  if torch.type(inputs) == 'torch.ClTensor' then
+    inputs = {inputs}
+  end
+  if torch.type(gradOutputs) == 'torch.ClTensor' then
+    gradOutputs = {gradOutputs}
+  end
   if #inputs ~= self.numInputs then
     error("num inputs should be " .. self.numInputs)
   end
@@ -121,13 +130,18 @@ function Apply:updateGradInput(inputs, gradOutputs)
   end
   backwardParams = {}
   for i=1,self.numInputs do
-    backwardParams['in' .. i] = self.gradInputs[i]
+--    backwardParams['input' .. i] = inputs[i]
+    backwardParams['gradInput' .. i] = self.gradInputs[i]
   end
   for o=1,self.numOutputs do
-    backwardParams['out' .. o] = gradOutputs[o]
+    backwardParams['gradOutput' .. o] = gradOutputs[o]
+    backwardParams['output' .. o] = self.outputs[o]
   end
   backwardParams['N'] = inputs[1]:numel()
   self.backwardKernel:run(backwardParams)
+  if self.numInputs == 1 then
+    self.gradInputs = self.gradInputs[1]
+  end
   self.gradInput = self.gradInputs
   return self.gradInputs
 end

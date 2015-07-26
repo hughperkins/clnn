@@ -45,7 +45,7 @@ for i, node in ipairs(g2.forwardnodes) do
     local apply = nn.Apply(1, 1, [[
       {{output}} = tanh({{input}});
     ]], [[
-      {{gradInput}} = {{input}} * (1 - {{gradOutput}} * {{gradOutput}});
+      {{gradInput}} = {{gradOutput}} * (1 - {{output}} * {{output}});
     ]])
     node.data.module = apply
     print('node.data.module', node.data.module)
@@ -67,5 +67,18 @@ graph.dot(g2.fg, '', 'g2.fg')
 local output2 = g2:forward(inputs[1])
 print('output1', output1)
 print('output2', output2)
-print('diff', (output2 - output1):abs():sum())
+local diff = (output2 - output1):abs():sum()
+print('diff', diff)
+assert(diff == 0)
+
+local gradInput1 = g:backward(inputs[1], output1)
+print('gradInput1\n', gradInput1)
+
+local gradInput2 = g2:backward(inputs[1], output1)
+print('gradInput2\n', gradInput2)
+
+diff = (gradInput2 - gradInput1):abs():sum()
+print('diff', diff)
+assert(diff == 0)
+
 
