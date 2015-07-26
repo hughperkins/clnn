@@ -63,37 +63,6 @@ function removeNodeByWalk(node, data)
   return node
 end
 
-function removeNodeByWalk2(node, data)
-  if node.data == data then
-    -- its me!
-    assert(#node.children == 1)
-    return node.children[1]
-  end
-  print('removeNodeByWalk', node.data.annotations.name)
-  for i, child in ipairs(node.children) do
-    if child.data == data then
-      print('remove child', i, child.data.annotations)
-      table.remove(node.children, i)
-      node.children[child] = nil
-      local childmapindexidx = node.data.mapindex[child.data]
-      node.data.mapindex[childmapindexidx] = nil
-      node.data.mapindex[child.data] = nil
-      for j, childchild in ipairs(child.children) do
-        if node.children[childchild] == nil then
-          table.insert(node.children, childchild)
-          node.children[childchild] = #node.children
-          node.data.mapindex[childchild.data] = #node.data.mapindex + 1
-          node.data.mapindex[#node.data.mapindex + 1] = childchild.data
-        end
-      end
-    end
-  end
-  for i, child in ipairs(node.children) do
-    removeNodeByWalk(child, data)
-  end
-  return node
-end
-
 --local n = nn.Apply(3, 2, [[
 --  {{out1}} = {{in1}} + {{in2}};
 --  {{out2}} = {{in3}} + 3.0f;

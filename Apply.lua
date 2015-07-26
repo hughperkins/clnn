@@ -12,6 +12,7 @@ function Apply:__init(numInputs, numOutputs, forwardExpression, backwardExpressi
   self.numOutputs = numOutputs
 
   -- create forward kernel
+  self.forwardExpression = forwardExpression
   self.forwardSrc = [[
     int n = get_global_id(0);
     if(n >= N) {
@@ -85,6 +86,7 @@ function Apply:updateOutput(inputs)
   if torch.type(inputs) == 'torch.ClTensor' then
     inputs = {inputs}
   end
+  print('torch.type(inputs)', torch.type(inputs), #inputs)
   if #inputs ~= self.numInputs then
     error("num inputs should be " .. self.numInputs)
   end
