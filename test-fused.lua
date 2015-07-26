@@ -91,8 +91,8 @@ require 'nngraph'
 local x = nn.Identity()()
 local m1 = nn.Tanh()(x)
 local m2 = nn.Sigmoid()(m1)
-local m3 = nn.Tanh()(m2)
-g = nn.gModule({x}, {m3})
+--local m3 = nn.Tanh()(m2)
+g = nn.gModule({x}, {m2})
 g2 = g:clone()
 g:cl()
 g2:cl()
@@ -143,13 +143,12 @@ diff = (gradInput2 - gradInput1):abs():sum()
 print('diff', diff)
 assert(diff == 0)
 
+os.exit(0)
+
 function isApply(module)
   if torch.type(module) == 'nn.Apply' then
     return true
   end
---  if torch.type(module) == 'nn.Tanh' then
---    return true
---  end
   return false
 end
 
@@ -176,19 +175,6 @@ while didfuse do
               n1 = node
               n2 = child
               n1_pos = i
-  --            n2_
-  --          if node.data.module ~= nil and torch.type(node.data.module) ~= 'nn.Identity' then
-  --            if n1 == nil then
-  --              n1 = node
-  --              n1_pos = i
-  --              print('n1 is', n1.data.module)
-  --            elseif n2 == nil then
-  --              n2 = node
-  --              n2_pos = i
-  --              print('n2 is', n2.data.module)
-  --            else
-  --              error('shouldnt be here')
-  --            end
             end
           end
         end
@@ -203,7 +189,7 @@ while didfuse do
     print('n1 forward', n1_forward)
     print('n2 forward', n2_forward)
 
-    tempvar = 't' .. fuseid
+    tempvar = 'sOutput' .. fuseid
     fuseid = fuseid + 1
     n1_forward = n1_forward:gsub('{{output}}', 'float ' .. tempvar)
     n2_forward = n2_forward:gsub('{{input}}', tempvar)
@@ -214,6 +200,9 @@ while didfuse do
     local fused_forward_exp = n1_forward .. '\n' .. n2_forward
     print('fused_forward', fused_forward_exp)
 
+    -- calculate forward first, to get the output values
+    -- do this by adding hte fused_forward_exp at the start
+    tempvar = 'sGradInput' .. fuseid
     local n1_backward = n1.data.module.backwardExpression
     local n2_backward = n2.data.module.backwardExpression
     print('n1 backward', n1_backward)
@@ -221,12 +210,20 @@ while didfuse do
     n2_backward = n2_backward:gsub('{{gradInput}}', 'float ' .. tempvar)
     n1_backward = n1_backward:gsub('{{gradOutput}}', tempvar)
 
-    local fused_backward_exp = n2_backward .. '\n' .. n1_backward
-    print('fused_backward', fused_backward_exp)
+    local fused_backwardonly_exp = n2_backward .. '\n' .. n1_backward
+    print('fused_backward', fused_backwardonly_exp)
 
-    local fusedModule = nn.Apply(1, 1, fused_forward_exp, fused_backward_exp)
+    local forward_then_backward = fused_forward_exp .. '\n' .. fused_backwardonly_exp
+
+    local fusedModule = nn.Apply(1, 1, fused_forward_exp, forward_then_backward)
+    fusedModule.backwardOnlyExpression = fused_backwardonly_exp
     nodes3 = removeNodeByWalk(nodes3, n2.data)
     n1.data.module = fusedModule
+    fusedModule.inputsNeeded = fusedModule.inputsNeeded or {}
+    fusedModule.gradOutputsNeeded = fusedModule.gradOutputsNeeded or {}
+    fusedModule.gradOutputsNeeded[n2.id] = true
+    fusedModule.gradOutputsNeeded[n1.id] = nil
+--    table.insert(fusedModule.inputsNeeded, {id=)
     didfuse = true
   end
 end
@@ -243,6 +240,13 @@ output2 = g3:forward(inputs[1])
 print('output1', output1)
 print('output2', output2)
 diff = (output2 - output1):abs():sum()
+print('diff', diff)
+assert(diff == 0)
+
+local gradInput2 = g3:backward(inputs[1], output1)
+print('gradInput2\n', gradInput2)
+
+diff = (gradInput2 - gradInput1):abs():sum()
 print('diff', diff)
 assert(diff == 0)
 

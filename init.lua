@@ -20,6 +20,7 @@ function nn.Criterion:cl()
 end
 
 include 'Apply.lua'
+include 'gApply.lua'
 
 include 'Tanh.lua'
 include 'Pointwise.lua'
