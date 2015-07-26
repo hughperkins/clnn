@@ -26,8 +26,8 @@ local inputs = {in1, in2, in3}
 
 require 'nngraph'
 local x = nn.Identity()()
---local m1 = nn.Tanh()(x)
-local m2 = nn.Sigmoid()(x)
+local m1 = nn.Tanh()(x)
+local m2 = nn.Sigmoid()(m1)
 g = nn.gModule({x}, {m2})
 g2 = g:clone()
 g:cl()
