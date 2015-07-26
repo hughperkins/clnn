@@ -214,7 +214,17 @@ while didfuse do
     local fused_forward_exp = n1_forward .. '\n' .. n2_forward
     print('fused_forward', fused_forward_exp)
 
-    local fusedModule = nn.Apply(1, 1, fused_forward_exp, '')
+    local n1_backward = n1.data.module.backwardExpression
+    local n2_backward = n2.data.module.backwardExpression
+    print('n1 backward', n1_backward)
+    print('n2 backward', n2_backward)
+    n2_backward = n2_backward:gsub('{{gradInput}}', 'float ' .. tempvar)
+    n1_backward = n1_backward:gsub('{{gradOutput}}', tempvar)
+
+    local fused_backward_exp = n2_backward .. '\n' .. n1_backward
+    print('fused_backward', fused_backward_exp)
+
+    local fusedModule = nn.Apply(1, 1, fused_forward_exp, fused_backward_exp)
     nodes3 = removeNodeByWalk(nodes3, n2.data)
     n1.data.module = fusedModule
     didfuse = true
