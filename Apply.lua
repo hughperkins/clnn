@@ -20,21 +20,23 @@ function Apply:__init(numInputs, numOutputs, forwardExpression, backwardExpressi
   ]]
   fe = forwardExpression
   for i=1,numInputs do
-    fe = fe:gsub('{{in' .. i .. '}}', 'in' .. i .. '_data[n]')
+    fe = fe:gsub('{{input' .. i .. '}}', 'input' .. i .. '_data[n]')
   end
+  fe = fe:gsub('{{input}}', 'input1_data[n]')
   for i=1,numOutputs do
-    fe = fe:gsub('{{out' .. i .. '}}', 'out' .. i .. '_data[n]')
+    fe = fe:gsub('{{output' .. i .. '}}', 'output' .. i .. '_data[n]')
   end
+  fe = fe:gsub('{{output}}', 'output1_data[n]')
   self.forwardSrc = self.forwardSrc .. fe
   self.backwardExpression = backwardExpression
   local inputs = {}
   for i=1,numInputs do
-    inputs['in' .. i] = 'ClTensor'
+    inputs['input' .. i] = 'ClTensor'
   end
   inputs['N'] = 'int'
   local outputs = {}
   for i=1,numOutputs do
-    outputs['out' .. i] = 'ClTensor'
+    outputs['output' .. i] = 'ClTensor'
   end
   self.forwardKernel = torch.ClKernel({input=inputs, output=outputs, src=self.forwardSrc})
   print(self.forwardKernel, self.forwardKernel:getRawKernel(), self.forwardKernel:getRenderedKernel())
@@ -49,24 +51,28 @@ function Apply:__init(numInputs, numOutputs, forwardExpression, backwardExpressi
   ]]
   be = backwardExpression
   for i=1,numInputs do
-    be = be:gsub('{{in' .. i .. '}}', 'in' .. i .. '_data[n]')
+    be = be:gsub('{{input' .. i .. '}}', 'input' .. i .. '_data[n]')
+    be = be:gsub('{{gradInput' .. i .. '}}', 'gradInput' .. i .. '_data[n]')
   end
-  for i=1,numOutputs do
-    be = be:gsub('{{out' .. i .. '}}', 'out' .. i .. '_data[n]')
+  be = be:gsub('{{input}}', 'input1_data[n]')
+  be = be:gsub('{{gradInput}}', 'gradInput1_data[n]')
+  for o=1,numOutputs do
+    be = be:gsub('{{gradOutput' .. o .. '}}', 'gradOutput' .. o .. '_data[n]')
   end
+  be = be:gsub('{{gradOutput}}', 'gradOutput1_data[n]')
   self.backwardSrc = self.backwardSrc .. be
   self.backwardExpression = backwardExpression
   local inputs = {}  -- this is certainly gratuitously duplicated
   for i=1,numInputs do
-    inputs['in' .. i] = 'ClTensor'
+    inputs['input' .. i] = 'ClTensor'
+    inputs['gradOutput' .. i] = 'ClTensor'
   end
+  inputs['N'] = 'int'
   local outputs = {}
   for i=1,numOutputs do
-    outputs['out' .. i] = 'ClTensor'
+    outputs['gradInput' .. i] = 'ClTensor'
   end
-  outputs['N'] = 'int'
-  -- note: need to reverse input/output:
-  self.backwardKernel = torch.ClKernel({output=inputs, input=outputs, src=self.backwardSrc})
+  self.backwardKernel = torch.ClKernel({output=outputs, input=inputs, src=self.backwardSrc})
   print(self.backwardKernel, self.backwardKernel:getRawKernel(), self.backwardKernel:getRenderedKernel())
 end
 
