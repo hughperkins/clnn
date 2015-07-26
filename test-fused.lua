@@ -28,8 +28,8 @@ require 'nngraph'
 local x = nn.Identity()()
 local m1 = nn.Tanh()(x)
 --local m2 = nn.Sigmoid()(m1)
-local g = nn.gModule({x}, {m1})
-local g2 = g:clone()
+g = nn.gModule({x}, {m1})
+g2 = g:clone()
 g:cl()
 g2:cl()
 
@@ -37,7 +37,7 @@ local output1 = g:forward(inputs[1])
 
 graph.dot(g.fg, '', 'g.fg')
 
-for i, node in ipairs(g.forwardnodes) do
+for i, node in ipairs(g2.forwardnodes) do
   print(i, node, node.id)
   local moduletype = torch.type(node.data.module)
   if moduletype == 'nn.Tanh' then
@@ -48,6 +48,17 @@ for i, node in ipairs(g.forwardnodes) do
       {{gradInput}} = {{input}} * (1 - {{gradOutput}} * {{gradOutput}});
     ]])
     node.data.module = apply
+    print('node.data.module', node.data.module)
+  end
+end
+
+print('redo iteration ==============================')
+for i, node in ipairs(g2.forwardnodes) do
+  print(i, node, node.id)
+  local moduletype = torch.type(node.data.module)
+  print('node.data.module', node.data.module)
+  if moduletype == 'nn.Tanh' then
+    print('Tanh detected')
   end
 end
 

@@ -79,6 +79,9 @@ end
 -- input should be a table of inputs
 -- output will be a table of outputs
 function Apply:updateOutput(inputs)
+  if torch.type(inputs) == 'torch.ClTensor' then
+    inputs = {inputs}
+  end
   if #inputs ~= self.numInputs then
     error("num inputs should be " .. self.numInputs)
   end
@@ -89,13 +92,16 @@ function Apply:updateOutput(inputs)
   end
   forwardParams = {}
   for i=1,self.numInputs do
-    forwardParams['in' .. i] = inputs[i]
+    forwardParams['input' .. i] = inputs[i]
   end
   for o=1,self.numOutputs do
-    forwardParams['out' .. o] = self.outputs[o]
+    forwardParams['output' .. o] = self.outputs[o]
   end
   forwardParams['N'] = inputs[1]:numel()
   self.forwardKernel:run(forwardParams)
+  if self.numOutputs == 1 then
+    self.outputs = self.outputs[1]
+  end
   self.output = self.outputs
   return self.outputs
 end
