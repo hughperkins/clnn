@@ -76,9 +76,12 @@ end
 x3, nodes3 = gh.graphGetNodes(g2)
 
 ngh.walkAddDataIds(nodes3)
+ngh.walkAddParents(nodes3)
 print('x3', ngh.nodeToString(x3))
 print('nodes3', ngh.nodeToString(nodes3))
 ngh.printGraph(nodes3)
+ngh.walkApply(nodes3, function(node) print(ngh.nodeToString(node) .. ' ' .. tostring(node.parents ~= nil)) end)
+print('x3.parents[1]', ngh.nodeToString(x3.parents[1]))
 
 if false then
   nodes3 = fuseApply(nodes3)

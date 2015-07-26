@@ -35,6 +35,13 @@ function nodeGraphHelper.walkAddDataIds(node, dataId)
   return dataId
 end
 
+function nodeGraphHelper.walkApply(node, func)
+  func(node)
+  for i, child in ipairs(node.children) do
+    nodeGraphHelper.walkApply(child, func)
+  end
+end
+
 function nodeGraphHelper.nodeToString(node)
   local res = tostring(node.data.id)
   if node.data.annotations ~= nil and node.data.annotations.name ~= nil then
@@ -48,7 +55,8 @@ end
 
 function nodeGraphHelper.walkAddParents(node)
   for i, child in ipairs(node.children) do
-    nodeGraphHelper.addNodeLink(node, child, 'parents')
+    nodeGraphHelper.addNodeLink(child, node, 'parents')
+    nodeGraphHelper.walkAddParents(child)
   end
 end
 
