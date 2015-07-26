@@ -142,53 +142,83 @@ diff = (gradInput2 - gradInput1):abs():sum()
 print('diff', diff)
 assert(diff == 0)
 
-
-x3, nodes3 = graphGetNodes(g2)
-ng3bg = nodes3:graph() -- not an nngraph, just a normal graph
-ng3fg = ng3bg:reverse()
--- fuse them...
--- lets assume we've already done the search, and determined that the sigmoid and tanh are adjacent, and can be fused
--- and we know their sequence (these are both just standard graph-search type algos; I'm sure I can do this bit)
--- mind you, we need to actually get their refs / node ids here
-local n1 = nil
-local n2 = nil -- this is the second, that eats the first
-local n1_pos = nil
-local n2_pos = nil
-for i, node in ipairs(ng3fg.nodes) do
-  print('i', i, node.data.module)
-  if node.data.module ~= nil and torch.type(node.data.module) ~= 'nn.Identity' then
-    if n1 == nil then
-      n1 = node
-      n1_pos = i
-      print('n1 is', n1.data.module)
-    elseif n2 == nil then
-      n2 = node
-      n2_pos = i
-      print('n2 is', n2.data.module)
-    else
-      error('shouldnt be here')
-    end
+function isApply(module)
+  if torch.type(module) == 'nn.Apply' then
+    return true
   end
+--  if torch.type(module) == 'nn.Tanh' then
+--    return true
+--  end
+  return false
 end
 
-local n1_forward = n1.data.module.forwardExpression
-local n2_forward = n2.data.module.forwardExpression
-print('n1 forward', n1_forward)
-print('n2 forward', n2_forward)
+x3, nodes3 = graphGetNodes(g2)
+-- fuse them...
+-- for now, let's just look for a parent-child who are both applies, and fuse those
+local didfuse = true
+local fuseid = 1
+while didfuse do
+  didfuse = false
+  ng3bg = nodes3:graph() -- not an nngraph, just a normal graph
+  ng3fg = ng3bg:reverse()
+  local n1 = nil
+  local n2 = nil -- this is the second, that eats the first
+  local n1_pos = nil
+--  local n2_pos = nil
+  for i, node in ipairs(ng3fg.nodes) do
+    if n1 == nil then  -- since no 'break'
+      print('i', i, node.data.module)
+      if isApply(node.data.module) then
+        for j, child in ipairs(node.children) do  -- I know this is rubbish n-squared, fix this later..
+          if i1 == nil then
+            if isApply(child.data.module) then
+              n1 = node
+              n2 = child
+              n1_pos = i
+  --            n2_
+  --          if node.data.module ~= nil and torch.type(node.data.module) ~= 'nn.Identity' then
+  --            if n1 == nil then
+  --              n1 = node
+  --              n1_pos = i
+  --              print('n1 is', n1.data.module)
+  --            elseif n2 == nil then
+  --              n2 = node
+  --              n2_pos = i
+  --              print('n2 is', n2.data.module)
+  --            else
+  --              error('shouldnt be here')
+  --            end
+            end
+          end
+        end
+      end
+    end
+  end
 
-tempvar = 't1'
-n1_forward = n1_forward:gsub('{{output}}', 'float ' .. tempvar)
-n2_forward = n2_forward:gsub('{{input}}', tempvar)
+  if n1 ~= nil then
+    print('fusing... ==============================')
+    local n1_forward = n1.data.module.forwardExpression
+    local n2_forward = n2.data.module.forwardExpression
+    print('n1 forward', n1_forward)
+    print('n2 forward', n2_forward)
 
-print('n1 forward', n1_forward)
-print('n2 forward', n2_forward)
+    tempvar = 't' .. fuseid
+    fuseid = fuseid + 1
+    n1_forward = n1_forward:gsub('{{output}}', 'float ' .. tempvar)
+    n2_forward = n2_forward:gsub('{{input}}', tempvar)
 
-local fused_forward_exp = n1_forward .. '\n' .. n2_forward
-print('fused_forward', fused_forward_exp)
+    print('n1 forward', n1_forward)
+    print('n2 forward', n2_forward)
 
-local fusedModule = nn.Apply(1, 1, fused_forward_exp, '')
-nodes3 = removeNodeByWalk(nodes3, n2.data)
-n1.data.module = fusedModule
+    local fused_forward_exp = n1_forward .. '\n' .. n2_forward
+    print('fused_forward', fused_forward_exp)
+
+    local fusedModule = nn.Apply(1, 1, fused_forward_exp, '')
+    nodes3 = removeNodeByWalk(nodes3, n2.data)
+    n1.data.module = fusedModule
+    didfuse = true
+  end
+end
 
 graph.dot(nodes3:graph(), '', 'nodes3')
 
