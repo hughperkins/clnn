@@ -31,8 +31,9 @@ local inputs = {in1, in2, in3}
 local x = nn.Identity()()
 local n1 = nn.Tanh()(x)
 local n2 = nn.Sigmoid()(n1)
-local n3 = nn.Sigmoid()(x)
-local n4 = nn.CAddTable()({n2, n3})
+local n3 = nn.Exp()(n2)
+local n4 = nn.Sigmoid()(x)
+local n5 = nn.CAddTable()({n3, n4})
 
 ngh.nameNode(x, 'x')
 ngh.nameNode(n1, 'n1')
@@ -41,7 +42,7 @@ ngh.nameNode(n3, 'n3')
 ngh.nameNode(n4, 'n4')
 
 --local m3 = nn.Tanh()(m2)
-g = nn.gModule({x}, {n2})
+g = nn.gModule({x}, {n3})
 g2 = g:clone()
 g:cl()
 g2:cl()
@@ -120,8 +121,24 @@ print('x3.parents[1]', ngh.nodeToString(x3.parents[1]))
 fusion.walkConvertToApply(nodes3)
 ngh.reversePrintGraph(x3)
 
-if os.getenv('FUSE') ~= nil then
-  print('fusing...')
+function normalizeWhite(input)
+  old = nil
+  while old ~= input do
+    old = input
+    input = input:gsub('  ', ' ')
+  end
+  while old ~= input do
+    old = input
+    input = input:gsub(' \n', '\n')
+  end
+  while old ~= input do
+    old = input
+    input = input:gsub('\n\n', '\n')
+  end
+  return input
+end
+
+function doFuse(nodes3)
   p, c = fusion.getFusiblePair(nodes3)
   -- p == parent, c == child
   -- fuse(p, c) = p . c = p(c(input)) 
@@ -139,7 +156,10 @@ if os.getenv('FUSE') ~= nil then
   local p_outputs = pmod.numOutputs
   local c_outputs = cmod.numOutputs
 
-  local virtualOutputs = c.virtualOutputs or 0
+--  print('parent virtualoutputs', p.data.module.virtualOutputs)
+--  print('child virtualoutputs', c.data.module.virtualOutputs)
+  local virtualOutputs = (c.data.module.virtualOutputs or 0) + (p.data.module.virtualOutputs or 0)
+  print('virtualOutputs before =', virtualOutputs)
   -- virtualOutputs = virtualOutputs + mod1.numOutputs
   -- mod1.virtualOutputs = virtualOutputs
 
@@ -157,7 +177,12 @@ if os.getenv('FUSE') ~= nil then
   print('cf', cf)
   print('pf', pf)
 
-  p.data.module.forwardExpression = cf .. '\n' .. pf
+  local fusedExp = normalizeWhite(cf .. '\n' .. pf)
+
+  print('fusedExp', fusedExp)
+  p.data.module.forwardExpression = fusedExp
+  p.data.module.virtualOutputs = virtualOutputs
+
   --nodes3 = ngh.removeNodeByWalk(nodes3, n2.data)
 
 --  ngh.walkApply(nodes3, function(node)
@@ -166,7 +191,7 @@ if os.getenv('FUSE') ~= nil then
 
 --  print(n1.data.id, n1.data.module, 'parentssize', #n1.parents, torch.type(n1.parents))
 
-  fused = ngh.reduceEdge(p, c)
+  p = ngh.reduceEdge(p, c)
 --  fused.forwardExpression = 
 
   -- remove n2 from graph
@@ -178,6 +203,12 @@ if os.getenv('FUSE') ~= nil then
   --for i, n2child in n2.children do
   --  
   --end
+end
+
+if os.getenv('FUSE') ~= nil then
+  print('fusing...')
+  doFuse(nodes3)
+  doFuse(nodes3)
 end
 
 ngh.printGraph(nodes3)

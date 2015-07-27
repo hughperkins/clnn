@@ -19,6 +19,13 @@ function fusion.walkConvertToApply(nodes)
         {{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});
       ]])
       node.data.module = apply
+    elseif moduletype == 'nn.Exp' then
+      local apply = nn.Apply(1, 1, [[
+        {{output}} =  exp({{input}});
+      ]], [[
+        {{gradInput}} = {{gradOutput}} * {{output}};
+      ]])
+      node.data.module = apply
     elseif moduletype == 'nn.CAddTable' then
       local apply = nn.Apply(2, 1, [[
         {{output}} = {{input1}} + {{input2}};
