@@ -66,17 +66,17 @@ function Apply:__init(numInputs, numOutputs, forwardExpression, backwardExpressi
   self.backwardSrc = self.backwardSrc .. be
   self.backwardExpression = backwardExpression
   local inputs = {}  -- this is certainly gratuitously duplicated
+  local outputs = {}
   for i=1,numInputs do
 --    inputs['input' .. i] = 'ClTensor'
-    inputs['gradOutput' .. i] = 'ClTensor'
-  end
-  inputs['N'] = 'int'
-  local outputs = {}
-  for i=1,numOutputs do
-    inputs['output' .. i] = 'ClTensor'
     outputs['gradInput' .. i] = 'ClTensor'
   end
-  self.backwardKernel = torch.ClKernel({output=outputs, input=inputs, src=self.backwardSrc})
+  inputs['N'] = 'int'
+  for i=1,numOutputs do
+    inputs['output' .. i] = 'ClTensor'
+    inputs['gradOutput' .. i] = 'ClTensor'
+  end
+  self.backwardKernel = torch.ClKernel({input=inputs, output=outputs, src=self.backwardSrc})
 --  print(self.backwardKernel, self.backwardKernel:getRawKernel(), self.backwardKernel:getRenderedKernel())
 end
 
