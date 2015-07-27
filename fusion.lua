@@ -1,9 +1,11 @@
-local function convertGraphToApply(g2)
-  for i, node in ipairs(g2.forwardnodes) do
-    print(i, node, node.id)
+fusion = {}
+
+local ngh = require('nodeGraphHelper')
+
+function fusion.walkConvertToApply(nodes)
+  ngh.walkApply(nodes, function(node)
     local moduletype = torch.type(node.data.module)
     if moduletype == 'nn.Tanh' then
-      print('Tanh detected')
       local apply = nn.Apply(1, 1, [[
         {{output}} = tanh({{input}});
       ]], [[
@@ -11,19 +13,40 @@ local function convertGraphToApply(g2)
       ]])
       node.data.module = apply
     elseif moduletype == 'nn.Sigmoid' then
-      print('Sigmoid detected')
       local apply = nn.Apply(1, 1, [[
         {{output}} =  1.f / (1.f + exp( - {{input}}));
       ]], [[
         {{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});
       ]])
       node.data.module = apply
-      print('node.data.module', node.data.module)
     end
-  end
+  end)
 end
 
-local function fuseApply(nodes3)
+function fusion.getFusiblePair(nodes)
+  local n1 = nil
+  local n2 = nil
+  ngh.walkApply(nodes, function(node)
+    if n1 ~= nil then
+      return
+    end
+    print('fusion.getFusiblePair', node.data.id)
+    if isApply(node.data.module) then
+      print('  .. isApply')
+      for j, child in ipairs(node.children) do  -- I know this is rubbish n-squared, fix this later..
+        if isApply(child.data.module) then
+          print('      .. child isApply')
+          n1 = node
+          n2 = child
+          return
+        end
+      end
+    end
+  end)
+  return n1, n2
+end
+
+function fusion.fuseApply(nodes3)
   -- fuse them...
   -- for now, let's just look for a parent-child who are both applies, and fuse those
   local didfuse = true
@@ -101,4 +124,5 @@ local function fuseApply(nodes3)
   return nodes3
 end
 
+return fusion
 

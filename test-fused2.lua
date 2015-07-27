@@ -3,7 +3,7 @@ require 'clnn'
 
 local ngh = require('nodeGraphHelper')
 local gh = require('graphHelper')
-include 'fusion.lua'
+local fusion = require('fusion')
 
 --local n = nn.Apply(3, 2, [[
 --  {{out1}} = {{in1}} + {{in2}};
@@ -77,9 +77,36 @@ function isApply(module)
   return false
 end
 
+--if false then
+--  nodes3 = fuseApply(nodes3)
+
+--  graph.dot(nodes3:graph(), '', 'nodes3')
+
+--  g3 = nn.gModule({x3}, {nodes3})
+
+--  graph.dot(g3.fg, '', 'g3.fg')
+
+--  print('input', inputs[1])
+
+--  output2 = g3:forward(inputs[1])
+--  print('output1', output1)
+--  print('output2', output2)
+--  diff = (output2 - output1):abs():sum()
+--  print('diff', diff)
+--  assert(diff == 0)
+
+--  local gradInput2 = g3:backward(inputs[1], output1)
+--  print('gradInput2\n', gradInput2)
+
+--  diff = (gradInput2 - gradInput1):abs():sum()
+--  print('diff', diff)
+--  assert(diff == 0)
+--end
+
 x3, nodes3 = gh.graphGetNodes(g2)
 
 ngh.walkAddParents(nodes3)
+ngh.walkStripByObjects(nodes3)
 --ngh.walkAddDataIds(nodes3)
 --ngh.walkReverseAddDataIds(nodes3)
 ngh.walkReverseAddDataIds(x3)
@@ -90,29 +117,56 @@ ngh.reversePrintGraph(x3)
 ngh.walkApply(nodes3, function(node) print(ngh.nodeToString(node) .. ' ' .. tostring(node.parents ~= nil)) end)
 print('x3.parents[1]', ngh.nodeToString(x3.parents[1]))
 
-if false then
-  nodes3 = fuseApply(nodes3)
+fusion.walkConvertToApply(nodes3)
+ngh.reversePrintGraph(x3)
+n1, n2 = fusion.getFusiblePair(nodes3)
+print('n1 ~= nil', n1 ~= nil)
+print('n1', ngh.nodeToString(n1))
+print('n2', ngh.nodeToString(n2))
 
-  graph.dot(nodes3:graph(), '', 'nodes3')
+local mod1 = n1.data.module
+local mod2 = n2.data.module
 
-  g3 = nn.gModule({x3}, {nodes3})
+local n1_inputs = mod1.numInputs
+local n2_inputs = mod2.numInputs
+local n1_outputs = mod1.numOutputs
+local n2_outputs = mod2.numOutputs
 
-  graph.dot(g3.fg, '', 'g3.fg')
+local virtualOutputs = mod1.virtualOutputs or 0
+-- virtualOutputs = virtualOutputs + mod1.numOutputs
+-- mod1.virtualOutputs = virtualOutputs
 
-  print('input', inputs[1])
-
-  output2 = g3:forward(inputs[1])
-  print('output1', output1)
-  print('output2', output2)
-  diff = (output2 - output1):abs():sum()
-  print('diff', diff)
-  assert(diff == 0)
-
-  local gradInput2 = g3:backward(inputs[1], output1)
-  print('gradInput2\n', gradInput2)
-
-  diff = (gradInput2 - gradInput1):abs():sum()
-  print('diff', diff)
-  assert(diff == 0)
+local n1f = mod1.forwardExpression
+local n2f = mod2.forwardExpression
+local n1f = n1f:gsub('{{output}}', 'float {{virtualOut' .. (virtualOutputs + 1) .. '}}')
+local n2f = n2f:gsub('{{input}}', '{{virtualOut' .. (virtualOutputs + 1) .. '}}')
+for o=1,mod1.numOutputs do
+  virtualOutputs = virtualOutputs + 1
+  local n1f = n1f:gsub('{{output' .. o .. '}}', '{{virtualOut' .. virtualOutputs .. '}}')
+  local n2f = n2f:gsub('{{input}}', '{{virtualOut' .. (virtualOutputs + 1) .. '}}')
 end
+
+mod1.forwardExpression = n1f .. '\n' .. n2f
+--nodes3 = ngh.removeNodeByWalk(nodes3, n2.data)
+
+ngh.walkApply(nodes3, function(node)
+  print(node.data.id, node.data.module, 'parentssize', #node.parents, torch.type(node.parents))
+end)
+
+print(n1.data.id, n1.data.module, 'parentssize', #n1.parents, torch.type(n1.parents))
+
+n1 = ngh.reduceEdge(n1, n2)
+
+-- remove n2 from graph
+-- here we assume that n2 only has n1 as parent, and n1 only has n2 as child
+-- need to improve this later...
+--n2.parents = {} 
+--n1.children = {}
+-- add n2's children as n1's
+--for i, n2child in n2.children do
+--  
+--end
+
+ngh.reversePrintGraph(x3)
+
 

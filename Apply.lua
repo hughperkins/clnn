@@ -40,7 +40,7 @@ function Apply:__init(numInputs, numOutputs, forwardExpression, backwardExpressi
     outputs['output' .. i] = 'ClTensor'
   end
   self.forwardKernel = torch.ClKernel({input=inputs, output=outputs, src=self.forwardSrc})
-  print(self.forwardKernel, self.forwardKernel:getRawKernel(), self.forwardKernel:getRenderedKernel())
+--  print(self.forwardKernel, self.forwardKernel:getRawKernel(), self.forwardKernel:getRenderedKernel())
 
   -- create backward kernel, could probably factorize this, rather than copy and hack
   -- but lets do copy and hack for now, to get it working
@@ -77,7 +77,11 @@ function Apply:__init(numInputs, numOutputs, forwardExpression, backwardExpressi
     outputs['gradInput' .. i] = 'ClTensor'
   end
   self.backwardKernel = torch.ClKernel({output=outputs, input=inputs, src=self.backwardSrc})
-  print(self.backwardKernel, self.backwardKernel:getRawKernel(), self.backwardKernel:getRenderedKernel())
+--  print(self.backwardKernel, self.backwardKernel:getRawKernel(), self.backwardKernel:getRenderedKernel())
+end
+
+function Apply:__tostring()
+  return 'Apply(' .. self.numInputs .. ', ' .. self.numOutputs .. ', "' .. self.forwardExpression:gsub('\n', ''):gsub('  ', '') .. '")'
 end
 
 -- input should be a table of inputs

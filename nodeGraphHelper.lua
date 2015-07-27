@@ -62,7 +62,7 @@ function nodeGraphHelper.nodeToString(node)
     res = res .. ' ' .. node.data.annotations.name
   end
   if node.data.module ~= nil then
-    res = res .. ' ' .. torch.type(node.data.module)
+    res = res .. ' ' .. tostring(node.data.module)
   end
   return res
 end
@@ -70,9 +70,31 @@ end
 function nodeGraphHelper.walkAddParents(node)
   node.parents = node.parents or {}
   for i, child in ipairs(node.children) do
-    nodeGraphHelper.addNodeLink(child, node, 'parents')
+--    nodeGraphHelper.addNodeLink(child, node, 'parents')
+    child.parents = child.parents or {}
+    nodeGraphHelper.addLink(child.parents, node)
     nodeGraphHelper.walkAddParents(child)
   end
+end
+
+function nodeGraphHelper.walkStripByObjects(node)
+  nodeGraphHelper.walkApply(node, function(node)
+    for k,v in pairs(node.children) do
+      if torch.type(k) == 'nn.Node' then
+        node.children[k] = nil
+      end
+    end
+    for k,v in pairs(node.parents) do
+      if torch.type(k) == 'nn.Node' then
+        node.parents[k] = nil
+      end
+    end
+  end)
+end
+
+function nodeGraphHelper.walkStandardize(node)
+  nodeGraphHelper.walkAddParents(node)
+  nodeGraphHelper.walkStripByObjects(node)
 end
 
 function nodeGraphHelper.printGraph(node, prefix)
@@ -91,36 +113,88 @@ function nodeGraphHelper.reversePrintGraph(node, prefix)
   end
 end
 
-function nodeGraphHelper.removeNodeByWalk(node, data)
-  print('removeNodeByWalk', node.data.annotations.name)
-  if node.data == data then
-    -- its me!
-    assert(#node.children == 1)
-    return node.children[1]
-  end
-  for i, child in ipairs(node.children) do
-    if child.data == data then
-      print('remove child', i, child.data.annotations)
-      table.remove(node.children, i)
-      node.children[child] = nil
-      local childmapindexidx = node.data.mapindex[child.data]
-      node.data.mapindex[childmapindexidx] = nil
-      node.data.mapindex[child.data] = nil
-      for j, childchild in ipairs(child.children) do
-        if node.children[childchild] == nil then
-          table.insert(node.children, childchild)
-          node.children[childchild] = #node.children
-          node.data.mapindex[childchild.data] = #node.data.mapindex + 1
-          node.data.mapindex[#node.data.mapindex + 1] = childchild.data
-        end
-      end
+function nodeGraphHelper.addLink(targetTable, value)
+  table.insert(targetTable, value)
+--  targetTable[value] = #targetTable
+end
+
+function nodeGraphHelper.removeLink(targetTable, value)
+  for i, v in ipairs(targetTable) do
+    if v == value then
+      table.remove(targetTable, i)
+      return
     end
   end
-  for i, child in ipairs(node.children) do
-    nodeGraphHelper.removeNodeByWalk(child, data)
-  end
-  return node
+--  targetTable[value] = nil
 end
+
+function nodeGraphHelper.addEdge(parent, child)
+  nodeGraphHelper.addLink(parent.children, child)
+  nodeGraphHeler.addLink(child.parents, parent)
+end
+
+function nodeGraphHelper.reduceEdge(parent, child)
+  -- means:
+  -- - all childs children transfer to parent
+  nodeGraphHelper.removeLink(parent.children, child)
+  print('parent', torch.type(parent), parent.data.module, parent.data.id, torch.type(parent.parents))
+  for i, childchild in ipairs(child.children) do
+    print('child', torch.type(child), child.data.module, child.data.id, torch.type(child.parents))
+    print('childchild', torch.type(childchild), childchild.data.module, childchild.data.id, torch.type(childchild.parents))
+    nodeGraphHelper.addLink(parent.children, childchild)
+    nodeGraphHelper.removeLink(childchild.parents, child)
+    nodeGraphHelper.addLink(childchild.parents, parent)
+  end
+  return parent
+end
+
+-- pass in the node we want to remove
+-- must have set parents beforehand
+-- joins from and to together, removing an edge
+-- from the graph
+-- the resulting data will be that in parent
+-- that in child will be thrown away
+--function nodeGraphHelper.fuseNodes(parent, child)
+--  -- remove parent from child
+--  table.remove(child.parents, child.parents[parent])
+--  child.parents[parent] = nil
+--  for i, child in to.children do
+--    
+--  end
+--end
+
+--function nodeGraphHelper.removeNodeByWalk(node, data)
+--  print('removeNodeByWalk', node.data.annotations.name)
+--  if node.data == data then
+--    print('its me!')
+--    assert(#node.children == 1)
+--    return node.children[1]
+--  end
+--  for i, child in ipairs(node.children) do
+--    if child.data == data then
+--      print('remove child', i, child.data.annotations.name)
+--      table.remove(node.children, i)
+--      node.children[child] = nil
+--      table.remove(node.data.mapindex, node.data.mapindex[child.data])
+--      node.data.mapindex[child.data] = nil
+
+--      
+
+--      for j, childchild in ipairs(child.children) do
+--        if node.children[childchild] == nil then
+--          table.insert(node.children, childchild)
+--          node.children[childchild] = #node.children
+--          node.data.mapindex[childchild.data] = #node.data.mapindex + 1
+--          node.data.mapindex[#node.data.mapindex + 1] = childchild.data
+--        end
+--      end
+--    end
+--  end
+--  for i, child in ipairs(node.children) do
+--    child = nodeGraphHelper.removeNodeByWalk(child, data)
+--  end
+--  return node
+--end
 
 return nodeGraphHelper
 
