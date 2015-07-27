@@ -12,7 +12,8 @@ function Apply:__init(numInputs, numOutputs, forwardExpression, backwardExpressi
   self.numOutputs = numOutputs
 
   -- create forward kernel
-  self.forwardExpression = forwardExpression
+  self.forwardExpression = forwardExpression:gsub('{{input}}', '{{input1}}')
+  self.forwardExpression = self.forwardExpression:gsub('{{output}}', '{{output1}}')
   self.forwardSrc = [[
     int n = get_global_id(0);
     if(n >= N) {

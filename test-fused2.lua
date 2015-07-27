@@ -41,7 +41,7 @@ ngh.nameNode(n3, 'n3')
 ngh.nameNode(n4, 'n4')
 
 --local m3 = nn.Tanh()(m2)
-g = nn.gModule({x}, {n4})
+g = nn.gModule({x}, {n2})
 g2 = g:clone()
 g:cl()
 g2:cl()
@@ -119,53 +119,66 @@ print('x3.parents[1]', ngh.nodeToString(x3.parents[1]))
 
 fusion.walkConvertToApply(nodes3)
 ngh.reversePrintGraph(x3)
-n2, n1 = fusion.getFusiblePair(nodes3)
-print('n1 ~= nil', n1 ~= nil)
-print('n1', ngh.nodeToString(n1))
-print('n2', ngh.nodeToString(n2))
 
-local mod1 = n1.data.module
-local mod2 = n2.data.module
+if os.getenv('FUSE') ~= nil then
+  print('fusing...')
+  p, c = fusion.getFusiblePair(nodes3)
+  -- p == parent, c == child
+  -- fuse(p, c) = p . c = p(c(input)) 
+  -- output = p(c(input))
 
-local n1_inputs = mod1.numInputs
-local n2_inputs = mod2.numInputs
-local n1_outputs = mod1.numOutputs
-local n2_outputs = mod2.numOutputs
+  print('p ~= nil', parent ~= nil)
+  print('p', ngh.nodeToString(p))
+  print('c', ngh.nodeToString(c))
 
-local virtualOutputs = mod1.virtualOutputs or 0
--- virtualOutputs = virtualOutputs + mod1.numOutputs
--- mod1.virtualOutputs = virtualOutputs
+  local pmod = p.data.module
+  local cmod = c.data.module
 
-local n1f = mod1.forwardExpression
-local n2f = mod2.forwardExpression
-local n1f = n1f:gsub('{{output}}', 'float {{virtualOut' .. (virtualOutputs + 1) .. '}}')
-local n2f = n2f:gsub('{{input}}', '{{virtualOut' .. (virtualOutputs + 1) .. '}}')
-for o=1,mod1.numOutputs do
-  virtualOutputs = virtualOutputs + 1
-  local n1f = n1f:gsub('{{output' .. o .. '}}', '{{virtualOut' .. virtualOutputs .. '}}')
-  local n2f = n2f:gsub('{{input}}', '{{virtualOut' .. (virtualOutputs + 1) .. '}}')
+  local p_inputs = pmod.numInputs
+  local c_inputs = cmod.numInputs
+  local p_outputs = pmod.numOutputs
+  local c_outputs = cmod.numOutputs
+
+  local virtualOutputs = c.virtualOutputs or 0
+  -- virtualOutputs = virtualOutputs + mod1.numOutputs
+  -- mod1.virtualOutputs = virtualOutputs
+
+  local cf = cmod.forwardExpression
+  local pf = pmod.forwardExpression
+  local cf = cf:gsub('{{output}}', 'float {{virtualOut' .. (virtualOutputs + 1) .. '}}')
+  local pf = pf:gsub('{{input}}', '{{virtualOut' .. (virtualOutputs + 1) .. '}}')
+  for o=1,cmod.numOutputs do
+    print('o', o)
+    virtualOutputs = virtualOutputs + 1
+    cf = cf:gsub('{{output' .. o .. '}}', 'float {{virtualOut' .. virtualOutputs .. '}}')
+    pf = pf:gsub('{{input' .. o .. '}}', '{{virtualOut' .. virtualOutputs .. '}}')
+  end
+
+  print('cf', cf)
+  print('pf', pf)
+
+  p.data.module.forwardExpression = cf .. '\n' .. pf
+  --nodes3 = ngh.removeNodeByWalk(nodes3, n2.data)
+
+--  ngh.walkApply(nodes3, function(node)
+--    print(node.data.id, node.data.module, 'parentssize', #node.parents, torch.type(node.parents))
+--  end)
+
+--  print(n1.data.id, n1.data.module, 'parentssize', #n1.parents, torch.type(n1.parents))
+
+  fused = ngh.reduceEdge(p, c)
+--  fused.forwardExpression = 
+
+  -- remove n2 from graph
+  -- here we assume that n2 only has n1 as parent, and n1 only has n2 as child
+  -- need to improve this later...
+  --n2.parents = {} 
+  --n1.children = {}
+  -- add n2's children as n1's
+  --for i, n2child in n2.children do
+  --  
+  --end
 end
-
-mod2.forwardExpression = n1f .. '\n' .. n2f
---nodes3 = ngh.removeNodeByWalk(nodes3, n2.data)
-
-ngh.walkApply(nodes3, function(node)
-  print(node.data.id, node.data.module, 'parentssize', #node.parents, torch.type(node.parents))
-end)
-
-print(n1.data.id, n1.data.module, 'parentssize', #n1.parents, torch.type(n1.parents))
-
-n1 = ngh.reduceEdge(n2, n1)
-
--- remove n2 from graph
--- here we assume that n2 only has n1 as parent, and n1 only has n2 as child
--- need to improve this later...
---n2.parents = {} 
---n1.children = {}
--- add n2's children as n1's
---for i, n2child in n2.children do
---  
---end
 
 ngh.printGraph(nodes3)
 ngh.reversePrintGraph(x3)
