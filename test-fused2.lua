@@ -32,17 +32,20 @@ local x = nn.Identity()()
 local n1 = nn.Tanh()(x)
 local n2 = nn.Sigmoid()(n1)
 local n3 = nn.Exp()(n2)
-local n4 = nn.Sigmoid()(x)
-local n5 = nn.CAddTable()({n3, n4})
+local n4 = nn.Abs()(n3)
+local n5 = nn.Sigmoid()(x)
+local n6 = nn.CAddTable()({n4, n5})
 
 ngh.nameNode(x, 'x')
 ngh.nameNode(n1, 'n1')
 ngh.nameNode(n2, 'n2')
 ngh.nameNode(n3, 'n3')
 ngh.nameNode(n4, 'n4')
+ngh.nameNode(n5, 'n5')
+ngh.nameNode(n6, 'n6')
 
 --local m3 = nn.Tanh()(m2)
-g = nn.gModule({x}, {n3})
+g = nn.gModule({x}, {n4})
 g2 = g:clone()
 g:cl()
 g2:cl()
@@ -144,6 +147,9 @@ function doFuse(nodes3)
   -- fuse(p, c) = p . c = p(c(input)) 
   -- output = p(c(input))
 
+  if p == nil then
+    return false
+  end
   print('p ~= nil', parent ~= nil)
   print('p', ngh.nodeToString(p))
   print('c', ngh.nodeToString(c))
@@ -203,12 +209,15 @@ function doFuse(nodes3)
   --for i, n2child in n2.children do
   --  
   --end
+  return true
 end
 
 if os.getenv('FUSE') ~= nil then
   print('fusing...')
-  doFuse(nodes3)
-  doFuse(nodes3)
+  while doFuse(nodes3) do
+  end
+--  doFuse(nodes3)
+--  doFuse(nodes3)
 end
 
 ngh.printGraph(nodes3)

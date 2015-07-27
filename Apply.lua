@@ -55,8 +55,9 @@ function Apply:__init(numInputs, numOutputs, forwardExpression, backwardExpressi
   for i=1,numInputs do
 --    be = be:gsub('{{input' .. i .. '}}', 'input' .. i .. '_data[n]')
     be = be:gsub('{{gradInput' .. i .. '}}', 'gradInput' .. i .. '_data[n]')
+    be = be:gsub('{{input' .. i .. '}}', 'input' .. i .. '_data[n]')
   end
---  be = be:gsub('{{input}}', 'input1_data[n]')
+  be = be:gsub('{{input}}', 'input1_data[n]')
   be = be:gsub('{{gradInput}}', 'gradInput1_data[n]')
   for o=1,numOutputs do
     be = be:gsub('{{gradOutput' .. o .. '}}', 'gradOutput' .. o .. '_data[n]')
@@ -71,6 +72,7 @@ function Apply:__init(numInputs, numOutputs, forwardExpression, backwardExpressi
   for i=1,numInputs do
 --    inputs['input' .. i] = 'ClTensor'
     outputs['gradInput' .. i] = 'ClTensor'
+    inputs['input' .. i] = 'ClTensor'
   end
   inputs['N'] = 'int'
   for i=1,numOutputs do
