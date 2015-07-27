@@ -79,6 +79,7 @@ end
 
 function nodeGraphHelper.walkStripByObjects(node)
   nodeGraphHelper.walkApply(node, function(node)
+    node.data.mapindex = nil
     for k,v in pairs(node.children) do
       if torch.type(k) == 'nn.Node' then
         node.children[k] = nil
@@ -113,19 +114,34 @@ function nodeGraphHelper.reversePrintGraph(node, prefix)
   end
 end
 
+function nodeGraphHelper.getLinkPos(targetTable, value)
+  for i, v in ipairs(targetTable) do
+    if v == value then
+      return i
+    end
+  end
+end
+
+function nodeGraphHelper.walkAddReciprocals(nodes)
+  nodeGraphHelper.walkApply(nodes, function(node)
+    for i, v in ipairs(node.parents) do
+      node.parents[v] = i
+    end
+    for i, v in ipairs(node.children) do
+      node.children[v] = i
+    end
+  end)
+end
+
 function nodeGraphHelper.addLink(targetTable, value)
-  table.insert(targetTable, value)
+  if nodeGraphHelper.getLinkPos(targetTable, value) == nil then
+    table.insert(targetTable, value)
+  end
 --  targetTable[value] = #targetTable
 end
 
 function nodeGraphHelper.removeLink(targetTable, value)
-  for i, v in ipairs(targetTable) do
-    if v == value then
-      table.remove(targetTable, i)
-      return
-    end
-  end
---  targetTable[value] = nil
+  table.remove(targetTable, nodeGraphHelper.getLinkPos(targetTable, value))
 end
 
 function nodeGraphHelper.addEdge(parent, child)

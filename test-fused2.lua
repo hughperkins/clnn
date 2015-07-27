@@ -167,6 +167,9 @@ n1 = ngh.reduceEdge(n1, n2)
 --  
 --end
 
+ngh.printGraph(nodes3)
 ngh.reversePrintGraph(x3)
 
+ngh.walkAddReciprocals(nodes3)
+graph.dot(nodes3:graph(), '', 'nodes3')
 
