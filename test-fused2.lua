@@ -119,7 +119,7 @@ print('x3.parents[1]', ngh.nodeToString(x3.parents[1]))
 
 fusion.walkConvertToApply(nodes3)
 ngh.reversePrintGraph(x3)
-n1, n2 = fusion.getFusiblePair(nodes3)
+n2, n1 = fusion.getFusiblePair(nodes3)
 print('n1 ~= nil', n1 ~= nil)
 print('n1', ngh.nodeToString(n1))
 print('n2', ngh.nodeToString(n2))
@@ -146,7 +146,7 @@ for o=1,mod1.numOutputs do
   local n2f = n2f:gsub('{{input}}', '{{virtualOut' .. (virtualOutputs + 1) .. '}}')
 end
 
-mod1.forwardExpression = n1f .. '\n' .. n2f
+mod2.forwardExpression = n1f .. '\n' .. n2f
 --nodes3 = ngh.removeNodeByWalk(nodes3, n2.data)
 
 ngh.walkApply(nodes3, function(node)
@@ -155,7 +155,7 @@ end)
 
 print(n1.data.id, n1.data.module, 'parentssize', #n1.parents, torch.type(n1.parents))
 
-n1 = ngh.reduceEdge(n1, n2)
+n1 = ngh.reduceEdge(n2, n1)
 
 -- remove n2 from graph
 -- here we assume that n2 only has n1 as parent, and n1 only has n2 as child
@@ -171,5 +171,5 @@ ngh.printGraph(nodes3)
 ngh.reversePrintGraph(x3)
 
 ngh.walkAddReciprocals(nodes3)
-graph.dot(nodes3:graph(), '', 'nodes3')
+graph.dot(nodes3:graph():reverse(), '', 'nodes3')
 
