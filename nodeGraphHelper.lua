@@ -1,5 +1,62 @@
 nodeGraphHelper = {}
 
+-- returns x, which is now top of inverted
+-- g.bg graph
+-- note that datas are identical to the ones
+-- in the original graph, not copies/clones
+function nodeGraphHelper.nnGraphToNgh(g)
+  local g2 = g
+  local newbg = g2.bg.nodes[2]
+  local thisnode = newbg
+  local x = newbg
+  while #thisnode.children > 0 do
+    x = thisnode
+    thisnode = thisnode.children[1]
+  end
+
+  thisnode = newbg
+  while thisnode.data ~= x.data do
+    thisnode = thisnode.children[1]
+  end
+  thisnode.children = {}
+
+  nodeGraphHelper.walkStandardize(newbg)
+  local x = nodeGraphHelper.invertGraph(newbg)
+  nodeGraphHelper.walkAddDataIds(x)
+  return x
+end
+
+-- pass in a bare, inverted ngh, and
+-- receive a gmodule :-)
+function nodeGraphHelper.nghToNnGraph(x)
+  local nodes = nodeGraphHelper.invertGraph(x)
+--  nodeGraphHelper.
+  local g = nn.gModule({x}, {nodes})
+  return g
+end
+
+function nodeGraphHelper.dot(topNode, something, filename)
+  nodeGraphHelper.walkAddBidirectional(topNode)
+  graph.dot(topNode:graph(), something, filename)
+  nodeGraphHelper.walkRemoveBidirectional(topNode)
+end
+
+function nodeGraphHelper.walkClone(node, newByOld)
+  local newGraph = graph.Node(node.data)
+  newGraph.parents = {}
+  local newByOld = newByOld or {}
+  newByOld[node] = newGraph
+  for i, oldChild in ipairs(node.children) do
+    local newChild = newByOld[oldChild]
+    if newChild == nil then
+      newChild = nodeGraphHelper.walkClone(oldChild, newByOld)
+    end
+    table.insert(newGraph.children, newChild)
+    table.insert(newChild.parents, newGraph)
+  end
+  return newGraph
+end
+
 function nodeGraphHelper.addNodeLink(from, to, tableName)
   from[tableName] = from[tableName] or {}
   local fromTable = from[tableName]
@@ -80,18 +137,40 @@ end
 
 function nodeGraphHelper.count(node)
   local count = 0
+  local visited = {}
   nodeGraphHelper.walkApply(node, function(node)
-    count = count + 1
+    if not visited[node] then
+      count = count + 1
+      visited[node] = true
+    end
   end)
   return count
 end
 
 function nodeGraphHelper.reverseCount(node)
   local count = 0
+  local visited = {}
   nodeGraphHelper.reverseWalkApply(node, function(node)
-    count = count + 1
+    if not visited[node] then
+      count = count + 1
+      visited[node] = true
+    end
   end)
   return count
+end
+
+function nodeGraphHelper.nodeGraphGetBottom(node)
+  if #node.children == 0 then
+    return node
+  end
+  return nodeGraphHelper.nodeGraphGetBottom(node.children[1])
+end
+
+function nodeGraphHelper.nodeGraphGetTop(node)
+  if #node.parents == 0 then
+    return node
+  end
+  return nodeGraphHelper.nodeGraphGetTop(node.parents[1])
 end
 
 function nodeGraphHelper.walkAddParents(node)
@@ -104,7 +183,7 @@ function nodeGraphHelper.walkAddParents(node)
   end
 end
 
-function nodeGraphHelper.walkStripByObjects(node)
+function nodeGraphHelper.walkRemoveBidirectional(node)
   nodeGraphHelper.walkApply(node, function(node)
     node.data.mapindex = nil
     for k,v in pairs(node.children) do
@@ -112,24 +191,40 @@ function nodeGraphHelper.walkStripByObjects(node)
         node.children[k] = nil
       end
     end
-    for k,v in pairs(node.parents) do
-      if torch.type(k) == 'nn.Node' then
-        node.parents[k] = nil
-      end
+--    for k,v in pairs(node.parents) do
+--      if torch.type(k) == 'nn.Node' then
+--        node.parents[k] = nil
+--      end
+--    end
+  end)
+end
+
+function nodeGraphHelper.walkAddBidirectional(node)
+  nodeGraphHelper.walkApply(node, function(node)
+    node.data.mapindex = {}
+    for i,v in ipairs(node.children) do
+      node.children[v] = i
+      node.data.mapindex[v.data] = i
+      node.data.mapindex[i] = v.data
     end
   end)
 end
 
 function nodeGraphHelper.walkStandardize(node)
   nodeGraphHelper.walkAddParents(node)
-  nodeGraphHelper.walkStripByObjects(node)
+  nodeGraphHelper.walkRemoveBidirectional(node)
 end
 
-function nodeGraphHelper.printGraph(node, prefix)
+function nodeGraphHelper.printGraph(node, prefix, printed)
+  printed = printed or {}
   prefix = prefix or ''
+  if printed[node] ~= nil then
+    return
+  end
+  printed[node] = true
   print(prefix .. nodeGraphHelper.nodeToString(node))
   for i, child in ipairs(node.children) do
-    nodeGraphHelper.printGraph(child, prefix .. '  ')
+    nodeGraphHelper.printGraph(child, prefix .. '  ', printed)
   end
 end
 
@@ -140,19 +235,16 @@ function nodeGraphHelper.reverseWalkApply(node, func)
   end
 end
 
-function nodeGraphHelper.reversePrintGraph(node, prefix)
+function nodeGraphHelper.reversePrintGraph(node, prefix, printed)
+  printed = printed or {}
   prefix = prefix or ''
+  if printed[node] ~= nil then
+    return
+  end
+  printed[node] = true
   print(prefix .. nodeGraphHelper.nodeToString(node))
   for i, child in ipairs(node.parents) do
-    nodeGraphHelper.reversePrintGraph(child, prefix .. '  ')
-  end
-end
-
-function nodeGraphHelper.getLinkPos(targetTable, value)
-  for i, v in ipairs(targetTable) do
-    if v == value then
-      return i
-    end
+    nodeGraphHelper.reversePrintGraph(child, prefix .. '  ', printed)
   end
 end
 
@@ -165,6 +257,35 @@ function nodeGraphHelper.walkAddReciprocals(nodes)
       node.children[v] = i
     end
   end)
+end
+
+function nodeGraphHelper.getLinkPos(targetTable, value)
+  for i, v in ipairs(targetTable) do
+    if v == value then
+      return i
+    end
+  end
+end
+
+-- returns new top
+function nodeGraphHelper.invertGraph(top)
+  -- we will put all nodes into all_nodes
+  -- then simply swap the 'children' and 'parents'
+  -- tables.  I guess :-)
+  local all_nodes = {}
+  local last_node = nil
+  nodeGraphHelper.walkApply(top, function(node)
+    if all_nodes[node] == nil then
+      all_nodes[node] = true
+    end
+    last_node = node
+  end)
+  for node, _ in pairs(all_nodes) do
+    local old_parents = node.parents
+    node.parents = node.children
+    node.children = old_parents
+  end
+  return nodeGraphHelper.nodeGraphGetTop(last_node)
 end
 
 function nodeGraphHelper.addLink(targetTable, value)

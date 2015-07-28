@@ -84,7 +84,11 @@ function Apply:__init(numInputs, numOutputs, forwardExpression, backwardExpressi
 end
 
 function Apply:__tostring()
-  return 'Apply(' .. self.numInputs .. ', ' .. self.numOutputs .. ', "' .. self.forwardExpression:gsub('\n', ''):gsub('  ', '') .. '")'
+  local fe = ''
+  if self.forwardExpression ~= nil then
+    fe = self.forwardExpression:gsub('\n', ''):gsub('  ', '')
+  end
+  return 'Apply(' .. self.numInputs .. ', ' .. self.numOutputs .. ', "' .. fe .. '")'
 end
 
 -- input should be a table of inputs

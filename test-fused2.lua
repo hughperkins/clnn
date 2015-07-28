@@ -149,3 +149,10 @@ ngh.reversePrintGraph(x3)
 ngh.walkAddReciprocals(nodes3)
 graph.dot(nodes3:graph():reverse(), '', 'nodes3')
 
+print('nodes3')
+ngh.printGraph(nodes3)
+local nodes3r = ngh.invertGraph(nodes3)
+print('nodes3')
+ngh.printGraph(nodes3r)
+graph.dot(nodes3r:graph(), '', 'nodes3r')
+
