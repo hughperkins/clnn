@@ -140,8 +140,10 @@ function fusion.doFuse(x)
   print('p', ngh.nodeToString(p))
   print('c', ngh.nodeToString(c))
 
-  local pmod = p.data.module
-  local cmod = c.data.module
+  local pdat = p.data
+  local cdat = c.data
+  local pmod = pdat.module
+  local cmod = cdat.module
 
   local p_inputs = pmod.numInputs
   local c_inputs = cmod.numInputs
@@ -162,58 +164,34 @@ function fusion.doFuse(x)
   -- parent might have more than one input
   -- only first input comes from child
 
-  local cf = cmod.forwardExpression
-  local pf = pmod.forwardExpression
-  local cf = cf:gsub('{{output}}', 'float {{virtualOut' .. (virtualOutputs + 1) .. '}}')
-  local pf = pf:gsub('{{input}}', '{{virtualOut' .. (virtualOutputs + 1) .. '}}')
-  for o=1,cmod.numOutputs do
-    print('o', o)
-    virtualOutputs = virtualOutputs + 1
-    cf = cf:gsub('{{output' .. o .. '}}', 'float {{virtualOut' .. virtualOutputs .. '}}')
-    pf = pf:gsub('{{input' .. o .. '}}', '{{virtualOut' .. virtualOutputs .. '}}')
+  local cfo = cdat.feobj
+  local pfo = pdat.feobj
+  local fusedfo = {}
+  for i, feo in ipairs(cfo) do
+    print('inserting', feo)
+    table.insert(fusedfo, feo)
+  end
+  for i, feo in ipairs(pfo) do
+    print('inserting', feo)
+    table.insert(fusedfo, feo)
   end
 
-  print('cf', cf)
-  print('pf', pf)
-
-  local fusedExp = normalizeWhite(cf .. '\n' .. pf)
-
-  print('fusedExp', fusedExp)
---  p.data.module.forwardExpression = fusedExp
---  p.data.module.virtualOutputs = virtualOutputs
-
-  --nodes3 = ngh.removeNodeByWalk(nodes3, n2.data)
-
---  ngh.walkApply(nodes3, function(node)
---    print(node.data.id, node.data.module, 'parentssize', #node.parents, torch.type(node.parents))
---  end)
-
---  print(n1.data.id, n1.data.module, 'parentssize', #n1.parents, torch.type(n1.parents))
-
-  local feobj = {template='{{output}} = {{input}} * {{input}};', transforms={input='input', output='output'}}
-
-  local cfeobj = {template='{{output}} = {{input}} * {{input}};', transforms={input='input', output='output'}}
-  local pfeobj = {template='{{output}} = {{input}} * {{input}};', transforms={input='input', output='output'}}
-
-  local cfeobj = {template='{{output}} = {{input}} * {{input}};', name='square', transforms={input='input', output='float virtualOutput1'}}
-  local pfeobj = {template='{{output}} = tanh({{input}});', name='tanh', transforms={input='virtualOutput1', output='output'}}
+  cfo[1].transforms.output = 'float virtualOutput1'
+  pfo[1].transforms.input = 'virtualOutput1'
+  for o=1,cmod.numOutputs do
+    virtualOutputs = virtualOutputs + 1
+--    cf = cf:gsub('{{output' .. o .. '}}', 'float {{virtualOut' .. virtualOutputs .. '}}')
+--    pf = pf:gsub('{{input' .. o .. '}}', '{{virtualOut' .. virtualOutputs .. '}}')
+  end
 
   local fused = ngh.reduceEdge(p, c)
   local fdat = fused.data
+  fdat.feobj = fusedfo
   local fmod = fdat.module
   fmod.forwardExpression = fusedExp
   fmod.virtualOutputs = virtualOutputs
   ngh.nodeSetName(fused, ngh.nodeGetName(c) .. '.' .. ngh.nodeGetName(p))
 
-  -- remove n2 from graph
-  -- here we assume that n2 only has n1 as parent, and n1 only has n2 as child
-  -- need to improve this later...
-  --n2.parents = {} 
-  --n1.children = {}
-  -- add n2's children as n1's
-  --for i, n2child in n2.children do
-  --  
-  --end
   return true
 end
 
