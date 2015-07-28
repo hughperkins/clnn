@@ -29,9 +29,10 @@ end
 -- pass in a bare, inverted ngh, and
 -- receive a gmodule :-)
 function nodeGraphHelper.nghToNnGraph(x)
-  local nodes = nodeGraphHelper.invertGraph(x)
---  nodeGraphHelper.
-  local g = nn.gModule({x}, {nodes})
+  local x2 = nodeGraphHelper.walkClone(x)
+  local nodes2 = nodeGraphHelper.invertGraph(x2)
+  nodeGraphHelper.walkAddBidirectional(nodes2)
+  local g = nn.gModule({x2}, {nodes2})
   return g
 end
 
