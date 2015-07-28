@@ -36,13 +36,13 @@ function nodeGraphHelper.nghToNnGraph(x)
 end
 
 function nodeGraphHelper.dot(topNode, something, filename)
-  nodeGraphHelper.walkAddBidirectional(topNode)
-  graph.dot(topNode:graph(), something, filename)
-  nodeGraphHelper.walkRemoveBidirectional(topNode)
+  local nghclone = nodeGraphHelper.walkClone(topNode)
+  nodeGraphHelper.walkAddBidirectional(nghclone)
+  graph.dot(nghclone:graph(), something, filename)
 end
 
 function nodeGraphHelper.walkClone(node, newByOld)
-  local newGraph = graph.Node(node.data)
+  local newGraph = nngraph.Node(node.data)
   newGraph.parents = {}
   local newByOld = newByOld or {}
   newByOld[node] = newGraph
