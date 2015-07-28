@@ -6,40 +6,82 @@ function fusion.walkConvertToApply(nodes)
   ngh.walkApply(nodes, function(node)
     local moduletype = torch.type(node.data.module)
     if moduletype == 'nn.Tanh' then
+      local dat = node.data
+      dat.name = moduletype
+      dat.virtualOutputs = 0
+      dat.feobj = {}
+      dat.beobj = {}
+      table.insert(dat.feobj, {template='{{output}} = tanh({{input}});', transforms={input='input', output='output'}})
+      table.insert(dat.beobj, {template='{{gradInput}} = {{gradOutput}} * (1 - {{output}} * {{output}});',
+        transforms={gradInput='gradInput', gradOutput='gradOutput', output='output'}})
       local apply = nn.Apply(1, 1, [[
         {{output}} = tanh({{input}});
       ]], [[
         {{gradInput}} = {{gradOutput}} * (1 - {{output}} * {{output}});
-      ]])
+      ]], moduletype)
       node.data.module = apply
     elseif moduletype == 'nn.Sigmoid' then
+      local dat = node.data
+      dat.name = moduletype
+      dat.virtualOutputs = 0
+      dat.feobj = {}
+      dat.beobj = {}
+      table.insert(dat.feobj, {template='{{output}} = 1.f / (1.f + exp( - {{input}}));', transforms={input='input', output='output'}})
+      table.insert(dat.beobj, {template='{{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});',
+        transforms={gradInput='gradInput', gradOutput='gradOutput', output='output'}})
       local apply = nn.Apply(1, 1, [[
         {{output}} =  1.f / (1.f + exp( - {{input}}));
       ]], [[
         {{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});
-      ]])
+      ]], moduletype)
       node.data.module = apply
     elseif moduletype == 'nn.Exp' then
+      local dat = node.data
+      dat.name = moduletype
+      dat.virtualOutputs = 0
+      dat.feobj = {}
+      dat.beobj = {}
+      table.insert(dat.feobj, {template='{{output}} = exp({{input}});', transforms={input='input', output='output'}})
+      table.insert(dat.beobj, {template='{{gradInput}} = {{gradOutput}} * {{output}};',
+        transforms={gradInput='gradInput', gradOutput='gradOutput', output='output'}})
       local apply = nn.Apply(1, 1, [[
         {{output}} =  exp({{input}});
       ]], [[
         {{gradInput}} = {{gradOutput}} * {{output}};
-      ]])
+      ]], moduletype)
       node.data.module = apply
     elseif moduletype == 'nn.Abs' then
+      local dat = node.data
+      dat.name = moduletype
+      dat.virtualOutputs = 0
+      dat.feobj = {}
+      dat.beobj = {}
+      table.insert(dat.feobj, {template='{{output}} = fabs({{input}});', transforms={input='input', output='output'}})
+      table.insert(dat.beobj, {template='{{gradInput}} = {{input}} < 0 ? - {{gradOutput}} : {{gradOutput}};',
+        transforms={gradInput='gradInput', gradOutput='gradOutput', input='input'}})
       local apply = nn.Apply(1, 1, [[
         {{output}} =  fabs({{input}});
       ]], [[
         {{gradInput}} = {{input}} < 0 ? - {{gradOutput}} : {{gradOutput}};
-      ]])
+      ]], moduletype)
       node.data.module = apply
     elseif moduletype == 'nn.CAddTable' then
+      local dat = node.data
+      dat.name = moduletype
+      dat.virtualOutputs = 0
+      dat.feobj = {}
+      dat.beobj = {}
+      table.insert(dat.feobj, {template='{{output}} = {{input1}} + {{input2}};', transforms={input1='input1', input2='input2', output='output'}})
+      table.insert(dat.beobj, {template=
+[[{{gradInput1}} = {{gradOutput}};
+{{gradInput2}} = {{gradOutput}};]],
+        transforms={gradInput1='gradInput1', gradInput2='gradInput2', gradOutput='gradOutput'}})
       local apply = nn.Apply(2, 1, [[
         {{output}} = {{input1}} + {{input2}};
       ]], [[
         {{gradInput1}} = {{gradOutput}};
         {{gradInput2}} = {{gradOutput}};
-      ]])
+      ]], moduletype)
       node.data.module = apply
     end
   end)

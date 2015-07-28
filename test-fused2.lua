@@ -31,21 +31,21 @@ local inputs = {in1, in2, in3}
 local x = nn.Identity()()
 local n1 = nn.Tanh()(x)
 local n2 = nn.Sigmoid()(n1)
---local n3 = nn.Exp()(n2)
+local n3 = nn.Exp()(x)
 --local n4 = nn.Abs()(n3)
 --local n5 = nn.Sigmoid()(x)
-local n3 = nn.CAddTable()({n2, x})
+local n4 = nn.CAddTable()({n2, n3})
 
 ngh.nameNode(x, 'x')
 ngh.nameNode(n1, 'n1')
 ngh.nameNode(n2, 'n2')
 ngh.nameNode(n3, 'n3')
---ngh.nameNode(n4, 'n4')
+ngh.nameNode(n4, 'n4')
 --ngh.nameNode(n5, 'n5')
 --ngh.nameNode(n6, 'n6')
 
 --local m3 = nn.Tanh()(m2)
-g = nn.gModule({x}, {n3})
+g = nn.gModule({x}, {n4})
 g2 = g:clone()
 g:cl()
 g2:cl()
@@ -165,9 +165,16 @@ function doFuse(nodes3)
 --  print('parent virtualoutputs', p.data.module.virtualOutputs)
 --  print('child virtualoutputs', c.data.module.virtualOutputs)
   local virtualOutputs = (c.data.module.virtualOutputs or 0) + (p.data.module.virtualOutputs or 0)
+  -- TODO need to renumber either all parents or all childs virtualoutputs, so dont overlap
   print('virtualOutputs before =', virtualOutputs)
   -- virtualOutputs = virtualOutputs + mod1.numOutputs
   -- mod1.virtualOutputs = virtualOutputs
+
+  -- observations:
+  -- ALL child's outputs go to parent
+  -- but normally child will just have one output
+  -- parent might have more than one input
+  -- only first input comes from child
 
   local cf = cmod.forwardExpression
   local pf = pmod.forwardExpression
@@ -186,8 +193,8 @@ function doFuse(nodes3)
   local fusedExp = normalizeWhite(cf .. '\n' .. pf)
 
   print('fusedExp', fusedExp)
-  p.data.module.forwardExpression = fusedExp
-  p.data.module.virtualOutputs = virtualOutputs
+--  p.data.module.forwardExpression = fusedExp
+--  p.data.module.virtualOutputs = virtualOutputs
 
   --nodes3 = ngh.removeNodeByWalk(nodes3, n2.data)
 
@@ -197,8 +204,19 @@ function doFuse(nodes3)
 
 --  print(n1.data.id, n1.data.module, 'parentssize', #n1.parents, torch.type(n1.parents))
 
-  p = ngh.reduceEdge(p, c)
---  fused.forwardExpression = 
+  local feobj = {template='{{output}} = {{input}} * {{input}};', transforms={input='input', output='output'}}
+
+  local cfeobj = {template='{{output}} = {{input}} * {{input}};', transforms={input='input', output='output'}}
+  local pfeobj = {template='{{output}} = {{input}} * {{input}};', transforms={input='input', output='output'}}
+
+  local cfeobj = {template='{{output}} = {{input}} * {{input}};', name='square', transforms={input='input', output='float virtualOutput1'}}
+  local pfeobj = {template='{{output}} = tanh({{input}});', name='tanh', transforms={input='virtualOutput1', output='output'}}
+
+  local fused = ngh.reduceEdge(p, c)
+  local fdat = fused.data
+  local fmod = fdat.module
+  fmod.forwardExpression = fusedExp
+  fmod.virtualOutputs = virtualOutputs
 
   -- remove n2 from graph
   -- here we assume that n2 only has n1 as parent, and n1 only has n2 as child
