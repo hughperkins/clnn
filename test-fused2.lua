@@ -103,19 +103,19 @@ end
 x3, nodes3 = gh.graphGetNodes(g2)
 
 ngh.walkAddParents(nodes3)
-ngh.walkStripByObjects(nodes3)
+ngh.walkRemoveBidirectional(nodes3)
+x3 = ngh.invertGraph(nodes3)
 --ngh.walkAddDataIds(nodes3)
 --ngh.walkReverseAddDataIds(nodes3)
-ngh.walkReverseAddDataIds(x3)
+ngh.walkAddDataIds(x3)
 print('x3', ngh.nodeToString(x3))
 print('nodes3', ngh.nodeToString(nodes3))
-ngh.printGraph(nodes3)
-ngh.reversePrintGraph(x3)
-ngh.walkApply(nodes3, function(node) print(ngh.nodeToString(node) .. ' ' .. tostring(node.parents ~= nil)) end)
-print('x3.parents[1]', ngh.nodeToString(x3.parents[1]))
+ngh.printGraph(x3)
+ngh.reversePrintGraph(nodes3)
+print('x3.children[1]', ngh.nodeToString(x3.children[1]))
 
-fusion.walkConvertToApply(nodes3)
-ngh.reversePrintGraph(x3)
+fusion.walkConvertToApply(x3)
+ngh.printGraph(x3)
 
 function normalizeWhite(input)
   old = nil
@@ -137,22 +137,19 @@ end
 
 if os.getenv('FUSE') ~= nil then
   print('fusing...')
-  while doFuse(nodes3) do
+  while fusion.doFuse(nodes3) do
   end
 --  doFuse(nodes3)
 --  doFuse(nodes3)
 end
 
-ngh.printGraph(nodes3)
-ngh.reversePrintGraph(x3)
+ngh.printGraph(x3)
+--ngh.reversePrintGraph(x3)
 
-ngh.walkAddReciprocals(nodes3)
-graph.dot(nodes3:graph():reverse(), '', 'nodes3')
+--ngh.walkAddReciprocals(nodes3)
+--graph.dot(nodes3:graph():reverse(), '', 'nodes3')
 
-print('nodes3')
-ngh.printGraph(nodes3)
-local nodes3r = ngh.invertGraph(nodes3)
-print('nodes3')
-ngh.printGraph(nodes3r)
-graph.dot(nodes3r:graph(), '', 'nodes3r')
+print('x3')
+ngh.printGraph(x3)
+ngh.dot(x3, '', 'x3')
 

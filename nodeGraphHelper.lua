@@ -273,6 +273,7 @@ function nodeGraphHelper.invertGraph(top)
   -- we will put all nodes into all_nodes
   -- then simply swap the 'children' and 'parents'
   -- tables.  I guess :-)
+  top = nodeGraphHelper.nodeGraphGetTop(top)
   local all_nodes = {}
   local last_node = nil
   nodeGraphHelper.walkApply(top, function(node)

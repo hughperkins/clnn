@@ -27,6 +27,10 @@ end
 function fusiontests.testApplyConvertTanh()
   local x = nn.Identity()()
   local n1 = nn.Tanh()(x)
+
+  ngh.walkAddParents(n1)
+  x = ngh.invertGraph(n1)
+
   fusion.walkConvertToApply(n1)
   tester:asserteq(torch.type(n1.data.module), 'nn.Apply')
   tester:asserteq(torch.type(x.data.module), 'nn.Identity')
@@ -42,7 +46,11 @@ end
 function fusiontests.testApplyConvertSigmoid()
   local x = nn.Identity()()
   local n1 = nn.Sigmoid()(x)
-  fusion.walkConvertToApply(n1)
+
+  ngh.walkAddParents(n1)
+  x = ngh.invertGraph(n1)
+  fusion.walkConvertToApply(x)
+
   tester:asserteq(torch.type(n1.data.module), 'nn.Apply')
   tester:asserteq(torch.type(x.data.module), 'nn.Identity')
   tester:asserteq(n1.data.virtualOutputs, 0)
@@ -58,7 +66,10 @@ function fusiontests.testApplyConvertTanhSigmoid()
   local x = nn.Identity()()
   local n1 = nn.Sigmoid()(x)
   local n2 = nn.Tanh()(n1)
-  fusion.walkConvertToApply(n2)
+
+  ngh.walkAddParents(n2)
+  x = ngh.invertGraph(n2)
+  fusion.walkConvertToApply(x)
 
   tester:asserteq(torch.type(x.data.module), 'nn.Identity')
 
@@ -91,22 +102,23 @@ function fusiontests.testFuseTanhSigmoid()
   ngh.nodeSetName(n2, 'n2')
 
   ngh.walkAddParents(n2)
-  ngh.walkStripByObjects(n2)
-  ngh.walkReverseAddDataIds(x )
+  ngh.walkRemoveBidirectional(n2)
+  x = ngh.invertGraph(n2)
+  ngh.walkAddDataIds(x)
 
-  fusion.reverseWalkConvertToApply(x)
-  tester:asserteq(ngh.count(n2), 3)
+  fusion.walkConvertToApply(x)
+  tester:asserteq(ngh.count(x), 3)
   fusion.doFuse(x)
-  tester:asserteq(ngh.count(n2), 2)
+  tester:asserteq(ngh.count(x), 2)
 
   tester:asserteq(torch.type(x.data.module), 'nn.Identity')
 
   tester:asserteq(ngh.nodeGetName(x), 'x')
-  tester:asserteq(#x.parents, 1)
-  tester:asserteq(#x.parents[1].parents, 0)
-  local fused = x.parents[1]
+  tester:asserteq(#x.children, 1)
+  tester:asserteq(#x.children[1].children, 0)
+  local fused = x.children[1]
   local fdat = fused.data
-  tester:asserteq(ngh.nodeGetName(fused), 'n1.n2')
+  tester:asserteq(ngh.nodeGetName(fused), 'n2.n1')
   tester:asserteq(#fdat.feobj, 2)
   tester:asserteq(fdat.feobj[1].template, '{{output}} = 1.f / (1.f + exp( - {{input}}));')
   tester:asserteq(fdat.feobj[2].template, '{{output}} = tanh({{input}});')
@@ -128,23 +140,24 @@ function fusiontests.testFuseExpTanhSigmoid()
   ngh.nodeSetName(n3, 'n3')
 
   ngh.walkAddParents(n3)
-  ngh.walkStripByObjects(n3)
-  ngh.walkReverseAddDataIds(x)
+  ngh.walkRemoveBidirectional(n3)
+  x = ngh.invertGraph(n2)
+  ngh.walkAddDataIds(x)
 
-  fusion.reverseWalkConvertToApply(x)
-  tester:asserteq(ngh.reverseCount(x), 4)
+  fusion.walkConvertToApply(x)
+  tester:asserteq(ngh.count(x), 4)
   fusion.doFuse(x)
-  tester:asserteq(ngh.reverseCount(x), 2)
+  tester:asserteq(ngh.count(x), 2)
 
   tester:asserteq(torch.type(x.data.module), 'nn.Identity')
 
   tester:asserteq(ngh.nodeGetName(x), 'x')
-  tester:asserteq(#x.parents, 1)
-  tester:asserteq(#x.parents[1].parents, 0)
+  tester:asserteq(#x.children, 1)
+  tester:asserteq(#x.children[1].children, 0)
 
-  local fused = x.parents[1]
+  local fused = x.children[1]
   local fdat = fused.data
-  tester:asserteq(ngh.nodeGetName(fused), 'n1.n2.n3')
+  tester:asserteq(ngh.nodeGetName(fused), 'n3.n2.n1')
   tester:asserteq(#fdat.feobj, 3)
   tester:asserteq(fdat.feobj[1].template, '{{output}} = 1.f / (1.f + exp( - {{input}}));')
   tester:asserteq(fdat.feobj[2].template, '{{output}} = tanh({{input}});')
@@ -170,21 +183,22 @@ function fusiontests.testApplyConvertSigmoidAddTable()
   ngh.nodeSetName(n2, 'n2')
 
   ngh.walkAddParents(n2)
-  ngh.walkStripByObjects(n2)
-  ngh.walkReverseAddDataIds(x)
+  ngh.walkRemoveBidirectional(n2)
+  x = ngh.invertGraph(n2)
+  ngh.walkAddDataIds(x)
 
-  fusion.reverseWalkConvertToApply(x)
-  tester:asserteq(ngh.reverseCount(x), 3)
+  fusion.walkConvertToApply(x)
+  tester:asserteq(ngh.count(x), 3)
   fusion.doFuse(x)
-  tester:asserteq(ngh.reverseCount(x), 2)
+  tester:asserteq(ngh.count(x), 2)
   local top = ngh.nodeGraphGetTop(x)
   graph.dot(top:graph(), '', 'add')
 
   tester:asserteq(torch.type(x.data.module), 'nn.Identity')
 
-  local fused = x.parents[1]
+  local fused = x.children[1]
   local fdat = fused.data
-  tester:asserteq(ngh.nodeGetName(fused), 'n1.n2')
+  tester:asserteq(ngh.nodeGetName(fused), 'n2.n1')
   tester:asserteq(#fdat.feobj, 2)
   tester:asserteq(fdat.feobj[1].template, '{{output}} = 1.f / (1.f + exp( - {{input}}));')
   tester:asserteq(fdat.feobj[2].template, '{{output}} = {{input1}} + {{input2}};')

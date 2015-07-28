@@ -1,5 +1,11 @@
 fusion = {}
 
+-- this assumes inverted, wrt g.bg, ie root of nodes, highest parent, is x, input
+-- and bottom, the child, is results
+-- in other words, its inverted wrt the graph created by doing like nn.Tanh()(nn.Sigmoid()()),
+-- which would make tanh a parent of sigmoid.  here we expect tanh to be the child of sigmoid,
+-- in this example
+
 local ngh = require('nodeGraphHelper')
 
 function fusion.isApply(module)
@@ -107,7 +113,7 @@ end
 function fusion.getFusiblePair(x)
   local n1 = nil
   local n2 = nil
-  ngh.reverseWalkApply(x, function(node)
+  ngh.walkApply(x, function(node)
     if n1 ~= nil then
       return
     end
@@ -129,20 +135,17 @@ function fusion.doFuse(x)
   end
 end
 
--- everything is upside down really:
--- parent function is applied to result of child function...
+-- since we inverted this:
+-- child function is applied to result of parent function
 function fusion.doFuseIteration(x)
   p, c = fusion.getFusiblePair(x)
   -- p == parent, c == child
-  -- fuse(p, c) = p . c = p(c(input)) 
-  -- output = p(c(input))
+  -- fuse(p, c) = c . p = c(p(input)) 
+  -- output = c(p(input))
 
   if p == nil then
     return false
   end
---  print('p ~= nil', parent ~= nil)
---  print('p', ngh.nodeToString(p))
---  print('c', ngh.nodeToString(c))
 
   local pdat = p.data
   local cdat = c.data
@@ -169,22 +172,22 @@ function fusion.doFuseIteration(x)
   -- need to find which input comes from child
 --  childIsWhichInput = ngh.getLinkPos(parent.
 
-  local cfo = cdat.feobj
   local pfo = pdat.feobj
+  local cfo = cdat.feobj
   local fusedfo = {}
-  for i, feo in ipairs(cfo) do
+  for i, feo in ipairs(pfo) do
     print('inserting', feo)
     table.insert(fusedfo, feo)
   end
-  for i, feo in ipairs(pfo) do
+  for i, feo in ipairs(cfo) do
     print('inserting', feo)
     table.insert(fusedfo, feo)
   end
 
   virtualOutputs = virtualOutputs + 1
-  cfo[#cfo].transforms.output = 'float virtualOutput' .. virtualOutputs
-  pfo[1].transforms.input = 'virtualOutput' .. virtualOutputs
-  for o=1,cmod.numOutputs do
+  pfo[#pfo].transforms.output = 'float virtualOutput' .. virtualOutputs
+  cfo[1].transforms.input = 'virtualOutput' .. virtualOutputs
+  for o=1,pmod.numOutputs do
 --    cfo
 --    cf = cf:gsub('{{output' .. o .. '}}', 'float {{virtualOut' .. virtualOutputs .. '}}')
 --    pf = pf:gsub('{{input' .. o .. '}}', '{{virtualOut' .. virtualOutputs .. '}}')
