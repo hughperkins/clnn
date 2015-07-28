@@ -128,6 +128,11 @@ function fusion.getFusiblePair(x)
 end
 
 function fusion.doFuse(x)
+  while fusion.doFuseIteration(x) do
+  end
+end
+
+function fusion.doFuseIteration(x)
   p, c = fusion.getFusiblePair(x)
   -- p == parent, c == child
   -- fuse(p, c) = p . c = p(c(input)) 
@@ -136,9 +141,9 @@ function fusion.doFuse(x)
   if p == nil then
     return false
   end
-  print('p ~= nil', parent ~= nil)
-  print('p', ngh.nodeToString(p))
-  print('c', ngh.nodeToString(c))
+--  print('p ~= nil', parent ~= nil)
+--  print('p', ngh.nodeToString(p))
+--  print('c', ngh.nodeToString(c))
 
   local pdat = p.data
   local cdat = c.data
@@ -176,10 +181,11 @@ function fusion.doFuse(x)
     table.insert(fusedfo, feo)
   end
 
-  cfo[1].transforms.output = 'float virtualOutput1'
-  pfo[1].transforms.input = 'virtualOutput1'
+  virtualOutputs = virtualOutputs + 1
+  cfo[#cfo].transforms.output = 'float virtualOutput' .. virtualOutputs
+  pfo[1].transforms.input = 'virtualOutput' .. virtualOutputs
   for o=1,cmod.numOutputs do
-    virtualOutputs = virtualOutputs + 1
+--    cfo
 --    cf = cf:gsub('{{output' .. o .. '}}', 'float {{virtualOut' .. virtualOutputs .. '}}')
 --    pf = pf:gsub('{{input' .. o .. '}}', '{{virtualOut' .. virtualOutputs .. '}}')
   end

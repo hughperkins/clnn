@@ -86,6 +86,14 @@ function nodeGraphHelper.count(node)
   return count
 end
 
+function nodeGraphHelper.reverseCount(node)
+  local count = 0
+  nodeGraphHelper.reverseWalkApply(node, function(node)
+    count = count + 1
+  end)
+  return count
+end
+
 function nodeGraphHelper.walkAddParents(node)
   node.parents = node.parents or {}
   for i, child in ipairs(node.children) do
@@ -126,8 +134,6 @@ function nodeGraphHelper.printGraph(node, prefix)
 end
 
 function nodeGraphHelper.reverseWalkApply(node, func)
-  print('reversewalkapply', tostring(node ~= nil))
-  print(nodeGraphHelper.nodeToString(node))
   func(node)
   for i, parent in ipairs(node.parents) do
     nodeGraphHelper.reverseWalkApply(parent, func)
@@ -181,10 +187,10 @@ function nodeGraphHelper.reduceEdge(parent, child)
   -- means:
   -- - all childs children transfer to parent
   nodeGraphHelper.removeLink(parent.children, child)
-  print('parent', torch.type(parent), parent.data.module, parent.data.id, torch.type(parent.parents))
+--  print('parent', torch.type(parent), parent.data.module, parent.data.id, torch.type(parent.parents))
   for i, childchild in ipairs(child.children) do
-    print('child', torch.type(child), child.data.module, child.data.id, torch.type(child.parents))
-    print('childchild', torch.type(childchild), childchild.data.module, childchild.data.id, torch.type(childchild.parents))
+--    print('child', torch.type(child), child.data.module, child.data.id, torch.type(child.parents))
+--    print('childchild', torch.type(childchild), childchild.data.module, childchild.data.id, torch.type(childchild.parents))
     nodeGraphHelper.addLink(parent.children, childchild)
     nodeGraphHelper.removeLink(childchild.parents, child)
     nodeGraphHelper.addLink(childchild.parents, parent)
