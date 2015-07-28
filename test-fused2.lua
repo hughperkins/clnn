@@ -74,13 +74,6 @@ if false then
   end
 end
 
-function isApply(module)
-  if torch.type(module) == 'nn.Apply' then
-    return true
-  end
-  return false
-end
-
 --if false then
 --  nodes3 = fuseApply(nodes3)
 
@@ -141,94 +134,6 @@ function normalizeWhite(input)
   return input
 end
 
-function doFuse(nodes3)
-  p, c = fusion.getFusiblePair(nodes3)
-  -- p == parent, c == child
-  -- fuse(p, c) = p . c = p(c(input)) 
-  -- output = p(c(input))
-
-  if p == nil then
-    return false
-  end
-  print('p ~= nil', parent ~= nil)
-  print('p', ngh.nodeToString(p))
-  print('c', ngh.nodeToString(c))
-
-  local pmod = p.data.module
-  local cmod = c.data.module
-
-  local p_inputs = pmod.numInputs
-  local c_inputs = cmod.numInputs
-  local p_outputs = pmod.numOutputs
-  local c_outputs = cmod.numOutputs
-
---  print('parent virtualoutputs', p.data.module.virtualOutputs)
---  print('child virtualoutputs', c.data.module.virtualOutputs)
-  local virtualOutputs = (c.data.module.virtualOutputs or 0) + (p.data.module.virtualOutputs or 0)
-  -- TODO need to renumber either all parents or all childs virtualoutputs, so dont overlap
-  print('virtualOutputs before =', virtualOutputs)
-  -- virtualOutputs = virtualOutputs + mod1.numOutputs
-  -- mod1.virtualOutputs = virtualOutputs
-
-  -- observations:
-  -- ALL child's outputs go to parent
-  -- but normally child will just have one output
-  -- parent might have more than one input
-  -- only first input comes from child
-
-  local cf = cmod.forwardExpression
-  local pf = pmod.forwardExpression
-  local cf = cf:gsub('{{output}}', 'float {{virtualOut' .. (virtualOutputs + 1) .. '}}')
-  local pf = pf:gsub('{{input}}', '{{virtualOut' .. (virtualOutputs + 1) .. '}}')
-  for o=1,cmod.numOutputs do
-    print('o', o)
-    virtualOutputs = virtualOutputs + 1
-    cf = cf:gsub('{{output' .. o .. '}}', 'float {{virtualOut' .. virtualOutputs .. '}}')
-    pf = pf:gsub('{{input' .. o .. '}}', '{{virtualOut' .. virtualOutputs .. '}}')
-  end
-
-  print('cf', cf)
-  print('pf', pf)
-
-  local fusedExp = normalizeWhite(cf .. '\n' .. pf)
-
-  print('fusedExp', fusedExp)
---  p.data.module.forwardExpression = fusedExp
---  p.data.module.virtualOutputs = virtualOutputs
-
-  --nodes3 = ngh.removeNodeByWalk(nodes3, n2.data)
-
---  ngh.walkApply(nodes3, function(node)
---    print(node.data.id, node.data.module, 'parentssize', #node.parents, torch.type(node.parents))
---  end)
-
---  print(n1.data.id, n1.data.module, 'parentssize', #n1.parents, torch.type(n1.parents))
-
-  local feobj = {template='{{output}} = {{input}} * {{input}};', transforms={input='input', output='output'}}
-
-  local cfeobj = {template='{{output}} = {{input}} * {{input}};', transforms={input='input', output='output'}}
-  local pfeobj = {template='{{output}} = {{input}} * {{input}};', transforms={input='input', output='output'}}
-
-  local cfeobj = {template='{{output}} = {{input}} * {{input}};', name='square', transforms={input='input', output='float virtualOutput1'}}
-  local pfeobj = {template='{{output}} = tanh({{input}});', name='tanh', transforms={input='virtualOutput1', output='output'}}
-
-  local fused = ngh.reduceEdge(p, c)
-  local fdat = fused.data
-  local fmod = fdat.module
-  fmod.forwardExpression = fusedExp
-  fmod.virtualOutputs = virtualOutputs
-
-  -- remove n2 from graph
-  -- here we assume that n2 only has n1 as parent, and n1 only has n2 as child
-  -- need to improve this later...
-  --n2.parents = {} 
-  --n1.children = {}
-  -- add n2's children as n1's
-  --for i, n2child in n2.children do
-  --  
-  --end
-  return true
-end
 
 if os.getenv('FUSE') ~= nil then
   print('fusing...')

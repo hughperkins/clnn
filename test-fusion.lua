@@ -7,6 +7,23 @@ local fusion = require('fusion')
 
 local fusiontests = {}
 
+function normalizeWhite(input)
+  old = nil
+  while old ~= input do
+    old = input
+    input = input:gsub('  ', ' ')
+  end
+  while old ~= input do
+    old = input
+    input = input:gsub(' \n', '\n')
+  end
+  while old ~= input do
+    old = input
+    input = input:gsub('\n\n', '\n')
+  end
+  return input
+end
+
 function fusiontests.testApplyConvertTanh()
   local x = nn.Identity()()
   local n1 = nn.Tanh()(x)
@@ -42,6 +59,41 @@ function fusiontests.testApplyConvertTanhSigmoid()
   local n1 = nn.Sigmoid()(x)
   local n2 = nn.Tanh()(n1)
   fusion.walkConvertToApply(n2)
+
+  tester:asserteq(torch.type(x.data.module), 'nn.Identity')
+
+  tester:asserteq(torch.type(n2.data.module), 'nn.Apply')
+  tester:asserteq(n2.data.virtualOutputs, 0)
+  tester:asserteq(#n2.data.feobj, 1)
+  tester:asserteq(#n2.data.beobj, 1)
+  tester:asserteq(n2.data.feobj[1].template, '{{output}} = tanh({{input}});')
+  tester:asserteq(n2.data.beobj[1].template, '{{gradInput}} = {{gradOutput}} * (1 - {{output}} * {{output}});')
+  tester:asserteq(n2.data.feobj[1].transforms.input, 'input')
+  tester:asserteq(n2.data.feobj[1].transforms.output, 'output')
+
+  tester:asserteq(torch.type(n1.data.module), 'nn.Apply')
+  tester:asserteq(n1.data.virtualOutputs, 0)
+  tester:asserteq(#n1.data.feobj, 1)
+  tester:asserteq(#n1.data.beobj, 1)
+  tester:asserteq(n1.data.feobj[1].template, '{{output}} = 1.f / (1.f + exp( - {{input}}));')
+  tester:asserteq(n1.data.beobj[1].template, '{{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});')
+  tester:asserteq(n1.data.feobj[1].transforms.input, 'input')
+  tester:asserteq(n1.data.feobj[1].transforms.output, 'output')
+end
+
+function fusiontests.testFuseTanhSigmoid()
+  local x = nn.Identity()()
+  local n1 = nn.Sigmoid()(x)
+  local n2 = nn.Tanh()(n1)
+
+  ngh.walkAddParents(n2)
+  ngh.walkStripByObjects(n2)
+  ngh.walkReverseAddDataIds(x )
+
+  fusion.walkConvertToApply(n2)
+  tester:asserteq(ngh.count(n2), 3)
+  fusion.doFuse(n2)
+  tester:asserteq(ngh.count(n2), 2)
 
   tester:asserteq(torch.type(x.data.module), 'nn.Identity')
 

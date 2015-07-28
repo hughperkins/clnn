@@ -67,6 +67,14 @@ function nodeGraphHelper.nodeToString(node)
   return res
 end
 
+function nodeGraphHelper.count(node)
+  local count = 0
+  nodeGraphHelper.walkApply(node, function(node)
+    count = count + 1
+  end)
+  return count
+end
+
 function nodeGraphHelper.walkAddParents(node)
   node.parents = node.parents or {}
   for i, child in ipairs(node.children) do
