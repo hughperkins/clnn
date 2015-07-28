@@ -86,13 +86,17 @@ function fusiontests.testFuseTanhSigmoid()
   local n1 = nn.Sigmoid()(x)
   local n2 = nn.Tanh()(n1)
 
+  ngh.nodeSetName(x, 'x')
+  ngh.nodeSetName(n1, 'n1')
+  ngh.nodeSetName(n2, 'n2')
+
   ngh.walkAddParents(n2)
   ngh.walkStripByObjects(n2)
   ngh.walkReverseAddDataIds(x )
 
-  fusion.walkConvertToApply(n2)
+  fusion.reverseWalkConvertToApply(x)
   tester:asserteq(ngh.count(n2), 3)
-  fusion.doFuse(n2)
+  fusion.doFuse(x)
   tester:asserteq(ngh.count(n2), 2)
 
   tester:asserteq(torch.type(x.data.module), 'nn.Identity')
@@ -114,6 +118,11 @@ function fusiontests.testFuseTanhSigmoid()
   tester:asserteq(n1.data.beobj[1].template, '{{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});')
   tester:asserteq(n1.data.feobj[1].transforms.input, 'input')
   tester:asserteq(n1.data.feobj[1].transforms.output, 'output')
+
+  tester:asserteq(ngh.nodeGetName(x), 'x')
+  tester:asserteq(ngh.nodeGetName(x.parents[1]), 'n1.n2')
+  tester:asserteq(#x.parents, 1)
+  tester:asserteq(#x.parents[1].parents, 0)
 end
 
 function go()

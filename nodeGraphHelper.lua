@@ -20,6 +20,17 @@ function nodeGraphHelper.addDataLink(from, to, tableName)
   end  
 end
 
+function nodeGraphHelper.nodeGetName(node)
+  if node.data.annotations == nil then
+    return nil
+  end
+  return node.data.annotations.name
+end
+
+function nodeGraphHelper.nodeSetName(node, name)
+  nodeGraphHelper.nameNode(node, name)
+end
+
 function nodeGraphHelper.nameNode(node, name)
   node.data.annotations = node.data.annotations or {}
   node.data.annotations.name = name
@@ -111,6 +122,15 @@ function nodeGraphHelper.printGraph(node, prefix)
   print(prefix .. nodeGraphHelper.nodeToString(node))
   for i, child in ipairs(node.children) do
     nodeGraphHelper.printGraph(child, prefix .. '  ')
+  end
+end
+
+function nodeGraphHelper.reverseWalkApply(node, func)
+  print('reversewalkapply', tostring(node ~= nil))
+  print(nodeGraphHelper.nodeToString(node))
+  func(node)
+  for i, parent in ipairs(node.parents) do
+    nodeGraphHelper.reverseWalkApply(parent, func)
   end
 end
 
