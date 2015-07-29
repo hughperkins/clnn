@@ -274,14 +274,6 @@ function nodeGraphHelper.walkAddReciprocals(nodes)
   end)
 end
 
-function nodeGraphHelper.getLinkPos(targetTable, value)
-  for i, v in ipairs(targetTable) do
-    if v == value then
-      return i
-    end
-  end
-end
-
 -- returns new top
 function nodeGraphHelper.invertGraph(top)
   -- we will put all nodes into all_nodes
@@ -302,12 +294,6 @@ function nodeGraphHelper.invertGraph(top)
     node.children = old_parents
   end
   return nodeGraphHelper.nodeGraphGetTop(last_node)
-end
-
-function nodeGraphHelper.addLink(targetTable, value)
-  if nodeGraphHelper.getLinkPos(targetTable, value) == nil then
-    table.insert(targetTable, value)
-  end
 end
 
 function ngh.walkValidate(topnode)
@@ -356,6 +342,21 @@ function ngh.walkValidate(topnode)
   return valid
 end
 
+function nodeGraphHelper.getLinkPos(targetTable, value)
+  for i, v in ipairs(targetTable) do
+    if v == value then
+      return i
+    end
+  end
+  return nil
+end
+
+function nodeGraphHelper.addLink(targetTable, value)
+  if nodeGraphHelper.getLinkPos(targetTable, value) == nil then
+    table.insert(targetTable, value)
+  end
+end
+
 function nodeGraphHelper.removeLink(targetTable, value)
   local pos = nodeGraphHelper.getLinkPos(targetTable, value)
   if pos ~= nil then
@@ -368,27 +369,33 @@ function nodeGraphHelper.addEdge(parent, child)
   nodeGraphHelper.addLink(child.parents, parent)
 end
 
-function nodeGraphHelper.reduceEdge(parent, child)
+function nodeGraphHelper.removeEdge(parent, child)
   nodeGraphHelper.removeLink(parent.children, child)
+  nodeGraphHelper.removeLink(child.parents, parent)
+end
+
+function nodeGraphHelper.reduceEdge(parent, child)
+--  nodeGraphHelper.removeLink(parent.children, child)
+  ngh.removeEdge(parent, child)
+  -- all child links on the child should become children of the 
+  -- parent
   for i, childchild in ipairs(child.children) do
-    nodeGraphHelper.addLink(parent.children, childchild)
-    nodeGraphHelper.removeLink(childchild.parents, child)
-    nodeGraphHelper.addLink(childchild.parents, parent)
+    ngh.addEdge(parent, childchild)
+  end
+  for i, childchild in ipairs(child.children) do
+    ngh.removeEdge(child, childchild)
   end
   -- all parent links on the child should move to parent, unless already present
   -- on parent
-  for i, childparent in ipairs(child.parents) do
-    if childparent ~= parent then
-      if ngh.getLinkPos(parent.parents, childparent) == nil then
-        ngh.addLink(parent.parents, childparent)
-        ngh.removeLink(childparent.children, child)
-        ngh.addLink(childparent.children, parent)
-        ngh.removeLink(child.parents, childparent)
-      else
-        ngh.removeLink(childparent.children, child)
-        ngh.removeLink(child.parents, childparent)
-      end
-    end
+  for i=#child.parents,1,-1 do
+--  for i, childparent in ipairs(child.parents) do
+    local childparent = child.parents[i]
+    ngh.addEdge(childparent, parent)
+  end
+--  for i, childparent in ipairs(child.parents) do
+  for i=#child.parents,1,-1 do
+    local childparent = child.parents[i]
+    ngh.removeEdge(childparent, child)
   end
 
   -- also remove any parents from child which are same as parent's parents

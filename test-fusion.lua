@@ -251,12 +251,97 @@ function fusiontests.testApplyConvertMultiInputAdd()
 --  ngh.dot(x, '', 'add')
   tester:asserteq(ngh.count(x), 6)
   tester:asserteq(ngh.walkValidate(x), true)
+--  ngh.dot(x, '', 'xold')
+  tester:asserteq(ngh.walkValidate(x), true)
+--  local xold = ngh.walkClone(x)
+--  tester:asserteq(ngh.walkValidate(x), true)
+--  ngh.printGraph(x)
+  fusion.doFuse(x)
+  tester:asserteq(ngh.walkValidate(x), true)
+--  ngh.printGraph(x)
+--  ngh.dot(x, '', 'xnew')
+  tester:asserteq(ngh.count(x), 5)
+
+  tester:asserteq(torch.type(x.data.module), 'nn.Identity')
+
+  local fused = x.children[1].children[1].children[1]
+  local fdat = fused.data
+  tester:asserteq(ngh.nodeGetName(fused), 'n2.n1')
+  tester:asserteq(#fdat.feobj, 2)
+  tester:asserteq(fdat.feobj[1].template, '{{output}} = tanh({{input}});')
+  tester:asserteq(fdat.feobj[2].template, '{{output}} = {{input1}} + {{input2}};')
+
+  for k, v in pairs(fdat.feobj[1].transforms) do
+    print('feobj[1]', k, v)
+  end
+  for k, v in pairs(fdat.feobj[2].transforms) do
+    print('feobj[2]', k, v)
+  end
+
+  tester:asserteq(fdat.feobj[1].transforms.input, 'input')
+  tester:asserteq(fdat.feobj[1].transforms.output, 'float virtualOutput1')
+
+  tester:asserteq(fdat.feobj[2].transforms.input1, 'virtualOutput1')
+  tester:asserteq(fdat.feobj[2].transforms.input2, 'input2')
+  tester:asserteq(fdat.feobj[2].transforms.output, 'output')
+end
+
+function fusiontests.testApplyCharRnn()
+  local x = nn.Identity()()
+  local xpre, x1, x2, x3, x4 = x:split(5)
+  local n1 = nn.Sigmoid()(x1)
+  local n2 = nn.Sigmoid()(x2)
+  local n3 = nn.Tanh()(x3)
+  local n4 = nn.CMulTable()({xpre, n1})
+  local n5 = nn.CMulTable()({n2, n3})
+  local n6 = nn.CAddTable()({n4, n5})
+  local n7 = nn.Tanh()(n6)
+  local n8 = nn.Sigmoid()(x4)
+  local n9 = nn.CMulTable()({n7, n8})
+  local out = nn.Identity()({n6, n9})
+
+  ngh.nodeSetName(x, 'x')
+  ngh.nodeSetName(xpre, 'xpre')
+  ngh.nodeSetName(x1, 'x1')
+  ngh.nodeSetName(x2, 'x2')
+  ngh.nodeSetName(x3, 'x3')
+  ngh.nodeSetName(x4, 'x4')
+  ngh.nodeSetName(n1, 'n1')
+  ngh.nodeSetName(n2, 'n2')
+  ngh.nodeSetName(n3, 'n3')
+  ngh.nodeSetName(n4, 'n4')
+  ngh.nodeSetName(n5, 'n5')
+  ngh.nodeSetName(n6, 'n6')
+  ngh.nodeSetName(n7, 'n7')
+  ngh.nodeSetName(n8, 'n8')
+  ngh.nodeSetName(n9, 'n9')
+  ngh.nodeSetName(out, 'out')
+
+  ngh.walkAddParents(n9)
+  x = ngh.invertGraph(n9)
+  ngh.walkRemoveBidirectional(x)
+  ngh.walkAddDataIds(x)
+
+  ngh.dot(x, '', 'add')
+  fusion.walkConvertToApply(x)
+  tester:asserteq(ngh.count(x), 16)
+  tester:asserteq(ngh.walkValidate(x), true)
   ngh.dot(x, '', 'xold')
   tester:asserteq(ngh.walkValidate(x), true)
   local xold = ngh.walkClone(x)
   tester:asserteq(ngh.walkValidate(x), true)
   ngh.printGraph(x)
-  fusion.doFuse(x)
+  local it = 0
+  ngh.dot(x, '', 'xit' .. it)
+  while fusion.doFuseIteration(x) do
+    tester:asserteq(ngh.walkValidate(x), true)
+    it = it + 1
+    ngh.dot(x, '', 'xit' .. it)
+    if it >= 4 then
+--      os.exit(0)
+    end
+  end
+--  fusion.doFuse(x)
   tester:asserteq(ngh.walkValidate(x), true)
   ngh.printGraph(x)
   ngh.dot(x, '', 'xnew')

@@ -95,6 +95,24 @@ function fusion.convertToApply(node)
       {{gradInput2}} = {{gradOutput}};
     ]], moduletype)
     node.data.module = apply
+  elseif moduletype == 'nn.CMulTable' then
+    local dat = node.data
+    dat.name = moduletype
+    dat.virtualOutputs = 0
+    dat.feobj = {}
+    dat.beobj = {}
+    table.insert(dat.feobj, {template='{{output}} = {{input1}} * {{input2}};', transforms={input1='input1', input2='input2', output='output'}})
+    table.insert(dat.beobj, {template=
+[[{{gradInput1}} = {{gradOutput}};
+{{gradInput2}} = {{gradOutput}};]],
+      transforms={gradInput1='gradInput1', gradInput2='gradInput2', gradOutput='gradOutput'}})
+    local apply = nn.Apply(2, 1, [[
+      {{output}} = {{input1}} + {{input2}};
+    ]], [[
+      {{gradInput1}} = {{gradOutput}};
+      {{gradInput2}} = {{gradOutput}};
+    ]], moduletype)
+    node.data.module = apply
   end
 end
 
