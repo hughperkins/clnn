@@ -8,7 +8,17 @@ fusion = {}
 
 local ngh = require('nodeGraphHelper')
 
-function fusion.isApply(module)
+function fusion.isNodeApply(node)
+  if node.data.module == nil then
+    return false
+   end
+  if torch.type(node.data.module) == 'nn.Apply' then
+    return true
+  end
+  return false
+end
+
+function fusion.isModuleApply(module)
   if torch.type(module) == 'nn.Apply' then
     return true
   end
@@ -135,9 +145,9 @@ function fusion.getFusiblePair(x)
     if n1 ~= nil then
       return
     end
-    if fusion.isApply(node.data.module) then
+    if fusion.isNodeApply(node) then
       for j, child in ipairs(node.children) do  -- I know this is rubbish n-squared, fix this later..
-        if fusion.isApply(child.data.module) then
+        if fusion.isNodeApply(child) then
           n1 = node
           n2 = child
           return
@@ -146,6 +156,28 @@ function fusion.getFusiblePair(x)
     end
   end)
   return n1, n2
+end
+
+function fusion.expandTemplate(feo)
+  fe = feo.template
+  for target, value in pairs(feo.transforms) do
+    fe = fe:gsub('{{' .. target .. '}}', value)
+  end
+  print(fe)
+  return fe
+end
+
+function fusion.generateKernels(x)
+  ngh.walkApply(x, function(node)
+    print('apply node', node.data.module)
+    if fusion.isNodeApply(node) then
+      fe = ''
+      for i, onefe in ipairs(node.data.feobj) do
+        fe = fe .. fusion.expandTemplate(onefe) .. '\n'
+      end
+      print('fe', fe)
+    end
+  end)
 end
 
 function fusion.doFuse(x)

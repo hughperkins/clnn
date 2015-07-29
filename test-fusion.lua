@@ -345,16 +345,23 @@ function fusiontests.testApplyCharRnn()
   tester:asserteq(ngh.walkValidate(x), true)
   ngh.printGraph(x)
   ngh.dot(x, '', 'xnew')
-  tester:asserteq(ngh.count(x), 5)
+  tester:asserteq(ngh.count(x), 8)
 
   tester:asserteq(torch.type(x.data.module), 'nn.Identity')
 
   local fused = x.children[1].children[1].children[1]
   local fdat = fused.data
-  tester:asserteq(ngh.nodeGetName(fused), 'n2.n1')
-  tester:asserteq(#fdat.feobj, 2)
-  tester:asserteq(fdat.feobj[1].template, '{{output}} = tanh({{input}});')
-  tester:asserteq(fdat.feobj[2].template, '{{output}} = {{input1}} + {{input2}};')
+  tester:asserteq(ngh.nodeGetName(fused), 'n9.n7.n6.n4.n1.n5.n2.n3.n8')
+  tester:asserteq(#fdat.feobj, 9)
+  tester:asserteq(fdat.feobj[1].template, '{{output}} = 1.f / (1.f + exp( - {{input}}));')
+  tester:asserteq(fdat.feobj[2].template, '{{output}} = tanh({{input}});')
+  tester:asserteq(fdat.feobj[3].template, '{{output}} = 1.f / (1.f + exp( - {{input}}));')
+  tester:asserteq(fdat.feobj[4].template, '{{output}} = {{input1}} * {{input2}};')
+  tester:asserteq(fdat.feobj[5].template, '{{output}} = 1.f / (1.f + exp( - {{input}}));')
+  tester:asserteq(fdat.feobj[6].template, '{{output}} = {{input1}} * {{input2}};')
+  tester:asserteq(fdat.feobj[7].template, '{{output}} = {{input1}} + {{input2}};')
+  tester:asserteq(fdat.feobj[8].template, '{{output}} = tanh({{input}});')
+  tester:asserteq(fdat.feobj[9].template, '{{output}} = {{input1}} * {{input2}};')
 
   for k, v in pairs(fdat.feobj[1].transforms) do
     print('feobj[1]', k, v)
@@ -369,6 +376,8 @@ function fusiontests.testApplyCharRnn()
   tester:asserteq(fdat.feobj[2].transforms.input1, 'virtualOutput1')
   tester:asserteq(fdat.feobj[2].transforms.input2, 'input2')
   tester:asserteq(fdat.feobj[2].transforms.output, 'output')
+
+  fusion.generateKernels(x)
 end
 
 function go()
