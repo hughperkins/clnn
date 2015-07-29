@@ -61,6 +61,7 @@ function nodeGraphHelper.walkClone(node, newByOld)
   newGraph.parents = {}
   local newByOld = newByOld or {}
   newByOld[node] = newGraph
+  newGraph.data.mapindex = nil
   for i, oldChild in ipairs(node.children) do
     local newChild = newByOld[oldChild]
     if newChild == nil then
