@@ -375,11 +375,28 @@ function nodeGraphHelper.reduceEdge(parent, child)
     nodeGraphHelper.removeLink(childchild.parents, child)
     nodeGraphHelper.addLink(childchild.parents, parent)
   end
-  -- also remove any parents from child which are same as parent's parents
-  for i, parentparent in ipairs(parent.parents) do
-    ngh.removeLink(child.parents, parentparent)
-    ngh.removeLink(parentparent.children, child)
+  -- all parent links on the child should move to parent, unless already present
+  -- on parent
+  for i, childparent in ipairs(child.parents) do
+    if childparent ~= parent then
+      if ngh.getLinkPos(parent.parents, childparent) == nil then
+        ngh.addLink(parent.parents, childparent)
+        ngh.removeLink(childparent.children, child)
+        ngh.addLink(childparent.children, parent)
+        ngh.removeLink(child.parents, childparent)
+      else
+        ngh.removeLink(childparent.children, child)
+        ngh.removeLink(child.parents, childparent)
+      end
+    end
   end
+
+  -- also remove any parents from child which are same as parent's parents
+--  for i, parentparent in ipairs(parent.parents) do
+--    ngh.removeLink(child.parents, parentparent)
+--    ngh.removeLink(parentparent.children, child)
+--  end
+
 --  for i, childparent in ipairs(child.parents) do
 --    parentparentpos = ngh.getLinkPos(parent.parents, childparent)
 --    if parentparentpos ~= nil then

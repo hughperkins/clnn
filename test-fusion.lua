@@ -200,19 +200,10 @@ function fusiontests.testApplyConvertSigmoidAddTable()
   ngh.walkAddDataIds(x)
 
   fusion.walkConvertToApply(x)
---  ngh.dot(x, '', 'add')
   tester:asserteq(ngh.count(x), 3)
-  print('')
   tester:asserteq(ngh.walkValidate(x), true)
-  ngh.dot(x, '', 'xold')
-  tester:asserteq(ngh.walkValidate(x), true)
-  local xold = ngh.walkClone(x)
-  tester:asserteq(ngh.walkValidate(x), true)
-  ngh.printGraph(x)
   fusion.doFuse(x)
   tester:asserteq(ngh.walkValidate(x), true)
-  ngh.printGraph(x)
-  ngh.dot(x, '', 'xnew')
   tester:asserteq(ngh.count(x), 2)
 
   tester:asserteq(torch.type(x.data.module), 'nn.Identity')
@@ -239,24 +230,26 @@ function fusiontests.testApplyConvertSigmoidAddTable()
   tester:asserteq(fdat.feobj[2].transforms.output, 'output')
 end
 
-function fusiontests.testApplyConvertSigmoidAddTable2()
+function fusiontests.testApplyConvertMultiInputAdd()
   local x = nn.Identity()()
-  local n1 = nn.Sigmoid()(x)
-  local n2 = nn.CAddTable()({x, n1})
+  local x1, x2 = x:split(2)
+  local n1 = nn.Tanh()(x1)
+  local n2 = nn.CAddTable()({n1, x2})
 
   ngh.nodeSetName(x, 'x')
+  ngh.nodeSetName(x1, 'x1')
+  ngh.nodeSetName(x2, 'x2')
   ngh.nodeSetName(n1, 'n1')
   ngh.nodeSetName(n2, 'n2')
 
   ngh.walkAddParents(n2)
-  ngh.walkRemoveBidirectional(n2)
   x = ngh.invertGraph(n2)
+  ngh.walkRemoveBidirectional(x)
   ngh.walkAddDataIds(x)
 
   fusion.walkConvertToApply(x)
 --  ngh.dot(x, '', 'add')
-  tester:asserteq(ngh.count(x), 3)
-  print('')
+  tester:asserteq(ngh.count(x), 6)
   tester:asserteq(ngh.walkValidate(x), true)
   ngh.dot(x, '', 'xold')
   tester:asserteq(ngh.walkValidate(x), true)
@@ -267,15 +260,15 @@ function fusiontests.testApplyConvertSigmoidAddTable2()
   tester:asserteq(ngh.walkValidate(x), true)
   ngh.printGraph(x)
   ngh.dot(x, '', 'xnew')
-  tester:asserteq(ngh.count(x), 2)
+  tester:asserteq(ngh.count(x), 5)
 
   tester:asserteq(torch.type(x.data.module), 'nn.Identity')
 
-  local fused = x.children[1]
+  local fused = x.children[1].children[1].children[1]
   local fdat = fused.data
   tester:asserteq(ngh.nodeGetName(fused), 'n2.n1')
   tester:asserteq(#fdat.feobj, 2)
-  tester:asserteq(fdat.feobj[1].template, '{{output}} = 1.f / (1.f + exp( - {{input}}));')
+  tester:asserteq(fdat.feobj[1].template, '{{output}} = tanh({{input}});')
   tester:asserteq(fdat.feobj[2].template, '{{output}} = {{input1}} + {{input2}};')
 
   for k, v in pairs(fdat.feobj[1].transforms) do
@@ -288,8 +281,8 @@ function fusiontests.testApplyConvertSigmoidAddTable2()
   tester:asserteq(fdat.feobj[1].transforms.input, 'input')
   tester:asserteq(fdat.feobj[1].transforms.output, 'float virtualOutput1')
 
-  tester:asserteq(fdat.feobj[2].transforms.input1, 'input1')
-  tester:asserteq(fdat.feobj[2].transforms.input2, 'virtualOutput1')
+  tester:asserteq(fdat.feobj[2].transforms.input1, 'virtualOutput1')
+  tester:asserteq(fdat.feobj[2].transforms.input2, 'input2')
   tester:asserteq(fdat.feobj[2].transforms.output, 'output')
 end
 
