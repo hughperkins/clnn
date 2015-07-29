@@ -5,6 +5,7 @@
 *.obj
 *.svg
 *.dot
+*.png
 
 # Precompiled Headers
 *.gch

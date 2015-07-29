@@ -166,11 +166,12 @@ function fusion.doFuseIteration(x)
   -- mod1.virtualOutputs = virtualOutputs
 
   -- observations:
-  -- ALL child's outputs go to parent
-  -- but normally child will just have one unique output (could go to multiple children)
-  -- parent might have more than one input
+  -- ALL parent's outputs go to child
+  -- but normally parent will just have one unique output (could go to multiple children)
+  -- child might have more than one input
   -- need to find which input comes from child
---  childIsWhichInput = ngh.getLinkPos(parent.
+  parentIsWhichInput = ngh.getLinkPos(c.parents, p)
+  print('parent input:', parentIsWhichInput)
 
   local pfo = pdat.feobj
   local cfo = cdat.feobj
@@ -186,7 +187,12 @@ function fusion.doFuseIteration(x)
 
   virtualOutputs = virtualOutputs + 1
   pfo[#pfo].transforms.output = 'float virtualOutput' .. virtualOutputs
-  cfo[1].transforms.input = 'virtualOutput' .. virtualOutputs
+  if cfo[1].transforms.input ~= nil then
+    cfo[1].transforms.input = 'virtualOutput' .. virtualOutputs
+  end
+  if cfo[1].transforms['input' .. parentIsWhichInput] ~= nil then
+    cfo[1].transforms['input' .. parentIsWhichInput] = 'virtualOutput' .. virtualOutputs
+  end
   for o=1,pmod.numOutputs do
 --    cfo
 --    cf = cf:gsub('{{output' .. o .. '}}', 'float {{virtualOut' .. virtualOutputs .. '}}')

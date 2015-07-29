@@ -1,4 +1,5 @@
 nodeGraphHelper = {}
+local ngh = nodeGraphHelper
 
 -- returns x, which is now top of inverted
 -- g.bg graph
@@ -41,9 +42,18 @@ function nodeGraphHelper.nghToNnGraph(x)
 end
 
 function nodeGraphHelper.dot(topNode, something, filename)
-  local nghclone = nodeGraphHelper.walkClone(topNode)
-  nodeGraphHelper.walkAddBidirectional(nghclone)
-  graph.dot(nghclone:graph(), something, filename)
+--  if torch.type(topNodes) ~= 'table' then
+--    topNodes = {topNodes}
+--  end
+--  local topNode = nn.Identity()()
+--  ngh.nodeSetName(topNode, 'topNode')
+--  for i=1, #topNodes do
+  local topNodes = nodeGraphHelper.walkClone(topNode)
+--    ngh.addEdge(topNode, nghclone)
+--  end
+  nodeGraphHelper.walkAddBidirectional(topNode)
+  graph.dot(topNode:graph(), something, filename)
+  nodeGraphHelper.walkRemoveBidirectional(topNode)
 end
 
 function nodeGraphHelper.walkClone(node, newByOld)
@@ -191,8 +201,13 @@ function nodeGraphHelper.walkRemoveBidirectional(node)
   nodeGraphHelper.walkApply(node, function(node)
     node.data.mapindex = nil
     for k,v in pairs(node.children) do
-      if torch.type(k) == 'nn.Node' then
+      if torch.type(k) ~= 'number' then
         node.children[k] = nil
+      end
+    end
+    for k,v in pairs(node.parents) do
+      if torch.type(k) ~= 'number' then
+        node.parents[k] = nil
       end
     end
   end)
@@ -294,13 +309,62 @@ function nodeGraphHelper.addLink(targetTable, value)
   end
 end
 
+function ngh.walkValidate(topnode)
+  local valid = true
+  ngh.walkApply(topnode, function(node)
+    if node.children == nil then
+      print('node' .. tostring(node) .. ' has no children table')
+      valid = false
+    end
+    if node.parents == nil then
+      print('node' .. tostring(node) .. ' has no parents table')
+      valid = false
+    end
+    if node.data.mapindex ~= nil then
+      print('node' .. tostring(node) .. ' has mapindex table')
+      assert(node.data.mapindex == nil)
+      valid = false
+    end
+    for k, v in pairs(node.children) do
+      if torch.type(k) ~= 'number' then
+        print('node' .. tostring(node) .. ' has non-number children key')
+        assert(torch.type(k) == 'number')
+        valid = false
+      end
+    end
+    for k, v in pairs(node.parents) do
+      if torch.type(k) ~= 'number' then
+        print('node' .. tostring(node) .. ' has non-number parents key')
+        assert(torch.type(k) == 'number')
+        valid = false
+      end
+    end
+    for i, child in ipairs(node.children) do
+      if ngh.getLinkPos(child.parents, node) == nil then
+        print('child link from ' .. tostring(node) .. ' to ' .. tostring(child) .. ' not reciprocated')
+        valid = false
+      end
+    end
+    for i, parent in ipairs(node.parents) do
+      if ngh.getLinkPos(parent.children, node) == nil then
+        print('parent link from ' .. tostring(node) .. ' to ' .. tostring(parent) .. ' not reciprocated')
+        valid = false
+      end
+    end
+  end)
+  return valid
+end
+
 function nodeGraphHelper.removeLink(targetTable, value)
-  table.remove(targetTable, nodeGraphHelper.getLinkPos(targetTable, value))
+  local pos = nodeGraphHelper.getLinkPos(targetTable, value)
+  if pos ~= nil then
+    table.remove(targetTable, pos)
+  end
 end
 
 function nodeGraphHelper.addEdge(parent, child)
   nodeGraphHelper.addLink(parent.children, child)
-  nodeGraphHeler.addLink(child.parents, parent)
+  nodeGraphHelper.addLink(child.parents, parent)
 end
 
 function nodeGraphHelper.reduceEdge(parent, child)
@@ -310,6 +374,17 @@ function nodeGraphHelper.reduceEdge(parent, child)
     nodeGraphHelper.removeLink(childchild.parents, child)
     nodeGraphHelper.addLink(childchild.parents, parent)
   end
+  -- also remove any parents from child which are same as parent's parents
+  for i, parentparent in ipairs(parent.parents) do
+    ngh.removeLink(child.parents, parentparent)
+    ngh.removeLink(parentparent.children, child)
+  end
+--  for i, childparent in ipairs(child.parents) do
+--    parentparentpos = ngh.getLinkPos(parent.parents, childparent)
+--    if parentparentpos ~= nil then
+--      ngh.removeLink(child.parents, 
+--    end
+--  end
   return parent
 end
 
