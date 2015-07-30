@@ -33,9 +33,11 @@ function fusion.convertToApply(node)
     dat.numVirtualOutputs = 0
     dat.feobj = {}
     dat.beobj = {}
-    table.insert(dat.feobj, {template='{{output1}} = tanh({{input1}});', transforms={input1={src='input',idx=1}, output1={src='output',idx=1}}})
-    table.insert(dat.beobj, {template='{{gradInput}} = {{gradOutput}} * (1 - {{output}} * {{output}});',
-      transforms={gradInput='gradInput', gradOutput='gradOutput', output='output'}})
+    table.insert(dat.feobj, {template='{{output1}} = tanh({{input1}});',
+      transforms={input1={src='input',idx=1}, output1={src='output',idx=1}},
+      backward='{{gradInput1}} = {{gradOutput1}} * (1 - {{output1}} * {{output1}});'})
+    table.insert(dat.beobj, {template='{{gradInput1}} = {{gradOutput1}} * (1 - {{output1}} * {{output1}});',
+      transforms={gradInput1='gradInput', gradOutput1='gradOutput', output1='output'}})
     local apply = nn.Apply(1, 1, [[
       {{output}} = tanh({{input}});
     ]], [[
@@ -48,7 +50,9 @@ function fusion.convertToApply(node)
     dat.numVirtualOutputs = 0
     dat.feobj = {}
     dat.beobj = {}
-    table.insert(dat.feobj, {template='{{output1}} = 1.f / (1.f + exp( - {{input1}}));', transforms={input1={src='input', idx=1}, output1={src='output', idx=1}}})
+    table.insert(dat.feobj, {template='{{output1}} = 1.f / (1.f + exp( - {{input1}}));',
+      transforms={input1={src='input', idx=1}, output1={src='output', idx=1}},
+      backward='{{gradInput1}} = {{gradOutput1}} * {{output1}} * (1.f - {{output1}});'})
     table.insert(dat.beobj, {template='{{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});',
       transforms={gradInput='gradInput', gradOutput='gradOutput', output='output'}})
     local apply = nn.Apply(1, 1, [[
@@ -63,7 +67,9 @@ function fusion.convertToApply(node)
     dat.numVirtualOutputs = 0
     dat.feobj = {}
     dat.beobj = {}
-    table.insert(dat.feobj, {template='{{output1}} = exp({{input1}});', transforms={input1={src='input', idx=1}, output1={src='output', idx=1}}})
+    table.insert(dat.feobj, {template='{{output1}} = exp({{input1}});',
+      transforms={input1={src='input', idx=1}, output1={src='output', idx=1}},
+      backward='{{gradInput1}} = {{gradOutput1}} * {{output1}};'})
     table.insert(dat.beobj, {template='{{gradInput1}} = {{gradOutput1}} * {{output1}};',
       transforms={gradInput1='gradInput1', gradOutput1='gradOutput1', output1='output1'}})
     local apply = nn.Apply(1, 1, [[
@@ -78,7 +84,9 @@ function fusion.convertToApply(node)
     dat.numVirtualOutputs = 0
     dat.feobj = {}
     dat.beobj = {}
-    table.insert(dat.feobj, {template='{{output1}} = fabs({{input1}});', transforms={input={src='input', idx=1}, output1={src='output', idx=1}}})
+    table.insert(dat.feobj, {template='{{output1}} = fabs({{input1}});',
+      transforms={input={src='input', idx=1}, output1={src='output', idx=1}},
+      backward='{{gradInput1}} = {{input1}} < 0 ? - {{gradOutput1}} : {{gradOutput1}};'})
     table.insert(dat.beobj, {template='{{gradInput1}} = {{input1}} < 0 ? - {{gradOutput1}} : {{gradOutput1}};',
       transforms={gradInput1='gradInput1', gradOutput1='gradOutput1', input1='input1'}})
     local apply = nn.Apply(1, 1, [[
@@ -93,7 +101,9 @@ function fusion.convertToApply(node)
     dat.numVirtualOutputs = 0
     dat.feobj = {}
     dat.beobj = {}
-    table.insert(dat.feobj, {template='{{output1}} = {{input1}} + {{input2}};', transforms={input1={src='input', idx=1}, input2={src='input', idx=2}, output1={src='output', idx=1}}})
+    table.insert(dat.feobj, {template='{{output1}} = {{input1}} + {{input2}};',
+      transforms={input1={src='input', idx=1}, input2={src='input', idx=2}, output1={src='output', idx=1}},
+      backward='{{gradInput1}} = {{gradOutput1}}; {{gradInput2}} = {{gradOutput1}};'})
     table.insert(dat.beobj, {template=
 [[{{gradInput1}} = {{gradOutput}};
 {{gradInput2}} = {{gradOutput}};]],
@@ -111,7 +121,9 @@ function fusion.convertToApply(node)
     dat.numVirtualOutputs = 0
     dat.feobj = {}
     dat.beobj = {}
-    table.insert(dat.feobj, {template='{{output1}} = {{input1}} * {{input2}};', transforms={input1={src='input', idx=1}, input2={src='input', idx=2}, output1={src='output', idx=1}}})
+    table.insert(dat.feobj, {template='{{output1}} = {{input1}} * {{input2}};',
+      transforms={input1={src='input', idx=1}, input2={src='input', idx=2}, output1={src='output', idx=1}},
+      backward='{{gradInput1}} = {{gradOutput1}}; {{gradInput2}} = {{gradOutput1}};'})
     table.insert(dat.beobj, {template=
 [[{{gradInput1}} = {{gradOutput1}};
 {{gradInput2}} = {{gradOutput}};]],
@@ -158,14 +170,30 @@ function fusion.getFusiblePair(x)
   return n1, n2
 end
 
-function fusion.expandTemplate(feo)
-  fe = feo.template
+function fusion.expandTemplate(feo, templateName)
+  local fe = feo[templateName]
   for target, value in pairs(feo.transforms) do
-    local declaration = ''
-    if target:find('output') ~= nil then
-      declaration = 'float '
+    if templateName == 'template' then
+      if value.src == 'input' then
+        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
+      elseif value.src == 'virtualOutput' then
+        if target:find('output') ~= nil then
+          fe = fe:gsub('{{' .. target .. '}}', 'float ' .. value.src .. value.idx)
+        else
+          fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
+        end
+      else
+        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
+      end
+    elseif templateName == 'backward' then
+--      if target:find('input') ~= nil then
+--        fe = fe:gsub('{{' .. target:gsub('input', 'gradInput') .. '}}', declaration .. value.src:gsub('input', 'gradInput') .. value.idx)
+--      elseif target:find('output') ~= nil then
+--        fe = fe:gsub('{{' .. target:gsub('output', 'gradOutput') .. '}}', declaration .. value.src:gsub('output', 'gradOutput') .. value.idx)
+--      end
+    else
+      error('Unknown template name %s', templateName)
     end
-    fe = fe:gsub('{{' .. target .. '}}', declaration .. value.src .. value.idx)
   end
   --print(fe)
   return fe
@@ -181,11 +209,18 @@ function fusion.generateKernels(x)
 --    print('apply node', node.data.module)
     print('node ' .. ngh.nodeGetName(node))
     if fusion.isNodeApply(node) then
-      fe = ''
+      local fe = ''
+      local be = ''
       for i, onefe in ipairs(node.data.feobj) do
-        fe = fe .. fusion.expandTemplate(onefe) .. '\n'
+        fe = fe .. fusion.expandTemplate(onefe, 'template') .. '\n'
+        be = be .. fusion.expandTemplate(onefe, 'backward') .. '\n'
       end
       print('fe', fe)
+      print('be', be)
+      local dat = node.data
+      local mod = dat.module
+      mod:updateExpressions(mod.numInputs, mod.numOutputs, fe, mod.backwardExpression)
+      print(mod.forwardKernel, mod.forwardKernel:getRawKernel(), mod.forwardKernel:getRenderedKernel())
     end
   end)
 end
@@ -217,13 +252,7 @@ function fusion.doFuseIteration(x)
   local p_outputs = pmod.numOutputs
   local c_outputs = cmod.numOutputs
 
---  print('parent virtualoutputs', p.data.module.virtualOutputs)
---  print('child virtualoutputs', c.data.module.virtualOutputs)
-  local virtualOutputs = (c.data.module.virtualOutputs or 0) + (p.data.module.virtualOutputs or 0)
-  -- TODO need to renumber either all parents or all childs virtualoutputs, so dont overlap
---  print('virtualOutputs before =', virtualOutputs)
-  -- virtualOutputs = virtualOutputs + mod1.numOutputs
-  -- mod1.virtualOutputs = virtualOutputs
+--  local virtualOutputs = (c.data.module.virtualOutputs or 0) + (p.data.module.virtualOutputs or 0)
 
   -- observations:
   -- ALL parent's outputs go to child
@@ -235,35 +264,10 @@ function fusion.doFuseIteration(x)
 
   local pfo = pdat.feobj
   local cfo = cdat.feobj
---  local fusedfo = {}
---  for i, feo in ipairs(pfo) do
-----    print('inserting', feo)
---    table.insert(fusedfo, feo)
---  end
---  for i, feo in ipairs(cfo) do
-----    print('inserting', feo)
---    table.insert(fusedfo, feo)
---  end
 
   -- for all child inputs which dont come from parent, and there will be exactly one from
   -- parent, add them to parent inputs
   local newNumInputs = pmod.numInputs + cmod.numInputs - 1  -- -1, because one came from parent
-  -- need to bump all child inputs by the number of parent inputs
---  for i=1, c.numInputs do
---    for j=1, #cfo do
---      if cfo[j].transforms['input'] == 'input' .. i then
---        cfo[j].transforms['input'] = 'input' .. (i + p.numInputs)
---      end
---      k = 1
---      while cfo[j].transforms['input' .. k] ~= nil do
---        cfo[j].transforms['input' .. k] = 'in
---        k = k + 1
---      end
---      if cfo[j].transforms['input' .. i] ~= nil then
---        cfo[j].transforms['input' .. i]
---      end
---    end
---  end
 
   local virtualOutputBase = pdat.numVirtualOutputs + cdat.numVirtualOutputs
   local newNumVirtualOutputs = pdat.numVirtualOutputs + cdat.numVirtualOutputs + pmod.numOutputs
@@ -279,6 +283,17 @@ function fusion.doFuseIteration(x)
   local parentIndexInChild = ngh.getLinkPos(c.parents, p)
   print('link pos childinparent=' .. childIndexInParent .. ' parentinchild=' .. parentIndexInChild)
   local fusedfos = {}
+
+  -- renumber virtualOutputs of child
+  for i=1,#cfo do
+    local thiscfo = cfo[i]
+    for _, transform in pairs(thiscfo.transforms) do
+      if transform.src == 'virtualOutput' then
+        transform.idx = transform.idx + pdat.numVirtualOutputs
+      end
+    end
+  end
+
   for i=1,#pfo do
     local thispfo = pfo[i]
     for _, transform in pairs(thispfo.transforms) do
@@ -301,7 +316,6 @@ function fusion.doFuseIteration(x)
       if transform.src == 'input' and transform.idx ~= parentIndexInChild then
         if transform.idx > parentIndexInChild then
           transform.idx = transform.idx + pmod.numInputs - 1
---          transform.idx = transform.idx - 1
         else
           bumpParentInputsAmount = bumpParentInputsAmount + 1
         end
@@ -318,23 +332,9 @@ function fusion.doFuseIteration(x)
     end
   end
 
---  if cfo[1].transforms.input.src == 'input' then
---    cfo[1].transforms.src = 'virtualOutput'
---    cfo[1].transforms.idx = virtualOutputs
---  end
---  if cfo[1].transforms['input' .. parentIsWhichInput] ~= nil then
---    cfo[1].transforms['input' .. parentIsWhichInput] = 'virtualOutput' .. virtualOutputs
---  end
-  for o=1,pmod.numOutputs do
---    cfo
---    cf = cf:gsub('{{output' .. o .. '}}', 'float {{virtualOut' .. virtualOutputs .. '}}')
---    pf = pf:gsub('{{input' .. o .. '}}', '{{virtualOut' .. virtualOutputs .. '}}')
-  end
-
   local fused = ngh.reduceEdge(p, c)
   local fdat = fused.data
   fdat.feobj = fusedfos
---  fdat.numInputs = newNumInputs
   fdat.numOutputs = 1  -- I guess???  might generalize this a bit, later...
   local fmod = fdat.module
   fmod.numInputs = pmod.numInputs + cmod.numInputs - 1

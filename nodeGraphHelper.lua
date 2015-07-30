@@ -125,10 +125,15 @@ function nodeGraphHelper.walkReverseAddDataIds(node, dataId)
   return dataId
 end
 
-function nodeGraphHelper.walkApply(node, func)
+function nodeGraphHelper.walkApply(node, func, visited)
+  visited = visited or {}
+  if visited[node] then
+    return
+  end
+  visited[node] = true
   func(node)
   for i, child in ipairs(node.children) do
-    nodeGraphHelper.walkApply(child, func)
+    nodeGraphHelper.walkApply(child, func, visited)
   end
 end
 

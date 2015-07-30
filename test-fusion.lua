@@ -612,6 +612,17 @@ function fusiontests.testInputOrderThreeWay()
     ngh.dot(x, '', 'xit' .. it)
     fusion.generateKernels(x)
     ngh.printGraphWithLinks(x)
+    ngh.walkApply(x, function(node)
+      local dat = node.data
+      if dat.feobj ~= nil then
+        for i, feobj in ipairs(dat.feobj) do
+          for k, v in pairs(feobj.transforms) do
+            print('feobj[' .. i .. ']', k, v.src .. v.idx)
+          end
+          print('')
+        end
+      end
+    end)
   end
   ngh.dot(x, '', 'testInputOrderThreeWayAfter')
 
@@ -672,11 +683,23 @@ function fusiontests.testApplyCharRnn()
     print('it ' .. it .. ' ======================')
     tester:asserteq(ngh.walkValidate(x), true)
     ngh.dot(x, '', 'xit' .. it)
-    fusion.generateKernels(x)
+--    fusion.generateKernels(x)
     ngh.printGraphWithLinks(x)
-    if it >= 8 then
+--    if it >= 8 then
 --      os.exit(0)
-    end
+--    end
+    fusion.generateKernels(x)
+    ngh.walkApply(x, function(node)
+      local dat = node.data
+      if dat.feobj ~= nil then
+        for i, feobj in ipairs(dat.feobj) do
+          for k, v in pairs(feobj.transforms) do
+            print('feobj[' .. i .. ']', k, v.src .. v.idx)
+          end
+          print('')
+        end
+      end
+    end)
   end
 --  fusion.doFuse(x)
   tester:asserteq(ngh.walkValidate(x), true)
@@ -700,13 +723,6 @@ function fusiontests.testApplyCharRnn()
   tester:asserteq(fdat.feobj[8].template, '{{output1}} = tanh({{input1}});')
   tester:asserteq(fdat.feobj[9].template, '{{output1}} = {{input1}} * {{input2}};')
 
-  for k, v in pairs(fdat.feobj[1].transforms) do
-    print('feobj[1]', k, v)
-  end
-  for k, v in pairs(fdat.feobj[2].transforms) do
-    print('feobj[2]', k, v)
-  end
-
 --  tester:asserteq(fdat.feobj[1].transforms.input1.src, 'input')
 --  tester:asserteq(fdat.feobj[1].transforms.output1.src, 'virtualOutput')
 
@@ -714,7 +730,7 @@ function fusiontests.testApplyCharRnn()
 --  tester:asserteq(fdat.feobj[2].transforms.input2.src, 'input')
 --  tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
 
-  fusion.generateKernels(x)
+--  fusion.generateKernels(x)
 end
 if false then
 end

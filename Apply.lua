@@ -8,6 +8,12 @@ local Apply, parent = torch.class('nn.Apply', 'nn.Module')
 
 function Apply:__init(numInputs, numOutputs, forwardExpression, backwardExpression)
   parent.__init(self)
+
+--  print('self', self)
+  Apply.updateExpressions(self, numInputs, numOutputs, forwardExpression, backwardExpression)
+end
+
+function Apply.updateExpressions(self, numInputs, numOutputs, forwardExpression, backwardExpression)
   self.numInputs = numInputs
   self.numOutputs = numOutputs
 
@@ -88,7 +94,7 @@ function Apply:__tostring()
   if self.forwardExpression ~= nil then
     fe = self.forwardExpression:gsub('\n', ''):gsub('  ', '')
   end
-  return 'Apply(' .. self.numInputs .. ', ' .. self.numOutputs .. ', "' .. fe .. '")'
+  return 'Apply(' .. tostring(self.numInputs) .. ', ' .. tostring(self.numOutputs) .. ', "' .. fe .. '")'
 end
 
 -- input should be a table of inputs
