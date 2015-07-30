@@ -293,7 +293,10 @@ function fusion.doFuseIteration(x)
         transform.idx = virtualOutputBase + 1
       end
       if transform.src == 'input' and transform.idx ~= parentIndexInChild then
-        transform.idx = transform.idx + pmod.numInputs - 1
+        transform.idx = transform.idx + pmod.numInputs
+        if transform.idx > parentIndexInChild then
+          transform.idx = transform.idx - 1
+        end
       end
     end
     table.insert(fusedfos, thiscfo)
@@ -318,7 +321,7 @@ function fusion.doFuseIteration(x)
 --  fdat.numInputs = newNumInputs
   fdat.numOutputs = 1  -- I guess???  might generalize this a bit, later...
   local fmod = fdat.module
-  fmod.numInputs = pmod.numInputs
+  fmod.numInputs = pmod.numInputs + cmod.numInputs - 1
   fmod.numOutputs = pmod.numOutputs + cmod.numOutputs - 1
   fmod.forwardExpression = fusedExp
   fdat.numVirtualOutputs = newNumVirtualOutputs
