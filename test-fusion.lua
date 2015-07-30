@@ -536,12 +536,12 @@ function fusiontests.testSigMulAdd()
   end
 
   tester:asserteq(fdat.feobj[1].transforms.input1.src, 'input')
-  tester:asserteq(fdat.feobj[1].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.input1.idx, 2)
   tester:asserteq(fdat.feobj[1].transforms.output1.src, 'virtualOutput')
   tester:asserteq(fdat.feobj[1].transforms.output1.idx, 2)
 
   tester:asserteq(fdat.feobj[2].transforms.input1.src, 'input')
-  tester:asserteq(fdat.feobj[2].transforms.input1.idx, 2)
+  tester:asserteq(fdat.feobj[2].transforms.input1.idx, 1)
   tester:asserteq(fdat.feobj[2].transforms.input2.src, 'virtualOutput')
   tester:asserteq(fdat.feobj[2].transforms.input2.idx, 2)
   tester:asserteq(fdat.feobj[2].transforms.output1.src, 'virtualOutput')
