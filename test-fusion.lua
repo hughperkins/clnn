@@ -420,9 +420,17 @@ function fusiontests.testAddTanhMul()
   tester:asserteq(ngh.walkValidate(x), true)
   ngh.printGraph(x)
 
+  local it = 0
+  print('it ' .. it .. ' ===============')
+  ngh.printGraphWithLinks(x)
   while fusion.doFuseIteration(x) do
+    it = it + 1
+    print('it ' .. it .. ' ===============')
     tester:asserteq(ngh.walkValidate(x), true)
+    ngh.printGraphWithLinks(x)
   end
+
+--  ngh.printGraphWithLinks(x)
 
   tester:asserteq(ngh.walkValidate(x), true)
   ngh.printGraph(x)

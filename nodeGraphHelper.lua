@@ -42,15 +42,7 @@ function nodeGraphHelper.nghToNnGraph(x)
 end
 
 function nodeGraphHelper.dot(topNode, something, filename)
---  if torch.type(topNodes) ~= 'table' then
---    topNodes = {topNodes}
---  end
---  local topNode = nn.Identity()()
---  ngh.nodeSetName(topNode, 'topNode')
---  for i=1, #topNodes do
   local topNodes = nodeGraphHelper.walkClone(topNode)
---    ngh.addEdge(topNode, nghclone)
---  end
   nodeGraphHelper.walkAddBidirectional(topNode)
   graph.dot(topNode:graph(), something, filename)
   nodeGraphHelper.walkRemoveBidirectional(topNode)
@@ -243,6 +235,22 @@ function nodeGraphHelper.printGraph(node, prefix, printed)
   end
 end
 
+function nodeGraphHelper.printGraphWithLinks(node, prefix, printed)
+  printed = printed or {}
+  prefix = prefix or ''
+  if printed[node] ~= nil then
+    return
+  end
+  printed[node] = true
+  print(prefix .. nodeGraphHelper.nodeToString(node))
+  for i, child in ipairs(node.children) do
+    print(prefix .. ' - ' .. i .. '->' .. ngh.getLinkPos(child.parents, node) .. ' ' .. nodeGraphHelper.nodeToString(child))
+  end
+  for i, child in ipairs(node.children) do
+    nodeGraphHelper.printGraphWithLinks(child, prefix .. '  ', printed)
+  end
+end
+
 function nodeGraphHelper.reverseWalkApply(node, func)
   func(node)
   for i, parent in ipairs(node.parents) do
@@ -374,16 +382,41 @@ function nodeGraphHelper.removeEdge(parent, child)
   nodeGraphHelper.removeLink(child.parents, parent)
 end
 
+-- preserves the pos of the edge in the parent.children table
+-- pos of the edge in the child tables will changes, since
+-- edge didnt exist before
+function nodeGraphHelper.moveEdgeChild(parent, oldChild, newChild)
+  local posInParent = ngh.getLinkPos(parent.children, oldChild)
+  parent.children[posInParent] = newChild
+  ngh.removeLink(oldChild.parents, parent)
+  ngh.addLink(newChild.parents, parent)
+end
+
+function nodeGraphHelper.moveEdgeParent(child, oldParent, newParent)
+  local posInChild = ngh.getLinkPos(child.parents, oldParent)
+  child.parents[posInChild] = newParent
+  ngh.removeLink(oldParent.children, child)
+  ngh.addLink(newParent.children, child)
+end
+
 function nodeGraphHelper.reduceEdge(parent, child)
   ngh.removeEdge(parent, child)
+  -- all children of the child should move to parent
+  for i, childchild in ipairs(child.children) do
+    ngh.moveEdgeParent(childchild, child, parent)
+  end
+
+  -- all parents of the child should move to parent
+  -- (unless they are the parent)
+
   -- all child links on the child should become children of the 
   -- parent
-  for i, childchild in ipairs(child.children) do
-    ngh.addEdge(parent, childchild)
-  end
-  for i, childchild in ipairs(child.children) do
-    ngh.removeEdge(child, childchild)
-  end
+--  for i, childchild in ipairs(child.children) do
+--    ngh.addEdge(parent, childchild)
+--  end
+--  for i, childchild in ipairs(child.children) do
+--    ngh.removeEdge(child, childchild)
+--  end
   -- all parent links on the child should move to parent, unless already present
   -- on parent
   for i=#child.parents,1,-1 do
