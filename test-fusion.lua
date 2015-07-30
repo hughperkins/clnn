@@ -323,6 +323,9 @@ function fusiontests.testApplyConvertMultiInputAdd()
   tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
   tester:asserteq(fdat.feobj[2].transforms.output1.idx, 1)
 
+  tester:asserteq(ngh.getLinkPos(x1.children[1].parents, x1), 1)
+  tester:asserteq(ngh.getLinkPos(x2.children[1].parents, x2), 2)
+
   fusion.generateKernels(x)
 end
 
@@ -387,6 +390,10 @@ function fusiontests.testApplyConvertMultiInputAdd3()
   tester:asserteq(fdat.feobj[2].transforms.input2.idx, 3)
   tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
   tester:asserteq(fdat.feobj[2].transforms.output1.idx, 1)
+
+  tester:asserteq(ngh.getLinkPos(x1.children[1].parents, x1), 1)
+  tester:asserteq(ngh.getLinkPos(x2.children[1].parents, x2), 2)
+  tester:asserteq(ngh.getLinkPos(x3.children[1].parents, x3), 3)
 
   fusion.generateKernels(x)
 end
@@ -472,6 +479,10 @@ function fusiontests.testAddTanhMul()
   tester:asserteq(fdat.feobj[3].transforms.output1.src, 'output')
   tester:asserteq(fdat.feobj[3].transforms.output1.idx, 1)
 
+  tester:asserteq(ngh.getLinkPos(x1.children[1].parents, x1), 1)
+  tester:asserteq(ngh.getLinkPos(x2.children[1].parents, x2), 2)
+  tester:asserteq(ngh.getLinkPos(x3.children[1].parents, x3), 3)
+
   fusion.generateKernels(x)
 end
 
@@ -553,6 +564,10 @@ function fusiontests.testSigMulAdd()
   tester:asserteq(fdat.feobj[3].transforms.input2.idx, 3)
   tester:asserteq(fdat.feobj[3].transforms.output1.src, 'output')
   tester:asserteq(fdat.feobj[3].transforms.output1.idx, 1)
+
+  tester:asserteq(ngh.getLinkPos(x1.children[1].parents, x1), 1)
+  tester:asserteq(ngh.getLinkPos(x2.children[1].parents, x2), 2)
+  tester:asserteq(ngh.getLinkPos(x3.children[1].parents, x3), 3)
 
   fusion.generateKernels(x)
 end
