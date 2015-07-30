@@ -46,7 +46,7 @@ function Apply.updateExpressions(self, numInputs, numOutputs, forwardExpression,
   for i=1,numOutputs do
     outputs['output' .. i] = 'ClTensor'
   end
-  self.forwardKernel = torch.ClKernel({input=inputs, output=outputs, src=self.forwardSrc})
+  self.forwardKernel = torch.ClKernel({input=inputs, output=outputs, src=self.forwardSrc, name='updateOutput'})
 --  print(self.forwardKernel, self.forwardKernel:getRawKernel(), self.forwardKernel:getRenderedKernel())
 
   -- create backward kernel, could probably factorize this, rather than copy and hack
@@ -85,7 +85,7 @@ function Apply.updateExpressions(self, numInputs, numOutputs, forwardExpression,
     inputs['output' .. i] = 'ClTensor'
     inputs['gradOutput' .. i] = 'ClTensor'
   end
-  self.backwardKernel = torch.ClKernel({input=inputs, output=outputs, src=self.backwardSrc})
+  self.backwardKernel = torch.ClKernel({input=inputs, output=outputs, src=self.backwardSrc, name='updateGradInput'})
 --  print(self.backwardKernel, self.backwardKernel:getRawKernel(), self.backwardKernel:getRenderedKernel())
 end
 

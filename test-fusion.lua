@@ -689,17 +689,17 @@ function fusiontests.testApplyCharRnn()
 --      os.exit(0)
 --    end
     fusion.generateKernels(x)
-    ngh.walkApply(x, function(node)
-      local dat = node.data
-      if dat.feobj ~= nil then
-        for i, feobj in ipairs(dat.feobj) do
-          for k, v in pairs(feobj.transforms) do
-            print('feobj[' .. i .. ']', k, v.src .. v.idx)
-          end
-          print('')
-        end
-      end
-    end)
+--    ngh.walkApply(x, function(node)
+--      local dat = node.data
+--      if dat.feobj ~= nil then
+--        for i, feobj in ipairs(dat.feobj) do
+--          for k, v in pairs(feobj.transforms) do
+--            print('feobj[' .. i .. ']', k, v.src .. v.idx)
+--          end
+--          print('')
+--        end
+--      end
+--    end)
   end
 --  fusion.doFuse(x)
   tester:asserteq(ngh.walkValidate(x), true)

@@ -207,7 +207,7 @@ function fusion.generateKernels(x)
     end
     seen[node] = true
 --    print('apply node', node.data.module)
-    print('node ' .. ngh.nodeGetName(node))
+--    print('node ' .. ngh.nodeGetName(node))
     if fusion.isNodeApply(node) then
       local fe = ''
       local be = ''
@@ -215,12 +215,13 @@ function fusion.generateKernels(x)
         fe = fe .. fusion.expandTemplate(onefe, 'template') .. '\n'
         be = be .. fusion.expandTemplate(onefe, 'backward') .. '\n'
       end
-      print('fe', fe)
+--      print('fe', fe)
       print('be', be)
       local dat = node.data
       local mod = dat.module
-      mod:updateExpressions(mod.numInputs, mod.numOutputs, fe, mod.backwardExpression)
-      print(mod.forwardKernel, mod.forwardKernel:getRawKernel(), mod.forwardKernel:getRenderedKernel())
+      mod:updateExpressions(mod.numInputs, mod.numOutputs, fe, be)
+      print(mod.forwardKernel:getRenderedKernel())
+      print(mod.backwardKernel:getRenderedKernel())
     end
   end)
 end
