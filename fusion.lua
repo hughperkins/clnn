@@ -279,7 +279,7 @@ function fusion.doFuseIteration(x)
     for _, transform in pairs(thispfo.transforms) do
       if transform.src == 'output' and transform.idx == childIndexInParent then
         transform.src = 'virtualOutput'
-        transform.idx = transform.idx + virtualOutputBase
+        transform.idx = virtualOutputBase + 1
       end
     end
     print('this pfo', thispfo)
@@ -290,7 +290,7 @@ function fusion.doFuseIteration(x)
     for _, transform in pairs(thiscfo.transforms) do
       if transform.src == 'input' and transform.idx == parentIndexInChild then
         transform.src = 'virtualOutput'
-        transform.idx = transform.idx + virtualOutputBase
+        transform.idx = virtualOutputBase + 1
       end
       if transform.src == 'input' and transform.idx ~= parentIndexInChild then
         transform.idx = transform.idx + pmod.numInputs - 1

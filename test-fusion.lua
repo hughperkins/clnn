@@ -378,8 +378,8 @@ function fusiontests.testApplyConvertMultiInputAdd3()
   tester:asserteq(fdat.feobj[1].transforms.input1.idx, 1)
   tester:asserteq(fdat.feobj[1].transforms.input2.src, 'input')
   tester:asserteq(fdat.feobj[1].transforms.input2.idx, 2)
-  tester:asserteq(fdat.feobj[1].transforms.output.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[1].transforms.output.idx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.output1.src, 'virtualOutput')
+  tester:asserteq(fdat.feobj[1].transforms.output1.idx, 1)
 
   tester:asserteq(fdat.feobj[2].transforms.input1.src, 'virtualOutput')
   tester:asserteq(fdat.feobj[2].transforms.input1.idx, 1)
@@ -391,6 +391,83 @@ function fusiontests.testApplyConvertMultiInputAdd3()
   fusion.generateKernels(x)
 end
 
+function fusiontests.testAddTanhMul()
+  local x = nn.Identity()()
+  local x1, x2, x3 = x:split(3)
+  local n1 = nn.CAddTable()({x1, x2})
+  local n2 = nn.Tanh()({n1})
+  local n3 = nn.CMulTable()({n2, x3})
+
+  ngh.nodeSetName(x, 'x')
+  ngh.nodeSetName(x1, 'x1')
+  ngh.nodeSetName(x2, 'x2')
+  ngh.nodeSetName(x3, 'x3')
+
+  ngh.nodeSetName(n1, 'n1')
+  ngh.nodeSetName(n2, 'n2')
+  ngh.nodeSetName(n3, 'n3')
+
+  ngh.walkAddParents(n3)
+  ngh.dot(n3, '', 'testAddTanhMulBeforeInvert')
+
+  x = ngh.invertGraph(n3)
+  ngh.walkRemoveBidirectional(x)
+  ngh.walkAddDataIds(x)
+
+  ngh.dot(x, '', 'testAddTanhMulBefore')
+  fusion.walkConvertToApply(x)
+  tester:asserteq(ngh.count(x), 8)
+  tester:asserteq(ngh.walkValidate(x), true)
+  ngh.printGraph(x)
+
+  while fusion.doFuseIteration(x) do
+    tester:asserteq(ngh.walkValidate(x), true)
+  end
+
+  tester:asserteq(ngh.walkValidate(x), true)
+  ngh.printGraph(x)
+  ngh.dot(x, '', 'testAddTanhMulAfter')
+  tester:asserteq(ngh.count(x), 6)
+
+  local fused = x.children[1].children[1].children[1]
+  local fdat = fused.data
+  tester:asserteq(ngh.nodeGetName(fused), 'n3.n2.n1')
+  tester:asserteq(#fdat.feobj, 3)
+  tester:asserteq(fdat.feobj[1].template, '{{output1}} = {{input1}} + {{input2}};')
+  tester:asserteq(fdat.feobj[2].template, '{{output1}} = tanh({{input1}});')
+  tester:asserteq(fdat.feobj[3].template, '{{output1}} = {{input1}} * {{input2}};')
+
+  for i, feobj in ipairs(fdat.feobj) do
+    for k, v in pairs(feobj.transforms) do
+      print('feobj[' .. i .. ']', k, v)
+    end
+  end
+
+  tester:asserteq(fdat.feobj[1].transforms.input1.src, 'input')
+  tester:asserteq(fdat.feobj[1].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.input2.src, 'input')
+  tester:asserteq(fdat.feobj[1].transforms.input2.idx, 2)
+  tester:asserteq(fdat.feobj[1].transforms.output1.src, 'virtualOutput')
+  tester:asserteq(fdat.feobj[1].transforms.output1.idx, 1)
+
+  tester:asserteq(fdat.feobj[2].transforms.input1.src, 'virtualOutput')
+  tester:asserteq(fdat.feobj[2].transforms.input1.idx, 1)
+--  tester:asserteq(fdat.feobj[2].transforms.input2.src, 'input')
+--  tester:asserteq(fdat.feobj[2].transforms.input2.idx, 3)
+  tester:asserteq(fdat.feobj[2].transforms.output1.src, 'virtualOutput')
+  tester:asserteq(fdat.feobj[2].transforms.output1.idx, 2)
+
+  tester:asserteq(fdat.feobj[3].transforms.input1.src, 'virtualOutput')
+  tester:asserteq(fdat.feobj[3].transforms.input1.idx, 2)
+  tester:asserteq(fdat.feobj[3].transforms.input2.src, 'input')
+  tester:asserteq(fdat.feobj[3].transforms.input2.idx, 3)
+  tester:asserteq(fdat.feobj[3].transforms.output1.src, 'output')
+  tester:asserteq(fdat.feobj[3].transforms.output1.idx, 1)
+
+  fusion.generateKernels(x)
+end
+
+if false then
 function fusiontests.testApplyCharRnn()
   local x = nn.Identity()()
   local xpre, x1, x2, x3, x4 = x:split(5)
@@ -443,7 +520,7 @@ function fusiontests.testApplyCharRnn()
     it = it + 1
     ngh.dot(x, '', 'xit' .. it)
     fusion.generateKernels(x)
-    if it >= 1 then
+    if it >= 3 then
       os.exit(0)
     end
   end
@@ -476,16 +553,15 @@ function fusiontests.testApplyCharRnn()
     print('feobj[2]', k, v)
   end
 
-  tester:asserteq(fdat.feobj[1].transforms.input, 'input')
-  tester:asserteq(fdat.feobj[1].transforms.output, 'float virtualOutput1')
+  tester:asserteq(fdat.feobj[1].transforms.input1.src, 'input')
+  tester:asserteq(fdat.feobj[1].transforms.output1.src, 'virtualOutput')
 
-  tester:asserteq(fdat.feobj[2].transforms.input1, 'virtualOutput1')
-  tester:asserteq(fdat.feobj[2].transforms.input2, 'input2')
-  tester:asserteq(fdat.feobj[2].transforms.output, 'output')
+  tester:asserteq(fdat.feobj[2].transforms.input1.src, 'virtualOutput')
+  tester:asserteq(fdat.feobj[2].transforms.input2.src, 'input')
+  tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
 
   fusion.generateKernels(x)
 end
-if false then
 end
 
 function go()
