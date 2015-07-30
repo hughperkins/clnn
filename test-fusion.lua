@@ -326,7 +326,6 @@ function fusiontests.testApplyConvertMultiInputAdd()
   fusion.generateKernels(x)
 end
 
-if false then
 function fusiontests.testApplyConvertMultiInputAdd3()
   local x = nn.Identity()()
   local x1, x2, x3 = x:split(3)
@@ -386,12 +385,13 @@ function fusiontests.testApplyConvertMultiInputAdd3()
   tester:asserteq(fdat.feobj[2].transforms.input1.idx, 1)
   tester:asserteq(fdat.feobj[2].transforms.input2.src, 'input')
   tester:asserteq(fdat.feobj[2].transforms.input2.idx, 3)
-  tester:asserteq(fdat.feobj[2].transforms.output.src, 'output')
-  tester:asserteq(fdat.feobj[2].transforms.output.idx, 1)
+  tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
+  tester:asserteq(fdat.feobj[2].transforms.output1.idx, 1)
 
   fusion.generateKernels(x)
 end
 
+if false then
 function fusiontests.testApplyCharRnn()
   local x = nn.Identity()()
   local xpre, x1, x2, x3, x4 = x:split(5)
