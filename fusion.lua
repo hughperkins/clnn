@@ -259,11 +259,20 @@ function fusion.doFuseIteration(x)
   local virtualOutputBase = pdat.numVirtualOutputs + cdat.numVirtualOutputs
   local newNumVirtualOutputs = pdat.numVirtualOutputs + cdat.numVirtualOutputs + pmod.numOutputs
 --  pfo[#pfo].transforms.output = 'float virtualOutput' .. virtualOutputs
+
+  -- actions on merge:
+  -- - virtualoutputs of child will need to be renumbered, so dont clobber parent (ie translated by
+  --   number of idx equal to number of parent virtualoutputs)
+  -- - there is one child output that feeds into child.  this will create one additional virtuaoutput
+  --   - we should find what is the input index for child, and output index for parent
+  local childIndexInParent = ngh.getLinkPos(p.children, c)
+  local parentIndexInChild = ngh.getLinkPos(c.parents, p)
+  print('link pos childinparent=' .. childIndexInParent .. ' parentinchild=' .. parentIndexInChild)
   local fusedfos = {}
   for i=1,#pfo do
     local thispfo = pfo[i]
     for _, transform in pairs(thispfo.transforms) do
-      if transform.src == 'output' then
+      if transform.src == 'output' and transform.idx == childIndexInParent then
         transform.src = 'virtualOutput'
         transform.idx = transform.idx + virtualOutputBase
       end
@@ -274,7 +283,7 @@ function fusion.doFuseIteration(x)
   for i=1,#cfo do
     local thiscfo = cfo[i]
     for _, transform in pairs(thiscfo.transforms) do
-      if transform.src == 'input' then
+      if transform.src == 'input' and transform.idx == parentIndexInChild then
         transform.src = 'virtualOutput'
         transform.idx = transform.idx + virtualOutputBase
       end
