@@ -391,7 +391,6 @@ function fusiontests.testApplyConvertMultiInputAdd3()
   fusion.generateKernels(x)
 end
 
-if false then
 function fusiontests.testApplyCharRnn()
   local x = nn.Identity()()
   local xpre, x1, x2, x3, x4 = x:split(5)
@@ -444,7 +443,7 @@ function fusiontests.testApplyCharRnn()
     it = it + 1
     ngh.dot(x, '', 'xit' .. it)
     fusion.generateKernels(x)
-    if it >= 3 then
+    if it >= 1 then
       os.exit(0)
     end
   end
@@ -460,15 +459,15 @@ function fusiontests.testApplyCharRnn()
   local fdat = fused.data
   tester:asserteq(ngh.nodeGetName(fused), 'n9.n7.n6.n4.n1.n5.n2.n3.n8')
   tester:asserteq(#fdat.feobj, 9)
-  tester:asserteq(fdat.feobj[1].template, '{{output}} = 1.f / (1.f + exp( - {{input}}));')
-  tester:asserteq(fdat.feobj[2].template, '{{output}} = tanh({{input}});')
-  tester:asserteq(fdat.feobj[3].template, '{{output}} = 1.f / (1.f + exp( - {{input}}));')
-  tester:asserteq(fdat.feobj[4].template, '{{output}} = {{input1}} * {{input2}};')
-  tester:asserteq(fdat.feobj[5].template, '{{output}} = 1.f / (1.f + exp( - {{input}}));')
-  tester:asserteq(fdat.feobj[6].template, '{{output}} = {{input1}} * {{input2}};')
-  tester:asserteq(fdat.feobj[7].template, '{{output}} = {{input1}} + {{input2}};')
-  tester:asserteq(fdat.feobj[8].template, '{{output}} = tanh({{input}});')
-  tester:asserteq(fdat.feobj[9].template, '{{output}} = {{input1}} * {{input2}};')
+  tester:asserteq(fdat.feobj[1].template, '{{output1}} = 1.f / (1.f + exp( - {{input1}}));')
+  tester:asserteq(fdat.feobj[2].template, '{{output1}} = tanh({{input1}});')
+  tester:asserteq(fdat.feobj[3].template, '{{output1}} = 1.f / (1.f + exp( - {{input1}}));')
+  tester:asserteq(fdat.feobj[4].template, '{{output1}} = {{input1}} * {{input2}};')
+  tester:asserteq(fdat.feobj[5].template, '{{output1}} = 1.f / (1.f + exp( - {{input1}}));')
+  tester:asserteq(fdat.feobj[6].template, '{{output1}} = {{input1}} * {{input2}};')
+  tester:asserteq(fdat.feobj[7].template, '{{output1}} = {{input1}} + {{input2}};')
+  tester:asserteq(fdat.feobj[8].template, '{{output1}} = tanh({{input1}});')
+  tester:asserteq(fdat.feobj[9].template, '{{output1}} = {{input1}} * {{input2}};')
 
   for k, v in pairs(fdat.feobj[1].transforms) do
     print('feobj[1]', k, v)
@@ -486,6 +485,7 @@ function fusiontests.testApplyCharRnn()
 
   fusion.generateKernels(x)
 end
+if false then
 end
 
 function go()

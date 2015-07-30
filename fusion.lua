@@ -111,7 +111,7 @@ function fusion.convertToApply(node)
     dat.numVirtualOutputs = 0
     dat.feobj = {}
     dat.beobj = {}
-    table.insert(dat.feobj, {template='{{output1}} = {{input1}} * {{input2}};', transforms={input1={src='input', idx=1}, input2={src='input', idx=2}, output={src='output', idx=1}}})
+    table.insert(dat.feobj, {template='{{output1}} = {{input1}} * {{input2}};', transforms={input1={src='input', idx=1}, input2={src='input', idx=2}, output1={src='output', idx=1}}})
     table.insert(dat.beobj, {template=
 [[{{gradInput1}} = {{gradOutput1}};
 {{gradInput2}} = {{gradOutput}};]],
@@ -161,7 +161,11 @@ end
 function fusion.expandTemplate(feo)
   fe = feo.template
   for target, value in pairs(feo.transforms) do
-    fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
+    local declaration = ''
+    if target:find('output') ~= nil then
+      declaration = 'float '
+    end
+    fe = fe:gsub('{{' .. target .. '}}', declaration .. value.src .. value.idx)
   end
   --print(fe)
   return fe
