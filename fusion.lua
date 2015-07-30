@@ -172,7 +172,12 @@ function fusion.expandTemplate(feo)
 end
 
 function fusion.generateKernels(x)
+  local seen = {}
   ngh.walkApply(x, function(node)
+    if seen[node] then
+      return
+    end
+    seen[node] = true
 --    print('apply node', node.data.module)
     print('node ' .. ngh.nodeGetName(node))
     if fusion.isNodeApply(node) then

@@ -557,6 +557,54 @@ function fusiontests.testSigMulAdd()
   fusion.generateKernels(x)
 end
 
+function fusiontests.testInputOrderThreeWay()
+  local x = nn.Identity()()
+  local x1, x2, x3 = x:split(3)
+  local n1 = nn.Tanh()({x2})
+  local n2 = nn.CAddTable()({x1, n1})
+  local n3 = nn.CMulTable()({n2, x3})
+
+  ngh.nodeSetName(x, 'x')
+
+  ngh.nodeSetName(x1, 'x1')
+  ngh.nodeSetName(x2, 'x2')
+  ngh.nodeSetName(x3, 'x3')
+
+  ngh.nodeSetName(n1, 'n1')
+  ngh.nodeSetName(n2, 'n2')
+  ngh.nodeSetName(n3, 'n3')
+
+  ngh.walkAddParents(n3)
+  x = ngh.invertGraph(n3)
+  ngh.walkRemoveBidirectional(x)
+  ngh.walkAddDataIds(x)
+
+  ngh.dot(x, '', 'testInputOrderThreeWayadd')
+  fusion.walkConvertToApply(x)
+  tester:asserteq(ngh.count(x), 8)
+  tester:asserteq(ngh.walkValidate(x), true)
+  ngh.dot(x, '', 'testInputOrderThreeWayBefore')
+  tester:asserteq(ngh.walkValidate(x), true)
+  local xold = ngh.walkClone(x)
+  tester:asserteq(ngh.walkValidate(x), true)
+  ngh.printGraph(x)
+  local it = 0
+  ngh.dot(x, '', 'xit' .. it)
+  while fusion.doFuseIteration(x) do
+    it = it + 1
+    print('it ' .. it .. ' ======================')
+    tester:asserteq(ngh.walkValidate(x), true)
+    ngh.dot(x, '', 'xit' .. it)
+    fusion.generateKernels(x)
+    ngh.printGraphWithLinks(x)
+  end
+  ngh.dot(x, '', 'testInputOrderThreeWayAfter')
+
+  tester:asserteq(ngh.getLinkPos(x1.children[1].parents, x1), 1)
+  tester:asserteq(ngh.getLinkPos(x2.children[1].parents, x2), 2)
+  tester:asserteq(ngh.getLinkPos(x3.children[1].parents, x3), 3)
+end
+
 if false then
 function fusiontests.testApplyCharRnn()
   local x = nn.Identity()()
@@ -606,11 +654,13 @@ function fusiontests.testApplyCharRnn()
   local it = 0
   ngh.dot(x, '', 'xit' .. it)
   while fusion.doFuseIteration(x) do
-    tester:asserteq(ngh.walkValidate(x), true)
     it = it + 1
+    print('it ' .. it .. ' ======================')
+    tester:asserteq(ngh.walkValidate(x), true)
     ngh.dot(x, '', 'xit' .. it)
     fusion.generateKernels(x)
-    if it >= 4 then
+    ngh.printGraphWithLinks(x)
+    if it >= 8 then
       os.exit(0)
     end
   end
