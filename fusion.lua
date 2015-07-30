@@ -265,6 +265,7 @@ function fusion.doFuseIteration(x)
   --   number of idx equal to number of parent virtualoutputs)
   -- - there is one child output that feeds into child.  this will create one additional virtuaoutput
   --   - we should find what is the input index for child, and output index for parent
+  -- - input idxes in child need to be shifted by amount equal to number of inputs in parent - 1
   local childIndexInParent = ngh.getLinkPos(p.children, c)
   local parentIndexInChild = ngh.getLinkPos(c.parents, p)
   print('link pos childinparent=' .. childIndexInParent .. ' parentinchild=' .. parentIndexInChild)
@@ -286,6 +287,9 @@ function fusion.doFuseIteration(x)
       if transform.src == 'input' and transform.idx == parentIndexInChild then
         transform.src = 'virtualOutput'
         transform.idx = transform.idx + virtualOutputBase
+      end
+      if transform.src == 'input' and transform.idx ~= parentIndexInChild then
+        transform.idx = transform.idx + pmod.numInputs - 1
       end
     end
     table.insert(fusedfos, thiscfo)
