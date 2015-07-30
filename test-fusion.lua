@@ -570,7 +570,22 @@ function go()
   torch.setdefaulttensortype('torch.FloatTensor')
   -- initSeed(seed)
   tester = torch.Tester()
-  tester:add(fusiontests)
+  local targettests = fusiontests
+  if os.getenv('LIST') ~= nil then
+    print('fusiontests', fusiontests)
+    os.exit(0)
+  end
+  if os.getenv('TESTS') ~= nil then
+    targettests = {}
+    local filter = os.getenv('TESTS')
+    for k, v in pairs(fusiontests) do
+      if k:find(filter) ~= nil then
+        targettests[k] = v
+      end
+    end
+  end
+  print('targettests', targettests)
+  tester:add(targettests)
   tester:run(tests)
   torch.setdefaulttensortype(oldtype)
   if print_timing then
