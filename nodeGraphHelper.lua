@@ -400,33 +400,40 @@ function nodeGraphHelper.moveEdgeParent(child, oldParent, newParent)
 end
 
 function nodeGraphHelper.reduceEdge(parent, child)
-  ngh.removeEdge(parent, child)
+--  ngh.removeEdge(parent, child)
   -- all children of the child should move to parent
   for i, childchild in ipairs(child.children) do
     ngh.moveEdgeParent(childchild, child, parent)
   end
 
-  -- all parents of the child should move to parent
-  -- (unless they are the parent)
-
-  -- all child links on the child should become children of the 
-  -- parent
---  for i, childchild in ipairs(child.children) do
---    ngh.addEdge(parent, childchild)
---  end
---  for i, childchild in ipairs(child.children) do
---    ngh.removeEdge(child, childchild)
---  end
   -- all parent links on the child should move to parent, unless already present
   -- on parent
-  for i=#child.parents,1,-1 do
-    local childparent = child.parents[i]
-    ngh.addEdge(childparent, parent)
+  -- need to keep order of parent links, so first first parent index from child
+  local parentIndexFromChild = ngh.getLinkPos(child.parents, parent)
+  print('parentIndexFromChild', parentIndexFromChild)
+  -- all child parents less than this need to be inserted behind any parent links from parent
+  -- the rest go after the existing parent links from parent
+  for i, childparent in ipairs(child.parents) do
+    if childparent ~= parent then
+      local childPosInChildParent = ngh.getLinkPos(childparent.children, child)
+      if i < parentIndexFromChild then
+        table.insert(parent.parents, i, childparent)
+      elseif i > parentIndexFromChild then
+        table.insert(parent.parents, childparent)
+      end
+      childparent.children[childPosInChildParent] = parent
+    end
   end
-  for i=#child.parents,1,-1 do
-    local childparent = child.parents[i]
-    ngh.removeEdge(childparent, child)
-  end
+  ngh.removeEdge(parent, child)
+
+--  for i=#child.parents,1,-1 do
+--    local childparent = child.parents[i]
+--    ngh.addEdge(childparent, parent)
+--  end
+--  for i=#child.parents,1,-1 do
+--    local childparent = child.parents[i]
+--    ngh.removeEdge(childparent, child)
+--  end
   return parent
 end
 
