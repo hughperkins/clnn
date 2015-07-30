@@ -263,7 +263,6 @@ function fusiontests.testApplyConvertSigmoidAddTable()
   fusion.generateKernels(x)
 end
 
-if false then
 function fusiontests.testApplyConvertMultiInputAdd()
   local x = nn.Identity()()
   local x1, x2 = x:split(2)
@@ -302,8 +301,8 @@ function fusiontests.testApplyConvertMultiInputAdd()
   local fdat = fused.data
   tester:asserteq(ngh.nodeGetName(fused), 'n2.n1')
   tester:asserteq(#fdat.feobj, 2)
-  tester:asserteq(fdat.feobj[1].template, '{{output}} = tanh({{input}});')
-  tester:asserteq(fdat.feobj[2].template, '{{output}} = {{input1}} + {{input2}};')
+  tester:asserteq(fdat.feobj[1].template, '{{output1}} = tanh({{input1}});')
+  tester:asserteq(fdat.feobj[2].template, '{{output1}} = {{input1}} + {{input2}};')
 
   for k, v in pairs(fdat.feobj[1].transforms) do
     print('feobj[1]', k, v)
@@ -312,16 +311,22 @@ function fusiontests.testApplyConvertMultiInputAdd()
     print('feobj[2]', k, v)
   end
 
-  tester:asserteq(fdat.feobj[1].transforms.input, 'input')
-  tester:asserteq(fdat.feobj[1].transforms.output, 'float virtualOutput1')
+  tester:asserteq(fdat.feobj[1].transforms.input1.src, 'input')
+  tester:asserteq(fdat.feobj[1].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.output1.src, 'virtualOutput')
+  tester:asserteq(fdat.feobj[1].transforms.output1.idx, 1)
 
-  tester:asserteq(fdat.feobj[2].transforms.input1, 'virtualOutput1')
-  tester:asserteq(fdat.feobj[2].transforms.input2, 'input2')
-  tester:asserteq(fdat.feobj[2].transforms.output, 'output')
+  tester:asserteq(fdat.feobj[2].transforms.input1.src, 'virtualOutput')
+  tester:asserteq(fdat.feobj[2].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[2].transforms.input2.src, 'input')
+  tester:asserteq(fdat.feobj[2].transforms.input2.idx, 2)
+  tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
+  tester:asserteq(fdat.feobj[2].transforms.output1.idx, 1)
 
   fusion.generateKernels(x)
 end
 
+if false then
 function fusiontests.testApplyConvertMultiInputAdd3()
   local x = nn.Identity()()
   local x1, x2, x3 = x:split(3)
@@ -361,8 +366,8 @@ function fusiontests.testApplyConvertMultiInputAdd3()
   local fdat = fused.data
   tester:asserteq(ngh.nodeGetName(fused), 'n2.n1')
   tester:asserteq(#fdat.feobj, 2)
-  tester:asserteq(fdat.feobj[1].template, '{{output}} = {{input1}} * {{input2}};')
-  tester:asserteq(fdat.feobj[2].template, '{{output}} = {{input1}} + {{input2}};')
+  tester:asserteq(fdat.feobj[1].template, '{{output1}} = {{input1}} * {{input2}};')
+  tester:asserteq(fdat.feobj[2].template, '{{output1}} = {{input1}} + {{input2}};')
 
   for i, feobj in ipairs(fdat.feobj) do
     for k, v in pairs(feobj.transforms) do
@@ -370,13 +375,19 @@ function fusiontests.testApplyConvertMultiInputAdd3()
     end
   end
 
-  tester:asserteq(fdat.feobj[1].transforms.input1, 'input1')
-  tester:asserteq(fdat.feobj[1].transforms.input2, 'input2')
-  tester:asserteq(fdat.feobj[1].transforms.output, 'float virtualOutput1')
+  tester:asserteq(fdat.feobj[1].transforms.input1.src, 'input')
+  tester:asserteq(fdat.feobj[1].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.input2.src, 'input')
+  tester:asserteq(fdat.feobj[1].transforms.input2.idx, 2)
+  tester:asserteq(fdat.feobj[1].transforms.output.src, 'virtualOutput')
+  tester:asserteq(fdat.feobj[1].transforms.output.idx, 1)
 
-  tester:asserteq(fdat.feobj[2].transforms.input1, 'virtualOutput1')
-  tester:asserteq(fdat.feobj[2].transforms.input2, 'input3')
-  tester:asserteq(fdat.feobj[2].transforms.output, 'output')
+  tester:asserteq(fdat.feobj[2].transforms.input1.src, 'virtualOutput')
+  tester:asserteq(fdat.feobj[2].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[2].transforms.input2.src, 'input')
+  tester:asserteq(fdat.feobj[2].transforms.input2.idx, 3)
+  tester:asserteq(fdat.feobj[2].transforms.output.src, 'output')
+  tester:asserteq(fdat.feobj[2].transforms.output.idx, 1)
 
   fusion.generateKernels(x)
 end
