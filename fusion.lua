@@ -285,6 +285,7 @@ function fusion.doFuseIteration(x)
     print('this pfo', thispfo)
     table.insert(fusedfos, thispfo)
   end
+  local bumpParentInputsAmount = 0  -- increment this for each child input that is left of parent link
   for i=1,#cfo do
     local thiscfo = cfo[i]
     for _, transform in pairs(thiscfo.transforms) do
@@ -293,13 +294,23 @@ function fusion.doFuseIteration(x)
         transform.idx = virtualOutputBase + 1
       end
       if transform.src == 'input' and transform.idx ~= parentIndexInChild then
-        transform.idx = transform.idx + pmod.numInputs
         if transform.idx > parentIndexInChild then
-          transform.idx = transform.idx - 1
+          transform.idx = transform.idx + pmod.numInputs - 1
+--          transform.idx = transform.idx - 1
+        else
+          bumpParentInputsAmount = bumpParentInputsAmount + 1
         end
       end
     end
     table.insert(fusedfos, thiscfo)
+  end
+  for i=1,#pfo do
+    local thispfo = pfo[i]
+    for _, transform in pairs(thispfo.transforms) do
+      if transform.src == 'input' then
+        transform.idx = transform.idx + bumpParentInputsAmount
+      end
+    end
   end
 
 --  if cfo[1].transforms.input.src == 'input' then
