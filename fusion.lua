@@ -33,7 +33,7 @@ function fusion.convertToApply(node)
     dat.numVirtualOutputs = 0
     dat.feobj = {}
     dat.beobj = {}
-    table.insert(dat.feobj, {template='{{output}} = tanh({{input}});', transforms={input={src='input',idx=1}, output={src='output',idx=1}}})
+    table.insert(dat.feobj, {template='{{output1}} = tanh({{input1}});', transforms={input1={src='input',idx=1}, output1={src='output',idx=1}}})
     table.insert(dat.beobj, {template='{{gradInput}} = {{gradOutput}} * (1 - {{output}} * {{output}});',
       transforms={gradInput='gradInput', gradOutput='gradOutput', output='output'}})
     local apply = nn.Apply(1, 1, [[
@@ -48,7 +48,7 @@ function fusion.convertToApply(node)
     dat.numVirtualOutputs = 0
     dat.feobj = {}
     dat.beobj = {}
-    table.insert(dat.feobj, {template='{{output}} = 1.f / (1.f + exp( - {{input}}));', transforms={input={src='input', idx=1}, output={src='output', idx=1}}})
+    table.insert(dat.feobj, {template='{{output1}} = 1.f / (1.f + exp( - {{input1}}));', transforms={input1={src='input', idx=1}, output1={src='output', idx=1}}})
     table.insert(dat.beobj, {template='{{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});',
       transforms={gradInput='gradInput', gradOutput='gradOutput', output='output'}})
     local apply = nn.Apply(1, 1, [[
