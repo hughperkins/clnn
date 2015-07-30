@@ -94,8 +94,8 @@ function nodeGraphHelper.addDataLink(from, to, tableName)
 end
 
 function nodeGraphHelper.nodeGetName(node)
-  if node.data.annotations == nil then
-    return nil
+  if node.data.annotations == nil or node.data.annotations.name == nil then
+    return ''
   end
   return node.data.annotations.name
 end

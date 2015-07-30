@@ -42,6 +42,7 @@ function fusiontests.testApplyConvertTanh()
   tester:asserteq(n1.data.beobj[1].template, '{{gradInput}} = {{gradOutput}} * (1 - {{output}} * {{output}});')
   tester:asserteq(n1.data.feobj[1].transforms.input, 'input')
   tester:asserteq(n1.data.feobj[1].transforms.output, 'output')
+  fusion.generateKernels(x)
 end
 
 function fusiontests.testApplyConvertSigmoid()
@@ -64,6 +65,8 @@ function fusiontests.testApplyConvertSigmoid()
   tester:asserteq(n1.data.beobj[1].template, '{{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});')
   tester:asserteq(n1.data.feobj[1].transforms.input, 'input')
   tester:asserteq(n1.data.feobj[1].transforms.output, 'output')
+
+  fusion.generateKernels(x)
 end
 
 function fusiontests.testApplyConvertTanhSigmoid()
@@ -97,6 +100,8 @@ function fusiontests.testApplyConvertTanhSigmoid()
   tester:asserteq(n1.data.beobj[1].template, '{{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});')
   tester:asserteq(n1.data.feobj[1].transforms.input, 'input')
   tester:asserteq(n1.data.feobj[1].transforms.output, 'output')
+
+  fusion.generateKernels(x)
 end
 
 function fusiontests.testFuseTanhSigmoid()
@@ -137,6 +142,8 @@ function fusiontests.testFuseTanhSigmoid()
   tester:asserteq(fdat.feobj[1].transforms.output, 'float virtualOutput1')
   tester:asserteq(fdat.feobj[2].transforms.input, 'virtualOutput1')
   tester:asserteq(fdat.feobj[2].transforms.output, 'output')
+
+  fusion.generateKernels(x)
 end
 
 function fusiontests.testFuseExpTanhSigmoid()
@@ -183,6 +190,8 @@ function fusiontests.testFuseExpTanhSigmoid()
 
   tester:asserteq(fdat.feobj[3].transforms.input, 'virtualOutput2')
   tester:asserteq(fdat.feobj[3].transforms.output, 'output')
+
+  fusion.generateKernels(x)
 end
 
 function fusiontests.testApplyConvertSigmoidAddTable()
@@ -228,6 +237,8 @@ function fusiontests.testApplyConvertSigmoidAddTable()
   tester:asserteq(fdat.feobj[2].transforms.input1, 'virtualOutput1')
   tester:asserteq(fdat.feobj[2].transforms.input2, 'input2')
   tester:asserteq(fdat.feobj[2].transforms.output, 'output')
+
+  fusion.generateKernels(x)
 end
 
 function fusiontests.testApplyConvertMultiInputAdd()
@@ -284,8 +295,70 @@ function fusiontests.testApplyConvertMultiInputAdd()
   tester:asserteq(fdat.feobj[2].transforms.input1, 'virtualOutput1')
   tester:asserteq(fdat.feobj[2].transforms.input2, 'input2')
   tester:asserteq(fdat.feobj[2].transforms.output, 'output')
+
+  fusion.generateKernels(x)
 end
 
+function fusiontests.testApplyConvertMultiInputAdd3()
+  local x = nn.Identity()()
+  local x1, x2, x3 = x:split(3)
+  local n1 = nn.CMulTable()({x1, x2})
+  local n2 = nn.CAddTable()({n1, x3})
+
+  ngh.nodeSetName(x, 'x')
+  ngh.nodeSetName(x1, 'x1')
+  ngh.nodeSetName(x2, 'x2')
+  ngh.nodeSetName(x3, 'x3')
+  ngh.nodeSetName(n1, 'n1')
+  ngh.nodeSetName(n2, 'n2')
+
+  ngh.walkAddParents(n2)
+  x = ngh.invertGraph(n2)
+  ngh.walkRemoveBidirectional(x)
+  ngh.walkAddDataIds(x)
+
+  fusion.walkConvertToApply(x)
+  ngh.dot(x, '', 'add')
+  tester:asserteq(ngh.count(x), 7)
+  tester:asserteq(ngh.walkValidate(x), true)
+  ngh.dot(x, '', 'xold')
+  tester:asserteq(ngh.walkValidate(x), true)
+  local xold = ngh.walkClone(x)
+  tester:asserteq(ngh.walkValidate(x), true)
+--  ngh.printGraph(x)
+  fusion.doFuse(x)
+  tester:asserteq(ngh.walkValidate(x), true)
+--  ngh.printGraph(x)
+  ngh.dot(x, '', 'xnew')
+  tester:asserteq(ngh.count(x), 6)
+
+  tester:asserteq(torch.type(x.data.module), 'nn.Identity')
+
+  local fused = x.children[1].children[1].children[1]
+  local fdat = fused.data
+  tester:asserteq(ngh.nodeGetName(fused), 'n2.n1')
+  tester:asserteq(#fdat.feobj, 2)
+  tester:asserteq(fdat.feobj[1].template, '{{output}} = {{input1}} * {{input2}};')
+  tester:asserteq(fdat.feobj[2].template, '{{output}} = {{input1}} + {{input2}};')
+
+  for i, feobj in ipairs(fdat.feobj) do
+    for k, v in pairs(feobj.transforms) do
+      print('feobj[' .. i .. ']', k, v)
+    end
+  end
+
+  tester:asserteq(fdat.feobj[1].transforms.input1, 'input1')
+  tester:asserteq(fdat.feobj[1].transforms.input2, 'input2')
+  tester:asserteq(fdat.feobj[1].transforms.output, 'float virtualOutput1')
+
+  tester:asserteq(fdat.feobj[2].transforms.input1, 'virtualOutput1')
+  tester:asserteq(fdat.feobj[2].transforms.input2, 'input3')
+  tester:asserteq(fdat.feobj[2].transforms.output, 'output')
+
+  fusion.generateKernels(x)
+end
+
+if false then
 function fusiontests.testApplyCharRnn()
   local x = nn.Identity()()
   local xpre, x1, x2, x3, x4 = x:split(5)
@@ -337,8 +410,9 @@ function fusiontests.testApplyCharRnn()
     tester:asserteq(ngh.walkValidate(x), true)
     it = it + 1
     ngh.dot(x, '', 'xit' .. it)
-    if it >= 4 then
---      os.exit(0)
+    fusion.generateKernels(x)
+    if it >= 3 then
+      os.exit(0)
     end
   end
 --  fusion.doFuse(x)
@@ -378,6 +452,7 @@ function fusiontests.testApplyCharRnn()
   tester:asserteq(fdat.feobj[2].transforms.output, 'output')
 
   fusion.generateKernels(x)
+end
 end
 
 function go()

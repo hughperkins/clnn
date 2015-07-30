@@ -163,13 +163,14 @@ function fusion.expandTemplate(feo)
   for target, value in pairs(feo.transforms) do
     fe = fe:gsub('{{' .. target .. '}}', value)
   end
-  print(fe)
+  --print(fe)
   return fe
 end
 
 function fusion.generateKernels(x)
   ngh.walkApply(x, function(node)
-    print('apply node', node.data.module)
+--    print('apply node', node.data.module)
+    print('node ' .. ngh.nodeGetName(node))
     if fusion.isNodeApply(node) then
       fe = ''
       for i, onefe in ipairs(node.data.feobj) do
@@ -211,7 +212,7 @@ function fusion.doFuseIteration(x)
 --  print('child virtualoutputs', c.data.module.virtualOutputs)
   local virtualOutputs = (c.data.module.virtualOutputs or 0) + (p.data.module.virtualOutputs or 0)
   -- TODO need to renumber either all parents or all childs virtualoutputs, so dont overlap
-  print('virtualOutputs before =', virtualOutputs)
+--  print('virtualOutputs before =', virtualOutputs)
   -- virtualOutputs = virtualOutputs + mod1.numOutputs
   -- mod1.virtualOutputs = virtualOutputs
 
@@ -221,17 +222,17 @@ function fusion.doFuseIteration(x)
   -- child might have more than one input
   -- need to find which input comes from child
   parentIsWhichInput = ngh.getLinkPos(c.parents, p)
-  print('parent input:', parentIsWhichInput)
+--  print('parent input:', parentIsWhichInput)
 
   local pfo = pdat.feobj
   local cfo = cdat.feobj
   local fusedfo = {}
   for i, feo in ipairs(pfo) do
-    print('inserting', feo)
+--    print('inserting', feo)
     table.insert(fusedfo, feo)
   end
   for i, feo in ipairs(cfo) do
-    print('inserting', feo)
+--    print('inserting', feo)
     table.insert(fusedfo, feo)
   end
 
