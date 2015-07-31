@@ -222,7 +222,7 @@ function fusion.expandTemplate(dat, feo, templateName, passName)
         if target:find('input') ~= nil then
           fe = fe:gsub('{{' .. target:gsub('input', 'gradInput') .. '}}', 'float ' .. value.src:gsub('virtualOutput', 'virtualGradInput') .. value.idx)
         else
-          fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
+          fe = fe:gsub('{{' .. target:gsub('output', 'gradOutput') .. '}}', value.src:gsub('virtualOutput', 'virtualGradInput') .. value.idx)
         end
 
 --        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
