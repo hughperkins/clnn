@@ -735,6 +735,31 @@ function fusiontests.testApplyCharRnn()
   fusion.generateKernels(x)
 end
 
+function fusiontests.forward1()
+  local x = nn.Identity()()
+  local n1 = nn.Tanh()(x)
+
+  local g = nn.gModule({x}, {n1}):cl()
+
+  local input = torch.ClTensor(5,3):uniform()
+  local outputbefore = g:forward(input)
+  print('outputbefore', outputbefore)
+
+  local x = ngh.nnGraphToNgh(g)
+  
+  tester:asserteq(ngh.walkValidate(x), true)
+  fusion.walkConvertToApply(x)
+  fusion.generateKernels(x)
+  tester:asserteq(ngh.walkValidate(x), true)
+
+  local g2 = ngh.nghToNnGraph(x)
+  local outputafter = g2:forward(input)
+  print('outputafter', outputafter)
+
+  diff = (outputafter - outputbefore):abs():sum()
+  assert(diff == 0)
+end
+
 function fusiontests.testLSTM()
   require('test.lstm.OneHot')
   local LSTM = require('test.lstm.LSTM')
