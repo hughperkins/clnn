@@ -208,6 +208,7 @@ function fusion.expandTemplate(dat, feo, templateName, passName)
 --      end
     -- === updateOutputs, forward section ====================
     elseif templateName == 'backward' and passName == 'backward' then
+      fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
       if value.src == 'input' then
 --        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
 --      elseif value.src == 'virtualOutput' then

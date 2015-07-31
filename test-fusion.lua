@@ -688,7 +688,7 @@ function fusiontests.testApplyCharRnn()
 --    if it >= 8 then
 --      os.exit(0)
 --    end
-    fusion.generateKernels(x)
+--    fusion.generateKernels(x)
 --    ngh.walkApply(x, function(node)
 --      local dat = node.data
 --      if dat.feobj ~= nil then
@@ -730,7 +730,7 @@ function fusiontests.testApplyCharRnn()
 --  tester:asserteq(fdat.feobj[2].transforms.input2.src, 'input')
 --  tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
 
---  fusion.generateKernels(x)
+  fusion.generateKernels(x)
 end
 if false then
 end
