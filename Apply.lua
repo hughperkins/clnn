@@ -9,8 +9,16 @@ local Apply, parent = torch.class('nn.Apply', 'nn.Module')
 function Apply:__init(numInputs, numOutputs, forwardExpression, backwardExpression)
   parent.__init(self)
 
+  self.numInputs = numInputs
+  self.numOutputs = numOutputs
+
+  self.forwardExpression = forwardExpression:gsub('{{input}}', '{{input1}}')
+  self.forwardExpression = self.forwardExpression:gsub('{{output}}', '{{output1}}')
+
+  self.backwardExpression = backwardExpression
+
 --  print('self', self)
-  Apply.updateExpressions(self, numInputs, numOutputs, forwardExpression, backwardExpression)
+--  Apply.updateExpressions(self, numInputs, numOutputs, forwardExpression, backwardExpression)
 end
 
 function Apply.updateExpressions(self, numInputs, numOutputs, forwardExpression, backwardExpression)
@@ -82,7 +90,7 @@ function Apply.updateExpressions(self, numInputs, numOutputs, forwardExpression,
   end
   inputs['N'] = 'int'
   for i=1,numOutputs do
-    inputs['output' .. i] = 'ClTensor'
+--    inputs['output' .. i] = 'ClTensor'
     inputs['gradOutput' .. i] = 'ClTensor'
   end
   self.backwardKernel = torch.ClKernel({input=inputs, output=outputs, src=self.backwardSrc, name='updateGradInput'})
