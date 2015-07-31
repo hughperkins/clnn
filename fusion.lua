@@ -170,10 +170,11 @@ function fusion.getFusiblePair(x)
   return n1, n2
 end
 
-function fusion.expandTemplate(feo, templateName)
+function fusion.expandTemplate(dat, feo, templateName, passName)
   local fe = feo[templateName]
   for target, value in pairs(feo.transforms) do
-    if templateName == 'template' then
+    -- === forward ====================
+    if templateName == 'template' and passName == 'forward' then
       if value.src == 'input' then
         fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
       elseif value.src == 'virtualOutput' then
@@ -185,12 +186,39 @@ function fusion.expandTemplate(feo, templateName)
       else
         fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
       end
-    elseif templateName == 'backward' then
+    -- === updateOutputs, forward section ====================
+    elseif templateName == 'template' and passName == 'backward' then
+      if value.src == 'input' then
+        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
+      elseif value.src == 'virtualOutput' then
+        if target:find('output') ~= nil then
+          fe = fe:gsub('{{' .. target .. '}}', 'float ' .. value.src .. value.idx)
+        else
+          fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
+        end
+      elseif value.src == 'output' then
+        -- convert to virtualOutput
+        local virtualOutputIdx = dat.numVirtualOutputs + value.idx
+        fe = fe:gsub('{{' .. target .. '}}', 'float virtualOutput' .. virtualOutputIdx)
+      end
 --      if target:find('input') ~= nil then
 --        fe = fe:gsub('{{' .. target:gsub('input', 'gradInput') .. '}}', declaration .. value.src:gsub('input', 'gradInput') .. value.idx)
 --      elseif target:find('output') ~= nil then
 --        fe = fe:gsub('{{' .. target:gsub('output', 'gradOutput') .. '}}', declaration .. value.src:gsub('output', 'gradOutput') .. value.idx)
 --      end
+    -- === updateOutputs, forward section ====================
+    elseif templateName == 'backward' and passName == 'backward' then
+      if value.src == 'input' then
+--        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
+--      elseif value.src == 'virtualOutput' then
+--        if target:find('output') ~= nil then
+--          fe = fe:gsub('{{' .. target .. '}}', 'float ' .. value.src .. value.idx)
+--        else
+--          fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
+--        end
+--      else
+--        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
+      end
     else
       error('Unknown template name %s', templateName)
     end
@@ -212,8 +240,11 @@ function fusion.generateKernels(x)
       local fe = ''
       local be = ''
       for i, onefe in ipairs(node.data.feobj) do
-        fe = fe .. fusion.expandTemplate(onefe, 'template') .. '\n'
-        be = be .. fusion.expandTemplate(onefe, 'backward') .. '\n'
+        fe = fe .. fusion.expandTemplate(node.data, onefe, 'template', 'forward') .. '\n'
+        be = be .. fusion.expandTemplate(node.data, onefe, 'template', 'backward') .. '\n'
+      end
+      for i, onefe in ipairs(node.data.feobj) do
+        be = be .. fusion.expandTemplate(node.data, onefe, 'backward', 'backward') .. '\n'
       end
 --      print('fe', fe)
       print('be', be)
