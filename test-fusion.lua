@@ -862,6 +862,43 @@ function fusiontests.forward2inputs2()
   assert(diff == 0)
 end
 
+function fusiontests.forwardThreeWay()
+  local x = nn.Identity()()
+  local x1, x2, x3 = x:split(3)
+  local n1 = nn.Tanh()({x2})
+  local n2 = nn.CAddTable()({x1, n1})
+  local n3 = nn.CMulTable()({n2, x3})
+
+  local g = nn.gModule({x}, {n3}):cl()
+
+  local input1 = torch.ClTensor(5,3):uniform()
+  local input2 = torch.ClTensor(5,3):uniform()
+  local input3 = torch.ClTensor(5,3):uniform()
+  local inputs = {input1, input2, input3}
+  local outputbefore = g:forward(inputs)
+  print('outputbefore', outputbefore)
+
+  local x = ngh.nnGraphToNgh(g)
+  
+  tester:asserteq(ngh.walkValidate(x), true)
+  fusion.walkConvertToApply(x)
+  while fusion.doFuseIteration(x) do
+  end
+  fusion.generateKernels(x)
+  ngh.printGraphWithLinks(x)
+  tester:asserteq(ngh.walkValidate(x), true)
+
+  local g2 = ngh.nghToNnGraph(x)
+  if os.getenv('TESTS') ~= nil then
+    graph.dot(g2.fg, '', 'g2')
+  end
+  local outputafter = g2:forward(inputs)
+  print('outputafter', outputafter)
+
+  diff = (outputafter - outputbefore):abs():sum()
+  assert(diff == 0)
+end
+
 function fusiontests.testLSTM()
   require('test.lstm.OneHot')
   local LSTM = require('test.lstm.LSTM')
