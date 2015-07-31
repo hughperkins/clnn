@@ -629,6 +629,8 @@ function fusiontests.testInputOrderThreeWay()
   tester:asserteq(ngh.getLinkPos(x1.children[1].parents, x1), 1)
   tester:asserteq(ngh.getLinkPos(x2.children[1].parents, x2), 2)
   tester:asserteq(ngh.getLinkPos(x3.children[1].parents, x3), 3)
+
+  fusion.generateKernels(x)
 end
 
 function fusiontests.testApplyCharRnn()
