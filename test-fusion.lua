@@ -775,10 +775,16 @@ function fusiontests.forward2()
   
   tester:asserteq(ngh.walkValidate(x), true)
   fusion.walkConvertToApply(x)
+  while fusion.doFuseIteration(x) do
+  end
   fusion.generateKernels(x)
   tester:asserteq(ngh.walkValidate(x), true)
+  ngh.printGraphWithLinks(x)
 
   local g2 = ngh.nghToNnGraph(x)
+  if os.getenv('TESTS') ~= nil then
+    graph.dot(g2.fg, '', 'g2')
+  end
   local outputafter = g2:forward(input)
   print('outputafter', outputafter)
 
@@ -803,10 +809,52 @@ function fusiontests.forward2inputs()
   
   tester:asserteq(ngh.walkValidate(x), true)
   fusion.walkConvertToApply(x)
+  while fusion.doFuseIteration(x) do
+  end
+  ngh.printGraphWithLinks(x)
   fusion.generateKernels(x)
   tester:asserteq(ngh.walkValidate(x), true)
 
   local g2 = ngh.nghToNnGraph(x)
+  if os.getenv('TESTS') ~= nil then
+    graph.dot(g2.fg, '', 'g2')
+  end
+  local outputafter = g2:forward(inputs)
+  print('outputafter', outputafter)
+
+  diff = (outputafter - outputbefore):abs():sum()
+  assert(diff == 0)
+end
+
+function fusiontests.forward2inputs2()
+  local x = nn.Identity()()
+  local x1, x2 = x:split(2)
+  local n1 = nn:Tanh()(x1)
+  local n2 = nn:Sigmoid()(x2)
+  local n3 = nn.CAddTable()({n1, n2})
+
+  local g = nn.gModule({x}, {n3}):cl()
+
+  local input1 = torch.ClTensor(5,3):uniform()
+  local input2 = torch.ClTensor(5,3):uniform()
+  local inputs = {input1, input2}
+  local outputbefore = g:forward(inputs)
+  print('outputbefore', outputbefore)
+
+  local x = ngh.nnGraphToNgh(g)
+  
+  tester:asserteq(ngh.walkValidate(x), true)
+  fusion.walkConvertToApply(x)
+  while fusion.doFuseIteration(x) do
+  end
+  fusion.generateKernels(x)
+  ngh.printGraphWithLinks(x)
+  tester:asserteq(ngh.walkValidate(x), true)
+
+  local g2 = ngh.nghToNnGraph(x)
+  if os.getenv('TESTS') ~= nil then
+    graph.dot(g2.fg, '', 'g2')
+  end
   local outputafter = g2:forward(inputs)
   print('outputafter', outputafter)
 
