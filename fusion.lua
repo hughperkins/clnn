@@ -172,44 +172,54 @@ end
 
 function fusion.expandTemplate(dat, feo, templateName, passName)
   local fe = feo[templateName]
+  print('incoming fe: ' .. fe)
   for target, value in pairs(feo.transforms) do
-    -- === forward ====================
-    if templateName == 'template' and passName == 'forward' then
-      if value.src == 'input' then
-        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
-      elseif value.src == 'virtualOutput' then
-        if target:find('output') ~= nil then
-          fe = fe:gsub('{{' .. target .. '}}', 'float ' .. value.src .. value.idx)
+    if templateName == 'template' then
+      if passName == 'forward' then
+        -- === updateOutput forward section ====================
+        if value.src == 'input' then
+          fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
+        elseif value.src == 'virtualOutput' then
+          if target:find('output') ~= nil then
+            fe = fe:gsub('{{' .. target .. '}}', 'float ' .. value.src .. value.idx)
+          else
+            fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
+          end
         else
-          fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
+          fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
         end
-      else
-        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
+      elseif passName == 'backward' then
+        -- === updateGradInput, forward section ====================
+        if value.src == 'input' then
+          fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
+        elseif value.src == 'virtualOutput' then
+          if target:find('output') ~= nil then
+            fe = fe:gsub('{{' .. target .. '}}', 'float ' .. value.src .. value.idx)
+          else
+            fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
+          end
+        elseif value.src == 'output' then
+          -- convert to virtualOutput
+          local virtualOutputIdx = dat.numVirtualOutputs + value.idx
+          fe = fe:gsub('{{' .. target .. '}}', 'float virtualOutput' .. virtualOutputIdx)
+        end
+  --      if target:find('input') ~= nil then
+  --        fe = fe:gsub('{{' .. target:gsub('input', 'gradInput') .. '}}', declaration .. value.src:gsub('input', 'gradInput') .. value.idx)
+  --      elseif target:find('output') ~= nil then
+  --        fe = fe:gsub('{{' .. target:gsub('output', 'gradOutput') .. '}}', declaration .. value.src:gsub('output', 'gradOutput') .. value.idx)
+  --      end
       end
-    -- === updateOutputs, forward section ====================
-    elseif templateName == 'template' and passName == 'backward' then
+    elseif templateName == 'backward' then
+      -- === updateGradInput, backward section ====================
+      print('  target=' .. target .. ' value.src=' .. value.src .. ' value.idx=' .. value.idx)
       if value.src == 'input' then
-        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
-      elseif value.src == 'virtualOutput' then
-        if target:find('output') ~= nil then
-          fe = fe:gsub('{{' .. target .. '}}', 'float ' .. value.src .. value.idx)
-        else
-          fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
-        end
+        fe = fe:gsub('{{' .. target:gsub('input', 'gradInput') .. '}}', 'gradInput' .. value.idx .. '_data[n]')
       elseif value.src == 'output' then
-        -- convert to virtualOutput
-        local virtualOutputIdx = dat.numVirtualOutputs + value.idx
-        fe = fe:gsub('{{' .. target .. '}}', 'float virtualOutput' .. virtualOutputIdx)
-      end
---      if target:find('input') ~= nil then
---        fe = fe:gsub('{{' .. target:gsub('input', 'gradInput') .. '}}', declaration .. value.src:gsub('input', 'gradInput') .. value.idx)
---      elseif target:find('output') ~= nil then
---        fe = fe:gsub('{{' .. target:gsub('output', 'gradOutput') .. '}}', declaration .. value.src:gsub('output', 'gradOutput') .. value.idx)
---      end
-    -- === updateOutputs, forward section ====================
-    elseif templateName == 'backward' and passName == 'backward' then
-      fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
-      if value.src == 'input' then
+        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
+--        fe = fe:gsub(target:gsub('output', 'gradOutput'), 'gradOutput' .. value.idx)
+      elseif value.src == 'virtualOutput' then
+        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
+
 --        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
 --      elseif value.src == 'virtualOutput' then
 --        if target:find('output') ~= nil then
@@ -219,7 +229,10 @@ function fusion.expandTemplate(dat, feo, templateName, passName)
 --        end
 --      else
 --        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
+      else
+        error('unknown value.src %s', value.src)
       end
+      print('    ->' .. fe)
     else
       error('Unknown template name %s', templateName)
     end
@@ -244,7 +257,9 @@ function fusion.generateKernels(x)
         fe = fe .. fusion.expandTemplate(node.data, onefe, 'template', 'forward') .. '\n'
         be = be .. fusion.expandTemplate(node.data, onefe, 'template', 'backward') .. '\n'
       end
-      for i, onefe in ipairs(node.data.feobj) do
+      for i=#node.data.feobj, 1, -1 do
+        local onefe = node.data.feobj[i]
+--      for i, onefe in ipairs(node.data.feobj) do
         be = be .. fusion.expandTemplate(node.data, onefe, 'backward', 'backward') .. '\n'
       end
 --      print('fe', fe)
@@ -252,8 +267,8 @@ function fusion.generateKernels(x)
       local dat = node.data
       local mod = dat.module
       mod:updateExpressions(mod.numInputs, mod.numOutputs, fe, be)
-      print(mod.forwardKernel:getRenderedKernel())
-      print(mod.backwardKernel:getRenderedKernel())
+--      print(mod.forwardKernel:getRenderedKernel())
+--      print(mod.backwardKernel:getRenderedKernel())
     end
   end)
 end
