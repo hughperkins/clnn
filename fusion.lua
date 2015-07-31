@@ -215,10 +215,15 @@ function fusion.expandTemplate(dat, feo, templateName, passName)
       if value.src == 'input' then
         fe = fe:gsub('{{' .. target:gsub('input', 'gradInput') .. '}}', 'gradInput' .. value.idx .. '_data[n]')
       elseif value.src == 'output' then
-        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
+        local virtualOutputIdx = dat.numVirtualOutputs + value.idx
+        fe = fe:gsub('{{' .. target .. '}}', 'virtualOutput' .. virtualOutputIdx)
 --        fe = fe:gsub(target:gsub('output', 'gradOutput'), 'gradOutput' .. value.idx)
       elseif value.src == 'virtualOutput' then
-        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
+        if target:find('input') ~= nil then
+          fe = fe:gsub('{{' .. target:gsub('input', 'gradInput') .. '}}', 'float ' .. value.src:gsub('virtualOutput', 'virtualGradInput') .. value.idx)
+        else
+          fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
+        end
 
 --        fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
 --      elseif value.src == 'virtualOutput' then
@@ -259,6 +264,7 @@ function fusion.generateKernels(x)
       end
       for i=#node.data.feobj, 1, -1 do
         local onefe = node.data.feobj[i]
+        print('onefe', onefe)
 --      for i, onefe in ipairs(node.data.feobj) do
         be = be .. fusion.expandTemplate(node.data, onefe, 'backward', 'backward') .. '\n'
       end
@@ -268,7 +274,7 @@ function fusion.generateKernels(x)
       local mod = dat.module
       mod:updateExpressions(mod.numInputs, mod.numOutputs, fe, be)
 --      print(mod.forwardKernel:getRenderedKernel())
---      print(mod.backwardKernel:getRenderedKernel())
+      print(mod.backwardKernel:getRenderedKernel())
     end
   end)
 end
