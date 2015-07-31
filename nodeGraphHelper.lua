@@ -11,7 +11,7 @@ local ngh = nodeGraphHelper
 -- not what we want)
 function nodeGraphHelper.nnGraphToNgh(g)
   local g2 = g
-  local newbg = g2.bg.nodes[2]
+  local newbg = g2.bg.nodes[1]
   local thisnode = newbg
   local x = newbg
   while #thisnode.children > 0 do

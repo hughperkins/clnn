@@ -734,7 +734,31 @@ function fusiontests.testApplyCharRnn()
 
   fusion.generateKernels(x)
 end
-if false then
+
+function fusiontests.testLSTM()
+  require('test.lstm.OneHot')
+  local LSTM = require('test.lstm.LSTM')
+  lstm = LSTM.lstm(65, 128, 2, 0)
+  graph.dot(lstm.fg, '', 'lstm.g')
+  x = ngh.nnGraphToNgh(lstm)
+  ngh.printGraph(x)
+  ngh.dot(x, '', 'lstm1')
+
+  tester:asserteq(ngh.walkValidate(x), true)
+  fusion.walkConvertToApply(x)
+  tester:asserteq(ngh.walkValidate(x), true)
+
+  local it = 0
+  print('it ' .. it .. ' ======================')
+  ngh.dot(x, '', 'xit' .. it)
+  while fusion.doFuseIteration(x) do
+    it = it + 1
+    print('it ' .. it .. ' ======================')
+    tester:asserteq(ngh.walkValidate(x), true)
+    ngh.dot(x, '', 'xit' .. it)
+  end
+
+  fusion.generateKernels(x)
 end
 
 function go()

@@ -135,6 +135,26 @@ function fusion.convertToApply(node)
       {{gradInput2}} = {{gradOutput}};
     ]], moduletype)
     node.data.module = apply
+  elseif false and moduletype == 'nil' then
+    local dat = node.data
+    dat.name = moduletype
+    dat.numVirtualOutputs = 0
+    dat.feobj = {}
+    dat.beobj = {}
+    table.insert(dat.feobj, {template='{{output1}} = {{input1}};',
+      transforms={input1={src='input', idx=1}, output1={src='output', idx=1}},
+      backward='{{gradInput1}} = {{gradOutput1}};'})
+    table.insert(dat.beobj, {template=
+[[{{gradInput1}} = {{gradOutput1}};
+{{gradInput2}} = {{gradOutput}};]],
+      transforms={gradInput1='gradInput1', gradInput2='gradInput2', gradOutput='gradOutput1'}})
+    local apply = nn.Apply(1, 1, [[
+      {{output}} = {{input1}} + {{input2}};
+    ]], [[
+      {{gradInput1}} = {{gradOutput}};
+      {{gradInput2}} = {{gradOutput}};
+    ]], moduletype)
+    node.data.module = apply
   end
 end
 
@@ -172,7 +192,7 @@ end
 
 function fusion.expandTemplate(dat, feo, templateName, passName)
   local fe = feo[templateName]
-  print('incoming fe: ' .. fe)
+--  print('incoming fe: ' .. fe)
   for target, value in pairs(feo.transforms) do
     if templateName == 'template' then
       if passName == 'forward' then
@@ -211,7 +231,7 @@ function fusion.expandTemplate(dat, feo, templateName, passName)
       end
     elseif templateName == 'backward' then
       -- === updateGradInput, backward section ====================
-      print('  target=' .. target .. ' value.src=' .. value.src .. ' value.idx=' .. value.idx)
+--      print('  target=' .. target .. ' value.src=' .. value.src .. ' value.idx=' .. value.idx)
       if value.src == 'input' then
         fe = fe:gsub('{{' .. target:gsub('input', 'gradInput') .. '}}', 'gradInput' .. value.idx .. '_data[n]')
       elseif value.src == 'output' then
@@ -238,7 +258,7 @@ function fusion.expandTemplate(dat, feo, templateName, passName)
       else
         error('unknown value.src %s', value.src)
       end
-      print('    ->' .. fe)
+--      print('    ->' .. fe)
     else
       error('Unknown template name %s', templateName)
     end
@@ -265,16 +285,16 @@ function fusion.generateKernels(x)
       end
       for i=#node.data.feobj, 1, -1 do
         local onefe = node.data.feobj[i]
-        print('onefe', onefe)
+--        print('onefe', onefe)
 --      for i, onefe in ipairs(node.data.feobj) do
         be = be .. fusion.expandTemplate(node.data, onefe, 'backward', 'backward') .. '\n'
       end
 --      print('fe', fe)
-      print('be', be)
+--      print('be', be)
       local dat = node.data
       local mod = dat.module
       mod:updateExpressions(mod.numInputs, mod.numOutputs, fe, be)
---      print(mod.forwardKernel:getRenderedKernel())
+      print(mod.forwardKernel:getRenderedKernel())
       print(mod.backwardKernel:getRenderedKernel())
     end
   end)
