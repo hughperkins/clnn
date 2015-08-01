@@ -102,7 +102,7 @@ function Apply:__tostring()
   if self.forwardExpression ~= nil then
     fe = self.forwardExpression:gsub('\n', ''):gsub('  ', '')
   end
-  return 'Apply(' .. tostring(self.numInputs) .. ', ' .. tostring(self.numOutputs) .. ', "' .. fe .. '")'
+  return 'Apply(numInputs=' .. tostring(self.numInputs) .. ',numOutputs=' .. tostring(self.numOutputs) .. ',fe="' .. fe .. '")'
 end
 
 -- input should be a table of inputs
@@ -113,7 +113,8 @@ function Apply:updateOutput(inputs)
   end
   print('torch.type(inputs)', torch.type(inputs), #inputs)
   if #inputs ~= self.numInputs then
-    error("num inputs should be " .. self.numInputs)
+    print(self)
+    error("num inputs should be " .. self.numInputs .. ' but was ' .. #inputs)
   end
   self.outputs = self.outputs or {}
   for o=1,self.numOutputs do

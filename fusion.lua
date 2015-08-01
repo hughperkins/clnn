@@ -294,8 +294,8 @@ function fusion.generateKernels(x)
       local dat = node.data
       local mod = dat.module
       mod:updateExpressions(mod.numInputs, mod.numOutputs, fe, be)
-      print(mod.forwardKernel:getRenderedKernel())
-      print(mod.backwardKernel:getRenderedKernel())
+--      print(mod.forwardKernel:getRenderedKernel())
+--      print(mod.backwardKernel:getRenderedKernel())
     end
   end)
 end
@@ -343,6 +343,7 @@ function fusion.doFuseIteration(x)
   -- for all child inputs which dont come from parent, and there will be exactly one from
   -- parent, add them to parent inputs
   local newNumInputs = pmod.numInputs + cmod.numInputs - 1  -- -1, because one came from parent
+  local newNumOutputs = pmod.numOutputs + cmod.numOutputs - 1  -- -1, because one came from parent
 
   local virtualOutputBase = pdat.numVirtualOutputs + cdat.numVirtualOutputs
   local newNumVirtualOutputs = pdat.numVirtualOutputs + cdat.numVirtualOutputs + pmod.numOutputs
@@ -410,10 +411,11 @@ function fusion.doFuseIteration(x)
   local fused = ngh.reduceEdge(p, c)
   local fdat = fused.data
   fdat.feobj = fusedfos
-  fdat.numOutputs = 1  -- I guess???  might generalize this a bit, later...
+  fdat.id = pdat.id .. '.' .. cdat.id
+--  fdat.numOutputs = 1  -- I guess???  might generalize this a bit, later...
   local fmod = fdat.module
-  fmod.numInputs = pmod.numInputs + cmod.numInputs - 1
-  fmod.numOutputs = pmod.numOutputs + cmod.numOutputs - 1
+  fmod.numInputs = newNumInputs
+  fmod.numOutputs = newNumOutputs
   fmod.forwardExpression = fusedExp
   fdat.numVirtualOutputs = newNumVirtualOutputs
   ngh.nodeSetName(fused, ngh.nodeGetName(c) .. '.' .. ngh.nodeGetName(p))

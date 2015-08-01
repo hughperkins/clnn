@@ -7,6 +7,30 @@ local fusion = require('fusion')
 
 local fusiontests = {}
 
+function nngraph.Node:graphNodeName()
+  if self.data.id ~= nil then
+    res = tostring(self.data.id)
+    local dat = self.data
+    if dat.module ~= nil then
+      local mod = dat.module
+      res = res .. ' ' .. torch.type(mod)
+      if mod.numInputs ~= nil then
+        if dat.numVirtualOutputs ~= nil and dat.numVirtualOutputs > 0 then
+          res = res .. ' ' .. mod.numInputs.. ' -> (' .. dat.numVirtualOutputs .. ')' .. ' -> ' .. mod.numOutputs
+        else
+          res = res .. ' ' .. mod.numInputs .. ' -> ' .. mod.numOutputs
+        end
+      end
+    end
+    return res
+  end
+  if self.data.annotations.name then
+    return self.data.annotations.name .. ' (' .. self.id .. ')'
+  else
+    return 'Node' .. self.id
+  end
+end
+
 function normalizeWhite(input)
   old = nil
   while old ~= input do
@@ -633,6 +657,68 @@ function fusiontests.testInputOrderThreeWay()
   fusion.generateKernels(x)
 end
 
+function fusiontests.testClonedOutput()
+  local name = 'testClonedOutput'
+
+  local x = nn.Identity()()
+  local n1 = nn.Tanh()(x)
+  local n2 = nn.Abs()(n1)
+  local n3 = nn.Sigmoid()(n1)
+  local n4 = nn.CAddTable()({n2, n3})
+
+  ngh.nodeSetName(x, 'x')
+
+  ngh.nodeSetName(n1, 'n1')
+  ngh.nodeSetName(n2, 'n2')
+  ngh.nodeSetName(n3, 'n3')
+  ngh.nodeSetName(n4, 'n4')
+
+  ngh.walkAddParents(n4)
+  x = ngh.invertGraph(n4)
+  ngh.walkRemoveBidirectional(x)
+  ngh.walkAddDataIds(x)
+
+  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', name .. 'Orig') end
+  fusion.walkConvertToApply(x)
+  tester:asserteq(ngh.count(x), 5)
+  tester:asserteq(ngh.walkValidate(x), true)
+  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', name .. 'Before') end
+  tester:asserteq(ngh.walkValidate(x), true)
+  local xold = ngh.walkClone(x)
+  tester:asserteq(ngh.walkValidate(x), true)
+  ngh.printGraph(x)
+  local it = 0
+  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', 'xit' .. it) end
+  while fusion.doFuseIteration(x) do
+    it = it + 1
+    print('it ' .. it .. ' ======================')
+    tester:asserteq(ngh.walkValidate(x), true)
+    if os.getenv('TESTS') ~= nil then ngh.dot(x, '', 'xit' .. it) end
+--    fusion.generateKernels(x)
+    ngh.printGraphWithLinks(x)
+    ngh.walkApply(x, function(node)
+      local dat = node.data
+      if dat.feobj ~= nil then
+        for i, feobj in ipairs(dat.feobj) do
+          for k, v in pairs(feobj.transforms) do
+            print('feobj[' .. i .. ']', k, v.src .. v.idx)
+          end
+          print('')
+        end
+      end
+    end)
+  end
+  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', name .. 'After') end
+
+  tester:asserteq(x.children[1].data.module.numInputs, 1)
+
+--  tester:asserteq(ngh.getLinkPos(x1.children[1].parents, x1), 1)
+--  tester:asserteq(ngh.getLinkPos(x2.children[1].parents, x2), 2)
+--  tester:asserteq(ngh.getLinkPos(x3.children[1].parents, x3), 3)
+
+--  fusion.generateKernels(x)
+end
+
 function fusiontests.testApplyCharRnn()
   local x = nn.Identity()()
   local xpre, x1, x2, x3, x4 = x:split(5)
@@ -897,6 +983,119 @@ function fusiontests.forwardThreeWay()
 
   diff = (outputafter - outputbefore):abs():sum()
   assert(diff == 0)
+end
+
+function fusiontests.forwardLSTMNofuse()
+  require('test.lstm.OneHot')
+  local LSTM = require('test.lstm.LSTM')
+  lstm = LSTM.lstm(65, 128, 1, 0):cl()
+  if os.getenv('TESTS') ~= nil then
+    graph.dot(lstm.fg, '', 'lstm.g')
+  end
+
+  local input1 = torch.ClTensor(50):fill(4)
+  local input2 = torch.ClTensor(50, 128):fill(2)
+  local input3 = torch.ClTensor(50, 128):fill(3)
+  local inputs = {input1, input2, input3}
+  local outputbefore = lstm:forward(inputs)
+  print('output', outputbefore)
+
+  x = ngh.nnGraphToNgh(lstm)
+  ngh.printGraph(x)
+  if os.getenv('TESTS') ~= nil then
+    ngh.dot(x, '', 'lstm1')
+  end
+
+  tester:asserteq(ngh.walkValidate(x), true)
+  fusion.walkConvertToApply(x)
+  tester:asserteq(ngh.walkValidate(x), true)
+  fusion.generateKernels(x)
+
+  local g2 = ngh.nghToNnGraph(x)
+  if os.getenv('TESTS') ~= nil then
+    graph.dot(g2.fg, '', 'g2')
+  end
+  local outputafter = g2:forward(inputs)
+  print('outputafter', outputafter)
+
+  for o=1, #outputbefore do
+    diff = (outputafter[o] - outputbefore[o]):abs():sum()
+    assert(diff == 0)
+  end
+
+--  local it = 0
+--  print('it ' .. it .. ' ======================')
+--  ngh.dot(x, '', 'xit' .. it)
+--  while fusion.doFuseIteration(x) do
+--    it = it + 1
+--    print('it ' .. it .. ' ======================')
+--    tester:asserteq(ngh.walkValidate(x), true)
+--    ngh.dot(x, '', 'xit' .. it)
+--  end
+
+--  fusion.generateKernels(x)
+end
+
+function fusiontests.forwardLSTMFused()
+  require('test.lstm.OneHot')
+  local LSTM = require('test.lstm.LSTM')
+  lstm = LSTM.lstm(65, 128, 1, 0):cl()
+  if os.getenv('TESTS') ~= nil then
+    graph.dot(lstm.fg, '', 'lstm.g')
+  end
+
+  local input1 = torch.ClTensor(50):fill(4)
+  local input2 = torch.ClTensor(50, 128):fill(2)
+  local input3 = torch.ClTensor(50, 128):fill(3)
+  local inputs = {input1, input2, input3}
+  local outputbefore = lstm:forward(inputs)
+  print('output', outputbefore)
+
+  x = ngh.nnGraphToNgh(lstm)
+  ngh.walkApply(x, function(node)
+    ngh.nodeSetName(node, 'node ' .. node.data.id)
+  end)
+  ngh.printGraph(x)
+  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', 'lstm1') end
+
+  tester:asserteq(ngh.walkValidate(x), true)
+  fusion.walkConvertToApply(x)
+  tester:asserteq(ngh.walkValidate(x), true)
+
+  it = 0
+  print('it ' .. it .. ' ======================')
+  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', 'xit' .. it) end
+  while fusion.doFuseIteration(x) do
+    it = it + 1
+    print('it ' .. it .. ' ======================')
+    tester:asserteq(ngh.walkValidate(x), true)
+    if os.getenv('TESTS') ~= nil then ngh.dot(x, '', 'xit' .. it) end
+  end
+
+  fusion.generateKernels(x)
+
+  ngh.printGraphWithLinks(x)
+  local g2 = ngh.nghToNnGraph(x)
+  if os.getenv('TESTS') ~= nil then graph.dot(g2.fg, '', 'g2') end
+  local outputafter = g2:forward(inputs)
+  print('outputafter', outputafter)
+
+  for o=1, #outputbefore do
+    diff = (outputafter[o] - outputbefore[o]):abs():sum()
+    assert(diff == 0)
+  end
+
+--  local it = 0
+--  print('it ' .. it .. ' ======================')
+--  ngh.dot(x, '', 'xit' .. it)
+--  while fusion.doFuseIteration(x) do
+--    it = it + 1
+--    print('it ' .. it .. ' ======================')
+--    tester:asserteq(ngh.walkValidate(x), true)
+--    ngh.dot(x, '', 'xit' .. it)
+--  end
+
+--  fusion.generateKernels(x)
 end
 
 function fusiontests.testLSTM()
