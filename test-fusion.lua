@@ -68,6 +68,7 @@ function fusiontests.testApplyConvertTanh()
   tester:asserteq(n1.data.feobj[1].transforms.output1.src, 'output')
   tester:asserteq(n1.data.feobj[1].transforms.input1.idx, 1)
   tester:asserteq(n1.data.feobj[1].transforms.output1.idx, 1)
+
   fusion.generateKernels(x)
 end
 
@@ -133,37 +134,73 @@ function fusiontests.testApplyConvertTanhSigmoid()
   tester:asserteq(n1.data.feobj[1].transforms.output1.src, 'output')
   tester:asserteq(n1.data.feobj[1].transforms.output1.idx, 1)
 
+  tester:asserteq(#x.children[1].data.outputs, 1)
+  tester:asserteq(x.children[1].data.outputs[1].child, x.children[1].children[1])
+  tester:asserteq(x.children[1].data.outputs[1].outputIdx, 1)
+
   fusion.generateKernels(x)
+end
+
+function fusiontests.testOutputsTwoOutput()
+  local x = nn.Identity()()
+  local n1 = nn.Sigmoid()(x)
+  local n2 = nn.Exp()(n1)
+  local n3 = nn.Tanh()(n1)
+  local out = nn.Identity()({n2, n3})
+
+  ngh.nodeSetName(x, 'x')
+  ngh.nodeSetName(n1, 'n1')
+  ngh.nodeSetName(n2, 'n2')
+  ngh.nodeSetName(n3, 'n3')
+  ngh.nodeSetName(out, 'out')
+
+  ngh.walkAddParents(out)
+  ngh.walkRemoveBidirectional(out)
+  tester:asserteq(ngh.walkValidate(out), true)
+  x = ngh.invertGraph(out)
+  ngh.walkAddDataIds(x)
+  tester:asserteq(ngh.walkValidate(x), true)
+  fusion.walkConvertToApply(x)
+  tester:asserteq(ngh.walkValidate(x), true)
+  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', 'x') end
+
+  tester:asserteq(#n1.data.outputs, 2) 
+  tester:asserteq(#n1.data.outputs[1].outputIdx, 1) 
+  tester:asserteq(#n1.data.outputs[1].child, n2)
+  tester:asserteq(#n1.data.outputs[2].outputIdx, 1) 
+  tester:asserteq(#n1.data.outputs[2].child, n3)
 end
 
 function fusiontests.testFuseTanhSigmoid()
   local x = nn.Identity()()
   local n1 = nn.Sigmoid()(x)
   local n2 = nn.Tanh()(n1)
+  local out = nn.Identity()({n2})
 
   ngh.nodeSetName(x, 'x')
   ngh.nodeSetName(n1, 'n1')
   ngh.nodeSetName(n2, 'n2')
+  ngh.nodeSetName(out, 'out')
 
-  ngh.walkAddParents(n2)
-  ngh.walkRemoveBidirectional(n2)
-  tester:asserteq(ngh.walkValidate(n2), true)
-  x = ngh.invertGraph(n2)
+  ngh.walkAddParents(out)
+  ngh.walkRemoveBidirectional(out)
+  tester:asserteq(ngh.walkValidate(out), true)
+  x = ngh.invertGraph(out)
   ngh.walkAddDataIds(x)
   tester:asserteq(ngh.walkValidate(x), true)
 
   fusion.walkConvertToApply(x)
-  tester:asserteq(ngh.count(x), 3)
+  tester:asserteq(ngh.count(x), 4)
   tester:asserteq(ngh.walkValidate(x), true)
   fusion.doFuse(x)
   tester:asserteq(ngh.walkValidate(x), true)
-  tester:asserteq(ngh.count(x), 2)
+  tester:asserteq(ngh.count(x), 3)
 
   tester:asserteq(torch.type(x.data.module), 'nn.Identity')
 
   tester:asserteq(ngh.nodeGetName(x), 'x')
   tester:asserteq(#x.children, 1)
-  tester:asserteq(#x.children[1].children, 0)
+  tester:asserteq(#x.children[1].children, 1)
   local fused = x.children[1]
   local fdat = fused.data
   tester:asserteq(ngh.nodeGetName(fused), 'n2.n1')
@@ -178,6 +215,12 @@ function fusiontests.testFuseTanhSigmoid()
   tester:asserteq(fdat.feobj[2].transforms.input1.idx, 1)
   tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
   tester:asserteq(fdat.feobj[2].transforms.output1.idx, 1)
+
+  tester:asserteq(#fused.data.outputs, 1)
+  print('x.child.out[1]', fused.data.outputs[1].child.data.module)
+  print('out', out.data.module)
+  tester:asserteq(fused.data.outputs[1].child, out)
+  tester:asserteq(fused.data.outputs[1].outputIdx, 1)
 
   fusion.generateKernels(x)
 end
@@ -710,7 +753,7 @@ function fusiontests.testClonedOutput()
   end
   if os.getenv('TESTS') ~= nil then ngh.dot(x, '', name .. 'After') end
 
-  tester:asserteq(x.children[1].data.module.numInputs, 1)
+  tester:asserteq(x.children[1].data.module.numInputs, 2)
 
 --  tester:asserteq(ngh.getLinkPos(x1.children[1].parents, x1), 1)
 --  tester:asserteq(ngh.getLinkPos(x2.children[1].parents, x2), 2)

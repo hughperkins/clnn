@@ -25,6 +25,16 @@ function fusion.isModuleApply(module)
   return false
 end
 
+function fusion.initClonedOutputs(node)
+  local dat = node.data
+  dat.outputs = {}
+  local outputs = dat.outputs
+  for i, child in ipairs(node.children) do
+    local output = {outputIdx=1, child=child}
+    table.insert(outputs, output)
+  end
+end
+
 function fusion.convertToApply(node)
   local moduletype = torch.type(node.data.module)
   if moduletype == 'nn.Tanh' then
@@ -44,6 +54,7 @@ function fusion.convertToApply(node)
       {{gradInput}} = {{gradOutput}} * (1 - {{output}} * {{output}});
     ]], moduletype)
     node.data.module = apply
+    fusion.initClonedOutputs(node)
   elseif moduletype == 'nn.Sigmoid' then
     local dat = node.data
     dat.name = moduletype
@@ -61,6 +72,7 @@ function fusion.convertToApply(node)
       {{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});
     ]], moduletype)
     node.data.module = apply
+    fusion.initClonedOutputs(node)
   elseif moduletype == 'nn.Exp' then
     local dat = node.data
     dat.name = moduletype
@@ -78,6 +90,7 @@ function fusion.convertToApply(node)
       {{gradInput}} = {{gradOutput}} * {{output}};
     ]], moduletype)
     node.data.module = apply
+    fusion.initClonedOutputs(node)
   elseif moduletype == 'nn.Abs' then
     local dat = node.data
     dat.name = moduletype
@@ -95,6 +108,7 @@ function fusion.convertToApply(node)
       {{gradInput}} = {{input}} < 0 ? - {{gradOutput}} : {{gradOutput}};
     ]], moduletype)
     node.data.module = apply
+    fusion.initClonedOutputs(node)
   elseif moduletype == 'nn.CAddTable' then
     local dat = node.data
     dat.name = moduletype
@@ -115,6 +129,7 @@ function fusion.convertToApply(node)
       {{gradInput2}} = {{gradOutput}};
     ]], moduletype)
     node.data.module = apply
+    fusion.initClonedOutputs(node)
   elseif moduletype == 'nn.CMulTable' then
     local dat = node.data
     dat.name = moduletype
@@ -135,6 +150,7 @@ function fusion.convertToApply(node)
       {{gradInput2}} = {{gradOutput}};
     ]], moduletype)
     node.data.module = apply
+    fusion.initClonedOutputs(node)
   elseif false and moduletype == 'nil' then
     local dat = node.data
     dat.name = moduletype
@@ -155,6 +171,7 @@ function fusion.convertToApply(node)
       {{gradInput2}} = {{gradOutput}};
     ]], moduletype)
     node.data.module = apply
+    fusion.initClonedOutputs(node)
   end
 end
 
@@ -309,10 +326,6 @@ end
 -- child function is applied to result of parent function
 function fusion.doFuseIteration(x)
   p, c = fusion.getFusiblePair(x)
-  -- p == parent, c == child
-  -- fuse(p, c) = c . p = c(p(input)) 
-  -- output = c(p(input))
-
   if p == nil then
     return false
   end
@@ -327,15 +340,7 @@ function fusion.doFuseIteration(x)
   local p_outputs = pmod.numOutputs
   local c_outputs = cmod.numOutputs
 
---  local virtualOutputs = (c.data.module.virtualOutputs or 0) + (p.data.module.virtualOutputs or 0)
-
-  -- observations:
-  -- ALL parent's outputs go to child
-  -- but normally parent will just have one unique output (could go to multiple children)
-  -- child might have more than one input
-  -- need to find which input comes from child
   parentIsWhichInput = ngh.getLinkPos(c.parents, p)
---  print('parent input:', parentIsWhichInput)
 
   local pfo = pdat.feobj
   local cfo = cdat.feobj
@@ -347,7 +352,6 @@ function fusion.doFuseIteration(x)
 
   local virtualOutputBase = pdat.numVirtualOutputs + cdat.numVirtualOutputs
   local newNumVirtualOutputs = pdat.numVirtualOutputs + cdat.numVirtualOutputs + pmod.numOutputs
---  pfo[#pfo].transforms.output = 'float virtualOutput' .. virtualOutputs
 
   -- actions on merge:
   -- - virtualoutputs of child will need to be renumbered, so dont clobber parent (ie translated by
@@ -369,7 +373,7 @@ function fusion.doFuseIteration(x)
       end
     end
   end
-
+  -- output from parent to child becomes virtualoutput
   for i=1,#pfo do
     local thispfo = pfo[i]
     for _, transform in pairs(thispfo.transforms) do
@@ -382,6 +386,8 @@ function fusion.doFuseIteration(x)
     table.insert(fusedfos, thispfo)
   end
   local bumpParentInputsAmount = 0  -- increment this for each child input that is left of parent link
+  -- renumber inputs for child and parent, to preserve original relative order and not clobber each other
+  -- child input from parent becomes virtualoutput
   for i=1,#cfo do
     local thiscfo = cfo[i]
     for _, transform in pairs(thiscfo.transforms) do
@@ -412,7 +418,6 @@ function fusion.doFuseIteration(x)
   local fdat = fused.data
   fdat.feobj = fusedfos
   fdat.id = pdat.id .. '.' .. cdat.id
---  fdat.numOutputs = 1  -- I guess???  might generalize this a bit, later...
   local fmod = fdat.module
   fmod.numInputs = newNumInputs
   fmod.numOutputs = newNumOutputs
