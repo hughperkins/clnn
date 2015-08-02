@@ -102,9 +102,10 @@ function fusiontests.testApplyConvertTanhSigmoid()
   local x = nn.Identity()()
   local n1 = nn.Sigmoid()(x)
   local n2 = nn.Tanh()(n1)
+  local out = nn.Identity()({n2})
 
-  ngh.walkAddParents(n2)
-  x = ngh.invertGraph(n2)
+  ngh.walkAddParents(out)
+  x = ngh.invertGraph(out)
   ngh.walkRemoveBidirectional(x)
   tester:asserteq(ngh.walkValidate(x), true)
   fusion.walkConvertToApply(x)
@@ -137,6 +138,7 @@ function fusiontests.testApplyConvertTanhSigmoid()
   tester:asserteq(#x.children[1].data.outputs, 1)
   tester:asserteq(x.children[1].data.outputs[1].child, x.children[1].children[1])
   tester:asserteq(x.children[1].data.outputs[1].outputIdx, 1)
+  tester:asserteq(x.children[1].data.outputs[1].InputIdx, 1)
 
   fusion.generateKernels(x)
 end
@@ -191,8 +193,10 @@ function fusiontests.testFuseTanhSigmoid()
 
   fusion.walkConvertToApply(x)
   tester:asserteq(ngh.count(x), 4)
+  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', 'xbefore') end
   tester:asserteq(ngh.walkValidate(x), true)
   fusion.doFuse(x)
+  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', 'xafter') end
   tester:asserteq(ngh.walkValidate(x), true)
   tester:asserteq(ngh.count(x), 3)
 

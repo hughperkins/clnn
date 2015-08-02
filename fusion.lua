@@ -30,7 +30,14 @@ function fusion.initClonedOutputs(node)
   dat.outputs = {}
   local outputs = dat.outputs
   for i, child in ipairs(node.children) do
-    local output = {outputIdx=1, child=child}
+    -- inputIdx is idx of the input into child node
+    -- to get this, we assume that all inputs into child are 
+    -- unique, and we look at the sequence number in the 
+    -- child.parents table
+    -- we are only going to store an outputs table, no inputs table
+    -- we can get the outputs table from the child, via the parent link
+    local inputIdx = ngh.getLinkPos(child.parents, node)
+    local output = {outputIdx=1, child=child, inputIdx=inputIdx}
     table.insert(outputs, output)
   end
 end
@@ -324,6 +331,8 @@ end
 
 -- since we inverted this:
 -- child function is applied to result of parent function
+-- we're going to move/fuse/merge all chid things into parent
+-- then throw away the child
 function fusion.doFuseIteration(x)
   p, c = fusion.getFusiblePair(x)
   if p == nil then
@@ -356,7 +365,7 @@ function fusion.doFuseIteration(x)
   -- actions on merge:
   -- - virtualoutputs of child will need to be renumbered, so dont clobber parent (ie translated by
   --   number of idx equal to number of parent virtualoutputs)
-  -- - there is one child output that feeds into child.  this will create one additional virtuaoutput
+  -- - there is one parent output that feeds into child.  this will create one additional virtuaoutput
   --   - we should find what is the input index for child, and output index for parent
   -- - input idxes in child need to be shifted by amount equal to number of inputs in parent - 1
   local childIndexInParent = ngh.getLinkPos(p.children, c)
@@ -411,6 +420,19 @@ function fusion.doFuseIteration(x)
       if transform.src == 'input' then
         transform.idx = transform.idx + bumpParentInputsAmount
       end
+    end
+  end
+  -- move outputs from child to parent, merging any duplicates
+  local parentOuts = {} -- set of parent output nodes, for quick lookup
+  for j, parentOut in ipairs(pdat.outputs) do
+    parentOuts[parentOut.child] = j
+  end
+  for i, childOut in ipairs(cdat.outputs) do
+    if parentOuts[childOut.child] ~= nil then
+      -- merge them
+    else
+      -- move from child to parent
+      
     end
   end
 
