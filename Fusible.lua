@@ -25,11 +25,13 @@ end
 
 -- Fusibles basically take just the 'data' bit of the nnGraph nodes, without
 -- the Node container, and without the parents and children of the node
--- this Fusible is just a dictionary (for now) with:
+-- this Fusible has:
+-- .numInputs (== #.inputs)
+-- .numOutputs (number of unique outputIdxs)
 -- .outputs = {
---   1 = {outputdidx=1, child=childa, inputidx=1},
---   2 = {outputdidx=2, child=childb, inputidx=1},
---   3 = {outputdidx=2, child=childb, inputidx=2},
+--   1 = {outputIdx=1, child=childa, inputIdx=1},
+--   2 = {outputIdx=2, child=childb, inputIdx=1},
+--   3 = {outputIdx=2, child=childb, inputIdx=2},
 -- }
 -- .inputs = {
 --   1 = parenta
@@ -70,7 +72,7 @@ end
 
 -- pass in a bare, inverted ngh, and
 -- receive a gmodule :-)
-function fusibles.nghToNnGraph(x)
+function fusibles.fusiblesToNnGraph(x)
   local x2 = fusibles.walkClone(x)
   local nodes2 = fusibles.invertGraph(x2)
   fusibles.walkAddBidirectional(nodes2)
@@ -78,11 +80,30 @@ function fusibles.nghToNnGraph(x)
   return g
 end
 
+-- create a set of nn.Nodes, using the Fusibles
+-- as the data...
+function fusibles.walkFusiblesToNodes(fusible, seen)
+  print('fusible', fusible)
+  seen = seen or {}
+  if seen[fusible] ~= nil then
+    return seen[fusible]
+  end
+  local node = nngraph.Node({module=fusible.module, annotations={}})
+  node.data.annotations.name = fusible.name
+  node.id = fusible.id
+  node.data.module = fusible.module
+  seen[fusible] = node
+  for i, output in ipairs(fusible.outputs) do
+    childNode = fusibles.walkFusiblesToNodes(output.child, seen)
+    node:add(childNode, true)
+  end
+  return node
+end
+
 function fusibles.dot(topNode, something, filename)
-  local topNodes = fusibles.walkClone(topNode)
-  fusibles.walkAddBidirectional(topNode)
-  graph.dot(topNode:graph(), something, filename)
-  fusibles.walkRemoveBidirectional(topNode)
+  local nodes = fusibles.walkFusiblesToNodes(topNode)
+  graph.dot(nodes:graph(), something, filename)
+--  fusibles.walkRemoveBidirectional(topNode)
 end
 
 --function fusibles.stripNodes(x)

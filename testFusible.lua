@@ -20,8 +20,8 @@ local x2 = fusibles.walkClone(x)
 
 print('x2=======')
 fusibles.printGraph(x2)
-os.exit(0)
 fusibles.dot(x2, '', 'x2')
+os.exit(0)
 
 local r2 = fusibles.invertGraph(x2)
 
