@@ -258,6 +258,8 @@ function fusibletests.testReduceEdgeParentHasParents()
   tester:asserteq(n3.outputs[1].child, out)
   tester:asserteq(#out.inputs, 1)
   tester:asserteq(out.inputs[1], n3)
+
+  if os.getenv('TESTS') ~= nil then x:dot('', 'xafter') end
 end
 
 function fusibletests.testReduceEdgeParentHasMultipleParents()
@@ -294,6 +296,17 @@ function fusibletests.testReduceEdgeParentHasMultipleParents()
   tester:asserteq(torch.type(p.module), 'nn.CMulTable')
   tester:asserteq(torch.type(c.module), 'nn.CAddTable')
   tester:asserteq(torch.type(out.module), 'nn.Identity')
+
+  p = p:reduceEdge(c)
+
+  tester:asserteq(#p.outputs, 1)
+  tester:asserteq(p.outputs[1].child, out)
+  tester:asserteq(p.numInputs, 3)
+  tester:asserteq(p.numOutputs, 1)
+  tester:asserteq(#out.inputs, 1)
+  tester:asserteq(out.inputs[1], p)
+
+  if os.getenv('TESTS') ~= nil then x:dot('', 'xafter') end
 end
 
 function go()

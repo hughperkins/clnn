@@ -367,9 +367,6 @@ function Fusible.fromNodes(node)
   return top
 end
 
---function fusibles.stripNodes(node)
---end
-
 -- returns new top
 -- cannot do this with Fusible, since inputs and outputs
 -- have assymetric information

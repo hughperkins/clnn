@@ -140,6 +140,11 @@ function nn.Fusible.reduceEdge(parent, child)
     end
   end
 
+  parent.numInputs = #parent.inputs
+  if parent.numInputs == 0 then
+    parent.numInputs = 1
+  end
+
 -- need to keep order of parent links, so first first parent index from child
 --  local parentIndexFromChild = nn.Fusible.getLinkPos(child.inputs, parent)
 --  print('parentIndexFromChild', parentIndexFromChild)
