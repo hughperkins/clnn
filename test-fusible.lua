@@ -256,7 +256,7 @@ function fusibletests.testReduceEdgeParentHasParents()
   tester:asserteq(n3.inputs[2], n2)
   tester:asserteq(n3.outputs[1].child, out)
   tester:asserteq(#out.inputs, 1)
-  tester:asserteq(#out.inputs[1], n3)
+  tester:asserteq(out.inputs[1], n3)
 end
 
 function go()
