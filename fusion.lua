@@ -203,10 +203,10 @@ function fusion.getFusiblePair(x)
       return
     end
     if fusion.isNodeApply(fusible) then
-      for j, child in ipairs(fusible.children) do  -- I know this is rubbish n-squared, fix this later..
-        if fusion.isNodeApply(child) then
+      for j, output in ipairs(fusible.outputs) do  -- I know this is rubbish n-squared, fix this later..
+        if fusion.isNodeApply(output.child) then
           n1 = fusible
-          n2 = child
+          n2 = output.child
           return
         end
       end
@@ -340,8 +340,8 @@ function fusion.doFuseIteration(x)
     return false
   end
 
-  local pdat = p.data
-  local cdat = c.data
+  local pdat = p
+  local cdat = c
   local pmod = pdat.module
   local cmod = cdat.module
 
