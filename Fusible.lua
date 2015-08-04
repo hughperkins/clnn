@@ -95,7 +95,7 @@ function fusibles.walkFusiblesToNodes(fusible, seen)
   seen[fusible] = node
   for i, output in ipairs(fusible.outputs) do
     childNode = fusibles.walkFusiblesToNodes(output.child, seen)
-    node:add(childNode, true)
+    node:add(childNode, false)
   end
   return node
 end
