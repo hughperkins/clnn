@@ -34,7 +34,7 @@ function Fusible:add(child)
     local output = {child=child, outputIdx=i, inputIdx=#child.inputs}
     table.insert(self.outputs, output)
   end
-  return child
+  return self
 end
 
 -- Fusibles basically take just the 'data' bit of the nnGraph nodes, without
@@ -288,6 +288,7 @@ function Fusible.fromNodes(node)
   -- and then we convert each one
   local all_nodes = {}
   fusibles.walkNngraphNodesApply(node, function(node)
+    print('adding ', node.data.module)
     all_nodes[node] = node
   end)
 
@@ -324,16 +325,22 @@ function Fusible.fromNodes(node)
     local data = node.data
     local fusible = fusible_by_node[node]
     for i, child in ipairs(node.children) do
+      print('fromNodes child', node.data.module, i, child.data.module)
       local childfusible = fusible_by_node[child]
       table.insert(fusible.inputs, childfusible)
-      local output = {child=fusible, outputIdx=i, inputIdx=#fusible.inputs}
+      local output = {child=fusible, outputIdx=#childfusible.outputs + 1, inputIdx=#fusible.inputs}
+      print('  outputIdx', output.outputIdx, 'inputIdx', output.inputIdx)
       table.insert(childfusible.outputs, output)
     end
   end
 
+--  local moduleType = torch.type(fusible.module)
   for i, fusible in ipairs(all_fusibles) do
     fusible.numOutputs = 1
     fusible.numInputs = #fusible.inputs
+    if fusible.numInputs == 0 then
+      fusible.numInputs = 1
+    end
     print('walk nodes2 fusible ' .. fusible .. ' numoutputs ' .. #fusible.outputs .. ' numinputs ' .. #fusible.inputs)
   end
 
