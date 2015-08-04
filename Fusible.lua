@@ -356,7 +356,7 @@ end
 --  return fusibles.nodeGraphGetTop(last_node)
 --end
 
-function fusibles.walkValidate(topnode)
+function Fusible.walkValidate(topnode)
   local valid = true
   topnode:walkApply(function(node)
     if node.outputs == nil then

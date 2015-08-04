@@ -15,7 +15,7 @@ graph.dot(g.fg, '', 'g')
 
 x = fusibles.nnGraphToFusibles(g)
 
-assert(fusibles.walkValidate(x))
+assert(x:walkValidate())
 local x2 = fusibles.walkClone(x)
 
 print('x2=======')
