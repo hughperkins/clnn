@@ -330,6 +330,14 @@ function fusion.doFuse(x)
   end
 end
 
+function getChildIndexInParent(parent, child)
+  for i, output in ipairs(parent.outputs) do
+    if output.child == child then
+      return i
+    end
+  end
+end
+
 -- since we inverted this:
 -- child function is applied to result of parent function
 -- we're going to move/fuse/merge all chid things into parent
@@ -350,7 +358,7 @@ function fusion.doFuseIteration(x)
   local p_outputs = pmod.numOutputs
   local c_outputs = cmod.numOutputs
 
-  parentIsWhichInput = nn.Fusible.getLinkPos(c.parents, p)
+  parentIsWhichInput = nn.Fusible.getLinkPos(c.inputs, p)
 
   local pfo = pdat.feobj
   local cfo = cdat.feobj
@@ -369,8 +377,8 @@ function fusion.doFuseIteration(x)
   -- - there is one parent output that feeds into child.  this will create one additional virtuaoutput
   --   - we should find what is the input index for child, and output index for parent
   -- - input idxes in child need to be shifted by amount equal to number of inputs in parent - 1
-  local childIndexInParent = nn.Fusible.getLinkPos(p.children, c)
-  local parentIndexInChild = nn.Fusible.getLinkPos(c.parents, p)
+  local childIndexInParent = getChildIndexInParent(p, c)
+  local parentIndexInChild = nn.Fusible.getLinkPos(c.inputs, p)
   print('link pos childinparent=' .. childIndexInParent .. ' parentinchild=' .. parentIndexInChild)
   local fusedfos = {}
 
@@ -438,7 +446,7 @@ function fusion.doFuseIteration(x)
   end
 
   local fused = nn.Fusible.reduceEdge(p, c)
-  local fdat = fused.data
+  local fdat = fused
   fdat.feobj = fusedfos
   fdat.id = pdat.id .. '.' .. cdat.id
   local fmod = fdat.module
@@ -446,7 +454,7 @@ function fusion.doFuseIteration(x)
   fmod.numOutputs = newNumOutputs
   fmod.forwardExpression = fusedExp
   fdat.numVirtualOutputs = newNumVirtualOutputs
-  nn.Fusible.fusibleSetName(fused, nn.Fusible.fusibleGetName(c) .. '.' .. nn.Fusible.fusibleGetName(p))
+  fused.name = c.name .. '.' .. p.name
 
   return true
 end

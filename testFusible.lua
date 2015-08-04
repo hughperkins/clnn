@@ -1,5 +1,5 @@
 require 'nngraph'
-local fusibles = require('Fusible')
+require 'clnn'
 
 local x = nn.Identity()()
 local n1 = nn.Tanh()(x)
@@ -13,10 +13,10 @@ local n7 = nn.CMulTable()({n5, n6})
 local g = nn.gModule({x}, {n7})
 graph.dot(g.fg, '', 'g')
 
-x = fusibles.nnGraphToFusibles(g)
+x = nn.Fusible.fromNnGraph(g)
 
 assert(x:walkValidate())
-local x2 = fusibles.walkClone(x)
+local x2 = x:walkClone()
 
 print('x2=======')
 x2:printGraph()

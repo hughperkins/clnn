@@ -65,7 +65,7 @@ function Fusible.fromNnGraph(g)
 
   x = Fusible.fromNodes(newbg)
 --  local x = fusibles.invertGraph(newbg)
-  fusibles.walkAddDataIds(x)
+  x:walkAddDataIds()
 --  fusibles.stripNodes(x)
   return x
 end
@@ -133,26 +133,26 @@ end
 
 -- contains a ref to the old module
 -- havent decided if this is what we want or not really...
-function fusibles.walkClone(node, newByOld)
-  local newNode =  nn.Fusible()
-  newNode.module = node.module
-  newNode.id = node.id
-  newNode.numOutputs = node.numOutputs
-  newNode.numInputs = node.numInputs
+function Fusible.walkClone(fusible, newByOld)
+  local newFusible =  nn.Fusible()
+  newFusible.module = fusible.module
+  newFusible.id = fusible.id
+  newFusible.numOutputs = fusible.numOutputs
+  newFusible.numInputs = fusible.numInputs
   local newByOld = newByOld or {}
-  newByOld[node] = newNode
-  for i, output in ipairs(node.outputs) do
+  newByOld[fusible] = newFusible
+  for i, output in ipairs(fusible.outputs) do
     local oldChild = output.child
     local newChild = newByOld[oldChild]
     if newChild == nil then
-      newChild = fusibles.walkClone(oldChild, newByOld)
+      newChild = oldChild:walkClone(newByOld)
     end
-    table.insert(newNode.outputs, {child=newChild,
+    table.insert(newFusible.outputs, {child=newChild,
       outputIdx=output.outputIdx, inputIdx=output.inputIdx})
-    local childInputIdx = fusibles.getLinkPos(oldChild.inputs, node)
-    newChild.inputs[childInputIdx] = newNode
+    local childInputIdx = Fusible.getLinkPos(oldChild.inputs, fusible)
+    newChild.inputs[childInputIdx] = newFusible
   end
-  return newNode
+  return newFusible
 end
 
 function fusibles.addNodeLink(from, to, tableName)
@@ -371,7 +371,7 @@ function Fusible.walkValidate(topnode)
     end
     for i, output in ipairs(node.outputs) do
       local child = output.child
-      if fusibles.getLinkPos(child.inputs, node) == nil then
+      if Fusible.getLinkPos(child.inputs, node) == nil then
         print('child link from ' .. tostring(node) .. ' to ' .. tostring(child) .. ' not reciprocated')
         valid = false
       end
@@ -392,7 +392,7 @@ function Fusible.walkValidate(topnode)
   return valid
 end
 
-function fusibles.getLinkPos(targetTable, value)
+function Fusible.getLinkPos(targetTable, value)
   for i, v in ipairs(targetTable) do
     if v == value then
       return i
