@@ -21,21 +21,14 @@ local x2 = fusibles.walkClone(x)
 print('x2=======')
 fusibles.printGraph(x2)
 fusibles.dot(x2, '', 'x2')
-os.exit(0)
-
-local r2 = fusibles.invertGraph(x2)
 
 print('x=======')
 fusibles.printGraph(x)
 fusibles.dot(x, '', 'x')
 
-print('r2=======')
-fusibles.printGraph(r2)
-fusibles.dot(r2, '', 'r2')
-
-g = fusibles.anToNnGraph(x)
-graph.dot(g.fg, '', 'g.fg')
-graph.dot(g.bg, '', 'g.bg')
+--g = fusibles.anToNnGraph(x)
+--graph.dot(g.fg, '', 'g.fg')
+--graph.dot(g.bg, '', 'g.bg')
 
 --local x = nn.Identity()()
 --local n1 = nn.Tanh()()

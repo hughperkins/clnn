@@ -63,8 +63,8 @@ function fusibles.nnGraphToFusibles(g)
   end
   thisnode.children = {}
 
-  newbg = fusibles.toFusibles(newbg)
-  local x = fusibles.invertGraph(newbg)
+  x = fusibles.toFusibles(newbg)
+--  local x = fusibles.invertGraph(newbg)
   fusibles.walkAddDataIds(x)
 --  fusibles.stripNodes(x)
   return x
@@ -183,13 +183,13 @@ function fusibles.nodeSetName(fusible, name)
   fusible.name = name
 end
 
-function fusibles.walkAddDataIds(node, dataId)
+function fusibles.walkAddDataIds(fusible, dataId)
   dataId = dataId or 0
-  if node.id == nil then
+  if fusible.id == nil then
     dataId = dataId + 1
-    node.id = dataId
+    fusible.id = dataId
   end
-  for i, output in ipairs(node.outputs) do
+  for i, output in ipairs(fusible.outputs) do
     dataId = fusibles.walkAddDataIds(output.child, dataId)
   end
   return dataId
@@ -325,34 +325,36 @@ function fusibles.toFusibles(node)
 
 --  fusibles.walkAddParents(node)
 --  fusibles.walkRemoveBidirectional(node)
-  return fusible_by_node[node]
+  return fusibles.nodeGraphGetTop(fusible_by_node[node])
 end
 
 --function fusibles.stripNodes(node)
 --end
 
 -- returns new top
-function fusibles.invertGraph(top)
-  -- we will put all nodes into all_nodes
-  -- then simply swap the 'children' and 'parents'
-  -- tables.  I guess :-)
-  top = fusibles.nodeGraphGetTop(top)
-  print('top', top)
-  local all_nodes = {}
-  local last_node = nil
-  fusibles.walkApply(top, function(node)
-    if all_nodes[node] == nil then
-      all_nodes[node] = true
-    end
-    last_node = node
-  end)
-  for node, _ in pairs(all_nodes) do
-    local old_parents = node.parents
-    node.parents = node.children
-    node.children = old_parents
-  end
-  return fusibles.nodeGraphGetTop(last_node)
-end
+-- cannot do this with Fusible, since inputs and outputs
+-- have assymetric information
+--function fusibles.invertGraph(top)
+--  -- we will put all nodes into all_nodes
+--  -- then simply swap the 'children' and 'parents'
+--  -- tables.  I guess :-)
+--  top = fusibles.nodeGraphGetTop(top)
+--  print('top', top)
+--  local all_nodes = {}
+--  local last_node = nil
+--  fusibles.walkApply(top, function(node)
+--    if all_nodes[node] == nil then
+--      all_nodes[node] = true
+--    end
+--    last_node = node
+--  end)
+--  for node, _ in pairs(all_nodes) do
+--    local old_parents = node.parents
+--    node.parents = node.children
+--    node.children = old_parents
+--  end
+--  return fusibles.nodeGraphGetTop(last_node)
+--end
 
 function fusibles.walkValidate(topnode)
   local valid = true
