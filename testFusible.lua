@@ -19,12 +19,12 @@ assert(fusibles.walkValidate(x))
 local x2 = fusibles.walkClone(x)
 
 print('x2=======')
-fusibles.printGraph(x2)
-fusibles.dot(x2, '', 'x2')
+x2:printGraph()
+x2:dot('', 'x2')
 
 print('x=======')
-fusibles.printGraph(x)
-fusibles.dot(x, '', 'x')
+x:printGraph()
+x:dot('', 'x')
 
 --g = fusibles.anToNnGraph(x)
 --graph.dot(g.fg, '', 'g.fg')

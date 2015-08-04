@@ -100,7 +100,7 @@ function fusibles.walkFusiblesToNodes(fusible, seen)
   return node
 end
 
-function fusibles.dot(topNode, something, filename)
+function Fusible.dot(topNode, something, filename)
   local nodes = fusibles.walkFusiblesToNodes(topNode)
   graph.dot(nodes:graph(), something, filename)
 --  fusibles.walkRemoveBidirectional(topNode)
@@ -325,7 +325,7 @@ function fusibles.toFusibles(node)
 
 --  fusibles.walkAddParents(node)
 --  fusibles.walkRemoveBidirectional(node)
-  return fusibles.nodeGraphGetTop(fusible_by_node[node])
+  return fusible_by_node[node]:getTop()
 end
 
 --function fusibles.stripNodes(node)
@@ -358,7 +358,7 @@ end
 
 function fusibles.walkValidate(topnode)
   local valid = true
-  fusibles.walkApply(topnode, function(node)
+  topnode:walkApply(function(node)
     if node.outputs == nil then
       print('node' .. tostring(node) .. ' has no outputs table')
       valid = false
