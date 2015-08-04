@@ -3,10 +3,12 @@ local Fusible = torch.class('nn.Fusible')
 Fusibles = {}
 fusibles = Fusibles
 
-function Fusible:__init()
+function Fusible:__init(numOutputs, name)
   self.outputs = {}
   self.inputs = {}
-  self.name = ''
+  self.name = name or ''
+  self.numOutputs = numOutputs or 1
+  self.numInputs = 0
 end
 
 function Fusible:__tostring()
@@ -21,6 +23,19 @@ end
 function Fusible.__concat(a, b)
 --  print('concat a=', a, 'b=', b)
   return tostring(a) .. tostring(b)
+end
+
+-- child operates on output of self
+-- assumptions:
+-- all outputs from self go to child
+function Fusible:add(child)
+  for i=1, self.numOutputs do
+    table.insert(child.inputs, self)
+    local output = {child=child, outputIdx=i, inputIdx=#child.inputs}
+    table.insert(self.outputs, output)
+  end
+  child.numInputs = child.numInputs + self.numOutputs
+  return self
 end
 
 -- Fusibles basically take just the 'data' bit of the nnGraph nodes, without
