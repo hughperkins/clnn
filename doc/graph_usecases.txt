@@ -1,0 +1,76 @@
+Dev notes: use cases for graph structure links etc
+==================================================
+
+- walk the nodes from top to bottom
+- walk the nodes from bottom to top
+- get top node
+  - assumes only one top
+  - sufficient to get any arbitrary parent at each step
+- get bottom node
+  - assumes only one bottom
+  - sufficient to get any arbitrary child at each step
+- given two nodes, determine which outputs from one are inputs to the other
+- given a node, know which nodes to send the outputs to, and which inputs of those nodes
+  should receive those outputs
+- given a node, know which nodes to backpropagate to, and which outputs of those nodes
+  should receive the backpropagation
+
+Expected properties:
+forward:
+- a node can have multiple children
+- each output can feed to multiple children
+- a node can have multiple unique outputs
+- some outputs might go to the same child
+
+backward:
+- a node can have multiple unique inputs
+- each unique input comes from only a single parent output
+
+Nice-to-have:
+- good forward/backward speed (only 'nice-to-have' since can use different structure
+once kernels have been compiled)
+
+
+Proposed structure:
+node.outputs = {
+   1 = {outputdidx=1, child=childa, inputidx=1},
+   2 = {outputdidx=2, child=childb, inputidx=1},
+   3 = {outputdidx=2, child=childb, inputidx=2},
+}
+node.inputs = {
+   1 = parenta
+   2 = parenta
+   3 = parentb
+}
+
+to get an arbitrary child of a node:
+- return node.outputs[1].child
+
+to get an arbitrary parent of a node:
+- return node.inputs[1]
+
+to get all children of a node:
+for i, output in ipairs(node.outputs) do
+   yield output.child
+end
+
+to get all parents of a node:
+for i, parent in ipairs(node.inputs) do
+  yield parent
+end
+
+given two nodes, determine which outputs from one are inputs to the other
+for i, output in ipairs(parent.data.outputs) do
+  if output.child == child then
+    yield output.outputidx
+  end
+end
+
+to do forward prop:
+for i, output in ipairs(node.outputs) do
+   output.child.
+end
+
+to do backward prop:
+
+

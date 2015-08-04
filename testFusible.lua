@@ -1,7 +1,5 @@
 require 'nngraph'
-local ngh = require('nodeGraphHelper')
-
-
+local fusibles = require('Fusible')
 
 local x = nn.Identity()()
 local n1 = nn.Tanh()(x)
@@ -15,24 +13,25 @@ local n7 = nn.CMulTable()({n5, n6})
 local g = nn.gModule({x}, {n7})
 graph.dot(g.fg, '', 'g')
 
-x = ngh.nnGraphToNgh(g)
+x = fusibles.nnGraphToFusibles(g)
 
-local x2 = ngh.walkClone(x)
+assert(fusibles.walkValidate(x))
+local x2 = fusibles.walkClone(x)
 print('x2=======')
-ngh.printGraph(x2)
-ngh.dot(x2, '', 'x2')
+fusibles.printGraph(x2)
+fusibles.dot(x2, '', 'x2')
 
-local r2 = ngh.invertGraph(x2)
+local r2 = fusibles.invertGraph(x2)
 
 print('x=======')
-ngh.printGraph(x)
-ngh.dot(x, '', 'x')
+fusibles.printGraph(x)
+fusibles.dot(x, '', 'x')
 
 print('r2=======')
-ngh.printGraph(r2)
-ngh.dot(r2, '', 'r2')
+fusibles.printGraph(r2)
+fusibles.dot(r2, '', 'r2')
 
-g = ngh.nghToNnGraph(x)
+g = fusibles.anToNnGraph(x)
 graph.dot(g.fg, '', 'g.fg')
 graph.dot(g.bg, '', 'g.bg')
 

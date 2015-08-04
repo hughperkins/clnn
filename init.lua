@@ -20,7 +20,7 @@ function nn.gModule:cl()
   return self
 end
 
-include 'Apply.lua'
+include 'Fusible.lua'
 include 'gApply.lua'
 
 include 'Tanh.lua'

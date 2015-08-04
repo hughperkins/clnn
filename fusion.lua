@@ -36,6 +36,7 @@ function fusion.initClonedOutputs(node)
     -- child.parents table
     -- we are only going to store an outputs table, no inputs table
     -- we can get the outputs table from the child, via the parent link
+    -- note that child can have multiple inputs from each parent
     local inputIdx = ngh.getLinkPos(child.parents, node)
     local output = {outputIdx=1, child=child, inputIdx=inputIdx}
     table.insert(outputs, output)
