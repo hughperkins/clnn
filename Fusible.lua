@@ -3,12 +3,14 @@ local Fusible = torch.class('nn.Fusible')
 Fusibles = {}
 fusibles = Fusibles
 
-function Fusible:__init(numInputs, numOutputs, name)
+function Fusible:__init(params)
   self.outputs = {}
   self.inputs = {}
-  self.numInputs = numInputs or 1
-  self.numOutputs = numOutputs or 1
-  self.name = name or ''
+  params = params or {}
+  self.numInputs = params.numInputs or 1
+  self.numOutputs = params.numOutputs or 1
+  self.name = params.name or ''
+  self.module = params.module
 end
 
 function Fusible:__tostring()
@@ -28,13 +30,27 @@ end
 -- child operates on output of self
 -- assumptions:
 -- all outputs from self go to child
-function Fusible:add(child)
-  for i=1, self.numOutputs do
-    table.insert(child.inputs, self)
-    local output = {child=child, outputIdx=i, inputIdx=#child.inputs}
-    table.insert(self.outputs, output)
+function Fusible:add(params)
+  if torch.type(params) == 'nn.Fusible' then
+    local child = params
+    for i=1, self.numOutputs do
+      table.insert(child.inputs, self)
+      local output = {child=child, outputIdx=i, inputIdx=#child.inputs}
+      table.insert(self.outputs, output)
+    end
+    return child
+  else
+    local child = nn.Fusible()
+    child.numInputs = params.numInputs or 1
+    child.numOutputs = params.numOutputs or 1
+    child.name = params.name or ''
+    child.module = params.module
+    for i=1, self.numOutputs do
+      table.insert(child.inputs, self)
+      table.insert(self.outputs, {child=child, outputIdx=i, inputIdx=1})
+    end
+    return child
   end
-  return self
 end
 
 -- Fusibles basically take just the 'data' bit of the nnGraph nodes, without

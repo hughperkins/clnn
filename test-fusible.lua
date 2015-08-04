@@ -45,8 +45,8 @@ function fusibletests.testBasic()
 end
 
 function fusibletests.testSimpleAdd()
-  local x = nn.Fusible(1, 1, 'x')
-  local n1 = nn.Fusible(1, 1, 'n1')
+  local x = nn.Fusible({name='x'})
+  local n1 = nn.Fusible({name='n1'})
 
   x:add(n1)
   x:printGraph()
@@ -65,8 +65,8 @@ function fusibletests.testSimpleAdd()
 end
 
 function fusibletests.testReduceEdge1()
-  local x = nn.Fusible(1, 1, 'x')
-  local n1 = nn.Fusible(1, 1, 'n1')
+  local x = nn.Fusible({name='x'})
+  local n1 = nn.Fusible({name='n1'})
 
   x:add(n1)
   x:printGraph()
@@ -88,9 +88,9 @@ function fusibletests.testReduceEdge1()
 end
 
 function fusibletests.testReduceEdgeChildHasChild()
-  local x = nn.Fusible(1, 1, 'x')
-  local n1 = nn.Fusible(1, 1, 'n1')
-  local n2 = nn.Fusible(1, 1, 'n2')
+  local x = nn.Fusible({name='x'})
+  local n1 = nn.Fusible({name='n1'})
+  local n2 = nn.Fusible({name='n2'})
 
   x:add(n1)
   n1:add(n2)
@@ -125,9 +125,9 @@ function fusibletests.testReduceEdgeChildHasChild()
 end
 
 function fusibletests.testReduceEdgeParentHasParent()
-  local x = nn.Fusible(1, 1, 'x')
-  local n1 = nn.Fusible(1, 1, 'n1')
-  local n2 = nn.Fusible(1, 1, 'n2')
+  local x = nn.Fusible({name='x'})
+  local n1 = nn.Fusible({name='n1'})
+  local n2 = nn.Fusible({name='n2'})
 
   x:add(n1)
   n1:add(n2)
@@ -163,8 +163,9 @@ end
 
 function fusibletests.testSimpleAddModules()
   local x = nn.Identity()()
-  local n1 = nn.Tanh(x)({x})
+  local n1 = nn.Tanh()(x)
 
+  print('calling gmodule...')
   local g = nn.gModule({x}, {n1})
   x = nn.Fusible.fromNnGraph(g)
   x:printGraph()
@@ -257,6 +258,42 @@ function fusibletests.testReduceEdgeParentHasParents()
   tester:asserteq(n3.outputs[1].child, out)
   tester:asserteq(#out.inputs, 1)
   tester:asserteq(out.inputs[1], n3)
+end
+
+function fusibletests.testReduceEdgeParentHasMultipleParents()
+  local x = nn.Fusible({module=nn.Identity(), name='x'})
+  local p1 = x:add(nn.Fusible({module=nn.Tanh(), name='p1'}))
+  local p2 = x:add(nn.Fusible({module=nn.Sigmoid(), name='p2'}))
+  local p3 = x:add(nn.Fusible({module=nn.Abs(), name='p3'}))
+  local p = nn.CMulTable()({p1, p3}) -- this will be parent
+  local c = nn.CAddTable()({p2, p})            -- this will be child
+  local out = nn.Identity()({c})
+  p1.name = 'p1'
+  p2.name = 'p2'
+  p3.name = 'p3'
+  p.name = 'p'
+  c.name = 'c'
+
+--  local g = nn.gModule({x}, {out})
+--  if os.getenv('TESTS') ~= nil then graph.dot(g.fg, '', 'g.fg') end
+--  if os.getenv('TESTS') ~= nil then graph.dot(g.bg, '', 'g.bg') end
+
+--  x = nn.Fusible.fromNnGraph(g)
+  x:printGraph()
+  if os.getenv('TESTS') ~= nil then x:dot('', 'x') end
+  p1 = x.outputs[1].child
+  p2 = x.outputs[2].child
+  p3 = x.outputs[3].child
+  p = p1.outputs[1].child
+  c = p.outputs[1].child
+  out = c.outputs[1].child
+
+  tester:asserteq(torch.type(p1.module), 'nn.Tanh')
+  tester:asserteq(torch.type(p2.module), 'nn.Sigmoid')
+  tester:asserteq(torch.type(p3.module), 'nn.Abs')
+  tester:asserteq(torch.type(p.module), 'nn.CMulTable')
+  tester:asserteq(torch.type(c.module), 'nn.CAddTable')
+  tester:asserteq(torch.type(out.module), 'nn.Identity')
 end
 
 function go()
