@@ -113,11 +113,11 @@ end
 -- contains a ref to the old module
 -- havent decided if this is what we want or not really...
 function fusibles.walkClone(node, newByOld)
-  local newNode =  {}
-  newNode.outputs = {}
-  newNode.inputs = {}
-  newNode.module = module
+  local newNode =  nn.Fusible()
+  newNode.module = node.module
   newNode.id = node.id
+  newNode.numOutputs = node.numOutputs
+  newNode.numInputs = node.numInputs
   local newByOld = newByOld or {}
   newByOld[node] = newNode
   for i, output in ipairs(node.outputs) do
