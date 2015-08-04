@@ -13,15 +13,17 @@ function nn.Criterion:cl()
    return self:type('torch.ClTensor')
 end
 
-function nn.gModule:cl()
---  print('nn.gModule.cl')
-  self:type('torch.ClTensor')
-  -- can build shadow graph here...
-  return self
+if nn.gModule ~= nil then
+  function nn.gModule:cl()
+  --  print('nn.gModule.cl')
+    self:type('torch.ClTensor')
+    -- can build shadow graph here...
+    return self
+  end
 end
 
 include 'Fusible.lua'
-include 'gApply.lua'
+include 'Apply.lua'
 
 include 'Tanh.lua'
 include 'Pointwise.lua'

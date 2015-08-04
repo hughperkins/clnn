@@ -47,7 +47,7 @@ end
 -- for now (we dont :clone() the original graph,
 -- since, this clones the data too, which is
 -- not what we want)
-function fusibles.nnGraphToFusibles(g)
+function Fusible.fromNnGraph(g)
   local g2 = g
   local newbg = g2.bg.nodes[1]
   local thisnode = newbg
@@ -63,7 +63,7 @@ function fusibles.nnGraphToFusibles(g)
   end
   thisnode.children = {}
 
-  x = fusibles.toFusibles(newbg)
+  x = Fusible.fromNodes(newbg)
 --  local x = fusibles.invertGraph(newbg)
   fusibles.walkAddDataIds(x)
 --  fusibles.stripNodes(x)
@@ -183,14 +183,14 @@ function fusibles.nodeSetName(fusible, name)
   fusible.name = name
 end
 
-function fusibles.walkAddDataIds(fusible, dataId)
+function Fusible.walkAddDataIds(fusible, dataId)
   dataId = dataId or 0
   if fusible.id == nil then
     dataId = dataId + 1
     fusible.id = dataId
   end
   for i, output in ipairs(fusible.outputs) do
-    dataId = fusibles.walkAddDataIds(output.child, dataId)
+    dataId = Fusible.walkAddDataIds(output.child, dataId)
   end
   return dataId
 end
@@ -268,7 +268,7 @@ end
 --  end)
 --end
 
-function fusibles.toFusibles(node)
+function Fusible.fromNodes(node)
   -- first it adds all nodes to a list, so 
   -- we can operate on each one on its own
   -- and then we convert each one
@@ -325,7 +325,9 @@ function fusibles.toFusibles(node)
 
 --  fusibles.walkAddParents(node)
 --  fusibles.walkRemoveBidirectional(node)
-  return fusible_by_node[node]:getTop()
+  local top = fusible_by_node[node]:getTop()
+  top:walkAddDataIds()
+  return top
 end
 
 --function fusibles.stripNodes(node)

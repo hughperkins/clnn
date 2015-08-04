@@ -1,16 +1,16 @@
 require 'nngraph'
 require 'clnn'
 
-local ngh = require('nodeGraphHelper')
+--local fusibles = require('Fusible')
 local gh = require('graphHelper')
 local fusion = require('fusion')
 
 local fusiontests = {}
 
 function nngraph.Node:graphNodeName()
-  if self.data.id ~= nil then
-    res = tostring(self.data.id)
-    local dat = self.data
+  if self.id ~= nil then
+    res = tostring(self.id)
+    local dat = self
     if dat.module ~= nil then
       local mod = dat.module
       res = res .. ' ' .. torch.type(mod)
@@ -24,8 +24,8 @@ function nngraph.Node:graphNodeName()
     end
     return res
   end
-  if self.data.annotations.name then
-    return self.data.annotations.name .. ' (' .. self.id .. ')'
+  if self.annotations.name then
+    return self.annotations.name .. ' (' .. self.id .. ')'
   else
     return 'Node' .. self.id
   end
@@ -52,22 +52,25 @@ function fusiontests.testApplyConvertTanh()
   local x = nn.Identity()()
   local n1 = nn.Tanh()(x)
 
-  ngh.walkAddParents(n1)
-  x = ngh.invertGraph(n1)
-  ngh.walkRemoveBidirectional(x)
+  x = nn.Fusible.fromNodes(n1)
 
-  fusion.walkConvertToApply(n1)
-  tester:asserteq(torch.type(n1.data.module), 'nn.Apply')
-  tester:asserteq(torch.type(x.data.module), 'nn.Identity')
-  tester:asserteq(n1.data.numVirtualOutputs, 0)
-  tester:asserteq(#n1.data.feobj, 1)
-  tester:asserteq(#n1.data.beobj, 1)
-  tester:asserteq(n1.data.feobj[1].template, '{{output1}} = tanh({{input1}});')
---  tester:asserteq(n1.data.beobj[1].template, '{{gradInput}} = {{gradOutput}} * (1 - {{output}} * {{output}});')
-  tester:asserteq(n1.data.feobj[1].transforms.input1.src, 'input')
-  tester:asserteq(n1.data.feobj[1].transforms.output1.src, 'output')
-  tester:asserteq(n1.data.feobj[1].transforms.input1.idx, 1)
-  tester:asserteq(n1.data.feobj[1].transforms.output1.idx, 1)
+--  fusibles.walkAddParents(n1)
+--  x = fusibles.invertGraph(n1)
+--  fusibles.walkRemoveBidirectional(x)
+
+  fusion.walkConvertToApply(x)
+  tester:asserteq(torch.type(x.outputs[1].child.module), 'nn.Apply')
+  tester:asserteq(torch.type(x.module), 'nn.Identity')
+  tester:asserteq(x.outputs[1].child.numVirtualOutputs, 0)
+  n1 = x.outputs[1].child
+  tester:asserteq(#n1.feobj, 1)
+  tester:asserteq(#n1.beobj, 1)
+  tester:asserteq(n1.feobj[1].template, '{{output1}} = tanh({{input1}});')
+--  tester:asserteq(n1.beobj[1].template, '{{gradInput}} = {{gradOutput}} * (1 - {{output}} * {{output}});')
+  tester:asserteq(n1.feobj[1].transforms.input1.src, 'input')
+  tester:asserteq(n1.feobj[1].transforms.output1.src, 'output')
+  tester:asserteq(n1.feobj[1].transforms.input1.idx, 1)
+  tester:asserteq(n1.feobj[1].transforms.output1.idx, 1)
 
   fusion.generateKernels(x)
 end
@@ -76,24 +79,24 @@ function fusiontests.testApplyConvertSigmoid()
   local x = nn.Identity()()
   local n1 = nn.Sigmoid()(x)
 
-  ngh.walkAddParents(n1)
-  x = ngh.invertGraph(n1)
-  ngh.walkRemoveBidirectional(x)
-  tester:asserteq(ngh.walkValidate(x), true)
+  fusibles.walkAddParents(n1)
+  x = fusibles.invertGraph(n1)
+  fusibles.walkRemoveBidirectional(x)
+  tester:asserteq(fusibles.walkValidate(x), true)
   fusion.walkConvertToApply(x)
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(fusibles.walkValidate(x), true)
 
-  tester:asserteq(torch.type(n1.data.module), 'nn.Apply')
-  tester:asserteq(torch.type(x.data.module), 'nn.Identity')
-  tester:asserteq(n1.data.numVirtualOutputs, 0)
-  tester:asserteq(#n1.data.feobj, 1)
-  tester:asserteq(#n1.data.beobj, 1)
-  tester:asserteq(n1.data.feobj[1].template, '{{output1}} = 1.f / (1.f + exp( - {{input1}}));')
---  tester:asserteq(n1.data.beobj[1].template, '{{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});')
-  tester:asserteq(n1.data.feobj[1].transforms.input1.src, 'input')
-  tester:asserteq(n1.data.feobj[1].transforms.output1.src, 'output')
-  tester:asserteq(n1.data.feobj[1].transforms.input1.idx, 1)
-  tester:asserteq(n1.data.feobj[1].transforms.output1.idx, 1)
+  tester:asserteq(torch.type(n1.module), 'nn.Apply')
+  tester:asserteq(torch.type(x.module), 'nn.Identity')
+  tester:asserteq(n1.numVirtualOutputs, 0)
+  tester:asserteq(#n1.feobj, 1)
+  tester:asserteq(#n1.beobj, 1)
+  tester:asserteq(n1.feobj[1].template, '{{output1}} = 1.f / (1.f + exp( - {{input1}}));')
+--  tester:asserteq(n1.beobj[1].template, '{{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});')
+  tester:asserteq(n1.feobj[1].transforms.input1.src, 'input')
+  tester:asserteq(n1.feobj[1].transforms.output1.src, 'output')
+  tester:asserteq(n1.feobj[1].transforms.input1.idx, 1)
+  tester:asserteq(n1.feobj[1].transforms.output1.idx, 1)
 
   fusion.generateKernels(x)
 end
@@ -104,41 +107,42 @@ function fusiontests.testApplyConvertTanhSigmoid()
   local n2 = nn.Tanh()(n1)
   local out = nn.Identity()({n2})
 
-  ngh.walkAddParents(out)
-  x = ngh.invertGraph(out)
-  ngh.walkRemoveBidirectional(x)
-  tester:asserteq(ngh.walkValidate(x), true)
+  x = nn.Fusible.fromNodes(n2)
+
+  tester:asserteq(x:walkValidate(), true)
   fusion.walkConvertToApply(x)
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(x:walkValidate(), true)
 
-  tester:asserteq(torch.type(x.data.module), 'nn.Identity')
+  tester:asserteq(torch.type(x.module), 'nn.Identity')
 
-  tester:asserteq(torch.type(n2.data.module), 'nn.Apply')
-  tester:asserteq(n2.data.numVirtualOutputs, 0)
-  tester:asserteq(#n2.data.feobj, 1)
-  tester:asserteq(#n2.data.beobj, 1)
-  tester:asserteq(n2.data.feobj[1].template, '{{output1}} = tanh({{input1}});')
---  tester:asserteq(n2.data.beobj[1].template, '{{gradInput}} = {{gradOutput}} * (1 - {{output}} * {{output}});')
-  tester:asserteq(n2.data.feobj[1].transforms.input1.src, 'input')
-  tester:asserteq(n2.data.feobj[1].transforms.input1.idx, 1)
-  tester:asserteq(n2.data.feobj[1].transforms.output1.src, 'output')
-  tester:asserteq(n2.data.feobj[1].transforms.output1.idx, 1)
+  n1 = x.outputs[1].child
+  n2 = n1.outputs[1].child
+  tester:asserteq(torch.type(n2.module), 'nn.Apply')
+  tester:asserteq(n2.numVirtualOutputs, 0)
+  tester:asserteq(#n2.feobj, 1)
+  tester:asserteq(#n2.beobj, 1)
+  tester:asserteq(n2.feobj[1].template, '{{output1}} = tanh({{input1}});')
+--  tester:asserteq(n2.beobj[1].template, '{{gradInput}} = {{gradOutput}} * (1 - {{output}} * {{output}});')
+  tester:asserteq(n2.feobj[1].transforms.input1.src, 'input')
+  tester:asserteq(n2.feobj[1].transforms.input1.idx, 1)
+  tester:asserteq(n2.feobj[1].transforms.output1.src, 'output')
+  tester:asserteq(n2.feobj[1].transforms.output1.idx, 1)
 
-  tester:asserteq(torch.type(n1.data.module), 'nn.Apply')
-  tester:asserteq(n1.data.numVirtualOutputs, 0)
-  tester:asserteq(#n1.data.feobj, 1)
-  tester:asserteq(#n1.data.beobj, 1)
-  tester:asserteq(n1.data.feobj[1].template, '{{output1}} = 1.f / (1.f + exp( - {{input1}}));')
---  tester:asserteq(n1.data.beobj[1].template, '{{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});')
-  tester:asserteq(n1.data.feobj[1].transforms.input1.src, 'input')
-  tester:asserteq(n1.data.feobj[1].transforms.input1.idx, 1)
-  tester:asserteq(n1.data.feobj[1].transforms.output1.src, 'output')
-  tester:asserteq(n1.data.feobj[1].transforms.output1.idx, 1)
+  tester:asserteq(torch.type(n1.module), 'nn.Apply')
+  tester:asserteq(n1.numVirtualOutputs, 0)
+  tester:asserteq(#n1.feobj, 1)
+  tester:asserteq(#n1.beobj, 1)
+  tester:asserteq(n1.feobj[1].template, '{{output1}} = 1.f / (1.f + exp( - {{input1}}));')
+--  tester:asserteq(n1.beobj[1].template, '{{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});')
+  tester:asserteq(n1.feobj[1].transforms.input1.src, 'input')
+  tester:asserteq(n1.feobj[1].transforms.input1.idx, 1)
+  tester:asserteq(n1.feobj[1].transforms.output1.src, 'output')
+  tester:asserteq(n1.feobj[1].transforms.output1.idx, 1)
 
-  tester:asserteq(#x.children[1].data.outputs, 1)
-  tester:asserteq(x.children[1].data.outputs[1].child, x.children[1].children[1])
-  tester:asserteq(x.children[1].data.outputs[1].outputIdx, 1)
-  tester:asserteq(x.children[1].data.outputs[1].InputIdx, 1)
+  tester:asserteq(#n1.outputs, 1)
+  tester:asserteq(n1.outputs[1].child, n2)
+  tester:asserteq(n1.outputs[1].outputIdx, 1)
+  tester:asserteq(n1.outputs[1].inputIdx, 1)
 
   fusion.generateKernels(x)
 end
@@ -150,27 +154,27 @@ function fusiontests.testOutputsTwoOutput()
   local n3 = nn.Tanh()(n1)
   local out = nn.Identity()({n2, n3})
 
-  ngh.nodeSetName(x, 'x')
-  ngh.nodeSetName(n1, 'n1')
-  ngh.nodeSetName(n2, 'n2')
-  ngh.nodeSetName(n3, 'n3')
-  ngh.nodeSetName(out, 'out')
+  fusibles.nodeSetName(x, 'x')
+  fusibles.nodeSetName(n1, 'n1')
+  fusibles.nodeSetName(n2, 'n2')
+  fusibles.nodeSetName(n3, 'n3')
+  fusibles.nodeSetName(out, 'out')
 
-  ngh.walkAddParents(out)
-  ngh.walkRemoveBidirectional(out)
-  tester:asserteq(ngh.walkValidate(out), true)
-  x = ngh.invertGraph(out)
-  ngh.walkAddDataIds(x)
-  tester:asserteq(ngh.walkValidate(x), true)
+  fusibles.walkAddParents(out)
+  fusibles.walkRemoveBidirectional(out)
+  tester:asserteq(fusibles.walkValidate(out), true)
+  x = fusibles.invertGraph(out)
+  fusibles.walkAddDataIds(x)
+  tester:asserteq(fusibles.walkValidate(x), true)
   fusion.walkConvertToApply(x)
-  tester:asserteq(ngh.walkValidate(x), true)
-  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', 'x') end
+  tester:asserteq(fusibles.walkValidate(x), true)
+  if os.getenv('TESTS') ~= nil then fusibles.dot(x, '', 'x') end
 
-  tester:asserteq(#n1.data.outputs, 2) 
-  tester:asserteq(#n1.data.outputs[1].outputIdx, 1) 
-  tester:asserteq(#n1.data.outputs[1].child, n2)
-  tester:asserteq(#n1.data.outputs[2].outputIdx, 1) 
-  tester:asserteq(#n1.data.outputs[2].child, n3)
+  tester:asserteq(#n1.outputs, 2) 
+  tester:asserteq(#n1.outputs[1].outputIdx, 1) 
+  tester:asserteq(#n1.outputs[1].child, n2)
+  tester:asserteq(#n1.outputs[2].outputIdx, 1) 
+  tester:asserteq(#n1.outputs[2].child, n3)
 end
 
 function fusiontests.testFuseTanhSigmoid()
@@ -179,35 +183,35 @@ function fusiontests.testFuseTanhSigmoid()
   local n2 = nn.Tanh()(n1)
   local out = nn.Identity()({n2})
 
-  ngh.nodeSetName(x, 'x')
-  ngh.nodeSetName(n1, 'n1')
-  ngh.nodeSetName(n2, 'n2')
-  ngh.nodeSetName(out, 'out')
+  fusibles.nodeSetName(x, 'x')
+  fusibles.nodeSetName(n1, 'n1')
+  fusibles.nodeSetName(n2, 'n2')
+  fusibles.nodeSetName(out, 'out')
 
-  ngh.walkAddParents(out)
-  ngh.walkRemoveBidirectional(out)
-  tester:asserteq(ngh.walkValidate(out), true)
-  x = ngh.invertGraph(out)
-  ngh.walkAddDataIds(x)
-  tester:asserteq(ngh.walkValidate(x), true)
+  fusibles.walkAddParents(out)
+  fusibles.walkRemoveBidirectional(out)
+  tester:asserteq(fusibles.walkValidate(out), true)
+  x = fusibles.invertGraph(out)
+  fusibles.walkAddDataIds(x)
+  tester:asserteq(fusibles.walkValidate(x), true)
 
   fusion.walkConvertToApply(x)
-  tester:asserteq(ngh.count(x), 4)
-  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', 'xbefore') end
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(fusibles.count(x), 4)
+  if os.getenv('TESTS') ~= nil then fusibles.dot(x, '', 'xbefore') end
+  tester:asserteq(fusibles.walkValidate(x), true)
   fusion.doFuse(x)
-  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', 'xafter') end
-  tester:asserteq(ngh.walkValidate(x), true)
-  tester:asserteq(ngh.count(x), 3)
+  if os.getenv('TESTS') ~= nil then fusibles.dot(x, '', 'xafter') end
+  tester:asserteq(fusibles.walkValidate(x), true)
+  tester:asserteq(fusibles.count(x), 3)
 
-  tester:asserteq(torch.type(x.data.module), 'nn.Identity')
+  tester:asserteq(torch.type(x.module), 'nn.Identity')
 
-  tester:asserteq(ngh.nodeGetName(x), 'x')
+  tester:asserteq(fusibles.nodeGetName(x), 'x')
   tester:asserteq(#x.children, 1)
   tester:asserteq(#x.children[1].children, 1)
   local fused = x.children[1]
-  local fdat = fused.data
-  tester:asserteq(ngh.nodeGetName(fused), 'n2.n1')
+  local fdat = fused
+  tester:asserteq(fusibles.nodeGetName(fused), 'n2.n1')
   tester:asserteq(#fdat.feobj, 2)
   tester:asserteq(fdat.feobj[1].template, '{{output1}} = 1.f / (1.f + exp( - {{input1}}));')
   tester:asserteq(fdat.feobj[2].template, '{{output1}} = tanh({{input1}});')
@@ -220,11 +224,11 @@ function fusiontests.testFuseTanhSigmoid()
   tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
   tester:asserteq(fdat.feobj[2].transforms.output1.idx, 1)
 
-  tester:asserteq(#fused.data.outputs, 1)
-  print('x.child.out[1]', fused.data.outputs[1].child.data.module)
-  print('out', out.data.module)
-  tester:asserteq(fused.data.outputs[1].child, out)
-  tester:asserteq(fused.data.outputs[1].outputIdx, 1)
+  tester:asserteq(#fused.outputs, 1)
+  print('x.child.out[1]', fused.outputs[1].child.module)
+  print('out', out.module)
+  tester:asserteq(fused.outputs[1].child, out)
+  tester:asserteq(fused.outputs[1].outputIdx, 1)
 
   fusion.generateKernels(x)
 end
@@ -235,31 +239,31 @@ function fusiontests.testFuseExpTanhSigmoid()
   local n2 = nn.Tanh()(n1)
   local n3 = nn.Exp()(n2)
 
-  ngh.nodeSetName(x, 'x')
-  ngh.nodeSetName(n1, 'n1')
-  ngh.nodeSetName(n2, 'n2')
-  ngh.nodeSetName(n3, 'n3')
+  fusibles.nodeSetName(x, 'x')
+  fusibles.nodeSetName(n1, 'n1')
+  fusibles.nodeSetName(n2, 'n2')
+  fusibles.nodeSetName(n3, 'n3')
 
-  ngh.walkAddParents(n3)
-  ngh.walkRemoveBidirectional(n3)
-  x = ngh.invertGraph(n2)
-  ngh.walkAddDataIds(x)
+  fusibles.walkAddParents(n3)
+  fusibles.walkRemoveBidirectional(n3)
+  x = fusibles.invertGraph(n2)
+  fusibles.walkAddDataIds(x)
 
   fusion.walkConvertToApply(x)
-  tester:asserteq(ngh.count(x), 4)
+  tester:asserteq(fusibles.count(x), 4)
   fusion.doFuse(x)
-  tester:asserteq(ngh.walkValidate(x), true)
-  tester:asserteq(ngh.count(x), 2)
+  tester:asserteq(fusibles.walkValidate(x), true)
+  tester:asserteq(fusibles.count(x), 2)
 
-  tester:asserteq(torch.type(x.data.module), 'nn.Identity')
+  tester:asserteq(torch.type(x.module), 'nn.Identity')
 
-  tester:asserteq(ngh.nodeGetName(x), 'x')
+  tester:asserteq(fusibles.nodeGetName(x), 'x')
   tester:asserteq(#x.children, 1)
   tester:asserteq(#x.children[1].children, 0)
 
   local fused = x.children[1]
-  local fdat = fused.data
-  tester:asserteq(ngh.nodeGetName(fused), 'n3.n2.n1')
+  local fdat = fused
+  tester:asserteq(fusibles.nodeGetName(fused), 'n3.n2.n1')
   tester:asserteq(#fdat.feobj, 3)
   tester:asserteq(fdat.feobj[1].template, '{{output1}} = 1.f / (1.f + exp( - {{input1}}));')
   tester:asserteq(fdat.feobj[2].template, '{{output1}} = tanh({{input1}});')
@@ -288,27 +292,27 @@ function fusiontests.testApplyConvertSigmoidAddTable()
   local n1 = nn.Sigmoid()(x)
   local n2 = nn.CAddTable()({n1, x})
 
-  ngh.nodeSetName(x, 'x')
-  ngh.nodeSetName(n1, 'n1')
-  ngh.nodeSetName(n2, 'n2')
+  fusibles.nodeSetName(x, 'x')
+  fusibles.nodeSetName(n1, 'n1')
+  fusibles.nodeSetName(n2, 'n2')
 
-  ngh.walkAddParents(n2)
-  ngh.walkRemoveBidirectional(n2)
-  x = ngh.invertGraph(n2)
-  ngh.walkAddDataIds(x)
+  fusibles.walkAddParents(n2)
+  fusibles.walkRemoveBidirectional(n2)
+  x = fusibles.invertGraph(n2)
+  fusibles.walkAddDataIds(x)
 
   fusion.walkConvertToApply(x)
-  tester:asserteq(ngh.count(x), 3)
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(fusibles.count(x), 3)
+  tester:asserteq(fusibles.walkValidate(x), true)
   fusion.doFuse(x)
-  tester:asserteq(ngh.walkValidate(x), true)
-  tester:asserteq(ngh.count(x), 2)
+  tester:asserteq(fusibles.walkValidate(x), true)
+  tester:asserteq(fusibles.count(x), 2)
 
-  tester:asserteq(torch.type(x.data.module), 'nn.Identity')
+  tester:asserteq(torch.type(x.module), 'nn.Identity')
 
   local fused = x.children[1]
-  local fdat = fused.data
-  tester:asserteq(ngh.nodeGetName(fused), 'n2.n1')
+  local fdat = fused
+  tester:asserteq(fusibles.nodeGetName(fused), 'n2.n1')
   tester:asserteq(#fdat.feobj, 2)
   tester:asserteq(fdat.feobj[1].template, '{{output1}} = 1.f / (1.f + exp( - {{input1}}));')
   tester:asserteq(fdat.feobj[2].template, '{{output1}} = {{input1}} + {{input2}};')
@@ -340,37 +344,37 @@ function fusiontests.testApplyConvertMultiInputAdd()
   local n1 = nn.Tanh()(x1)
   local n2 = nn.CAddTable()({n1, x2})
 
-  ngh.nodeSetName(x, 'x')
-  ngh.nodeSetName(x1, 'x1')
-  ngh.nodeSetName(x2, 'x2')
-  ngh.nodeSetName(n1, 'n1')
-  ngh.nodeSetName(n2, 'n2')
+  fusibles.nodeSetName(x, 'x')
+  fusibles.nodeSetName(x1, 'x1')
+  fusibles.nodeSetName(x2, 'x2')
+  fusibles.nodeSetName(n1, 'n1')
+  fusibles.nodeSetName(n2, 'n2')
 
-  ngh.walkAddParents(n2)
-  x = ngh.invertGraph(n2)
-  ngh.walkRemoveBidirectional(x)
-  ngh.walkAddDataIds(x)
+  fusibles.walkAddParents(n2)
+  x = fusibles.invertGraph(n2)
+  fusibles.walkRemoveBidirectional(x)
+  fusibles.walkAddDataIds(x)
 
   fusion.walkConvertToApply(x)
---  ngh.dot(x, '', 'add')
-  tester:asserteq(ngh.count(x), 6)
-  tester:asserteq(ngh.walkValidate(x), true)
---  ngh.dot(x, '', 'xold')
-  tester:asserteq(ngh.walkValidate(x), true)
---  local xold = ngh.walkClone(x)
---  tester:asserteq(ngh.walkValidate(x), true)
---  ngh.printGraph(x)
+--  fusibles.dot(x, '', 'add')
+  tester:asserteq(fusibles.count(x), 6)
+  tester:asserteq(fusibles.walkValidate(x), true)
+--  fusibles.dot(x, '', 'xold')
+  tester:asserteq(fusibles.walkValidate(x), true)
+--  local xold = fusibles.walkClone(x)
+--  tester:asserteq(fusibles.walkValidate(x), true)
+--  fusibles.printGraph(x)
   fusion.doFuse(x)
-  tester:asserteq(ngh.walkValidate(x), true)
---  ngh.printGraph(x)
---  ngh.dot(x, '', 'xnew')
-  tester:asserteq(ngh.count(x), 5)
+  tester:asserteq(fusibles.walkValidate(x), true)
+--  fusibles.printGraph(x)
+--  fusibles.dot(x, '', 'xnew')
+  tester:asserteq(fusibles.count(x), 5)
 
-  tester:asserteq(torch.type(x.data.module), 'nn.Identity')
+  tester:asserteq(torch.type(x.module), 'nn.Identity')
 
   local fused = x.children[1].children[1].children[1]
-  local fdat = fused.data
-  tester:asserteq(ngh.nodeGetName(fused), 'n2.n1')
+  local fdat = fused
+  tester:asserteq(fusibles.nodeGetName(fused), 'n2.n1')
   tester:asserteq(#fdat.feobj, 2)
   tester:asserteq(fdat.feobj[1].template, '{{output1}} = tanh({{input1}});')
   tester:asserteq(fdat.feobj[2].template, '{{output1}} = {{input1}} + {{input2}};')
@@ -394,8 +398,8 @@ function fusiontests.testApplyConvertMultiInputAdd()
   tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
   tester:asserteq(fdat.feobj[2].transforms.output1.idx, 1)
 
-  tester:asserteq(ngh.getLinkPos(x1.children[1].parents, x1), 1)
-  tester:asserteq(ngh.getLinkPos(x2.children[1].parents, x2), 2)
+  tester:asserteq(fusibles.getLinkPos(x1.children[1].parents, x1), 1)
+  tester:asserteq(fusibles.getLinkPos(x2.children[1].parents, x2), 2)
 
   fusion.generateKernels(x)
 end
@@ -406,38 +410,38 @@ function fusiontests.testApplyConvertMultiInputAdd3()
   local n1 = nn.CMulTable()({x1, x2})
   local n2 = nn.CAddTable()({n1, x3})
 
-  ngh.nodeSetName(x, 'x')
-  ngh.nodeSetName(x1, 'x1')
-  ngh.nodeSetName(x2, 'x2')
-  ngh.nodeSetName(x3, 'x3')
-  ngh.nodeSetName(n1, 'n1')
-  ngh.nodeSetName(n2, 'n2')
+  fusibles.nodeSetName(x, 'x')
+  fusibles.nodeSetName(x1, 'x1')
+  fusibles.nodeSetName(x2, 'x2')
+  fusibles.nodeSetName(x3, 'x3')
+  fusibles.nodeSetName(n1, 'n1')
+  fusibles.nodeSetName(n2, 'n2')
 
-  ngh.walkAddParents(n2)
-  x = ngh.invertGraph(n2)
-  ngh.walkRemoveBidirectional(x)
-  ngh.walkAddDataIds(x)
+  fusibles.walkAddParents(n2)
+  x = fusibles.invertGraph(n2)
+  fusibles.walkRemoveBidirectional(x)
+  fusibles.walkAddDataIds(x)
 
   fusion.walkConvertToApply(x)
-  ngh.dot(x, '', 'add')
-  tester:asserteq(ngh.count(x), 7)
-  tester:asserteq(ngh.walkValidate(x), true)
-  ngh.dot(x, '', 'xold')
-  tester:asserteq(ngh.walkValidate(x), true)
-  local xold = ngh.walkClone(x)
-  tester:asserteq(ngh.walkValidate(x), true)
---  ngh.printGraph(x)
+  fusibles.dot(x, '', 'add')
+  tester:asserteq(fusibles.count(x), 7)
+  tester:asserteq(fusibles.walkValidate(x), true)
+  fusibles.dot(x, '', 'xold')
+  tester:asserteq(fusibles.walkValidate(x), true)
+  local xold = fusibles.walkClone(x)
+  tester:asserteq(fusibles.walkValidate(x), true)
+--  fusibles.printGraph(x)
   fusion.doFuse(x)
-  tester:asserteq(ngh.walkValidate(x), true)
---  ngh.printGraph(x)
-  ngh.dot(x, '', 'xnew')
-  tester:asserteq(ngh.count(x), 6)
+  tester:asserteq(fusibles.walkValidate(x), true)
+--  fusibles.printGraph(x)
+  fusibles.dot(x, '', 'xnew')
+  tester:asserteq(fusibles.count(x), 6)
 
-  tester:asserteq(torch.type(x.data.module), 'nn.Identity')
+  tester:asserteq(torch.type(x.module), 'nn.Identity')
 
   local fused = x.children[1].children[1].children[1]
-  local fdat = fused.data
-  tester:asserteq(ngh.nodeGetName(fused), 'n2.n1')
+  local fdat = fused
+  tester:asserteq(fusibles.nodeGetName(fused), 'n2.n1')
   tester:asserteq(#fdat.feobj, 2)
   tester:asserteq(fdat.feobj[1].template, '{{output1}} = {{input1}} * {{input2}};')
   tester:asserteq(fdat.feobj[2].template, '{{output1}} = {{input1}} + {{input2}};')
@@ -462,9 +466,9 @@ function fusiontests.testApplyConvertMultiInputAdd3()
   tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
   tester:asserteq(fdat.feobj[2].transforms.output1.idx, 1)
 
-  tester:asserteq(ngh.getLinkPos(x1.children[1].parents, x1), 1)
-  tester:asserteq(ngh.getLinkPos(x2.children[1].parents, x2), 2)
-  tester:asserteq(ngh.getLinkPos(x3.children[1].parents, x3), 3)
+  tester:asserteq(fusibles.getLinkPos(x1.children[1].parents, x1), 1)
+  tester:asserteq(fusibles.getLinkPos(x2.children[1].parents, x2), 2)
+  tester:asserteq(fusibles.getLinkPos(x3.children[1].parents, x3), 3)
 
   fusion.generateKernels(x)
 end
@@ -476,48 +480,48 @@ function fusiontests.testAddTanhMul()
   local n2 = nn.Tanh()({n1})
   local n3 = nn.CMulTable()({n2, x3})
 
-  ngh.nodeSetName(x, 'x')
-  ngh.nodeSetName(x1, 'x1')
-  ngh.nodeSetName(x2, 'x2')
-  ngh.nodeSetName(x3, 'x3')
+  fusibles.nodeSetName(x, 'x')
+  fusibles.nodeSetName(x1, 'x1')
+  fusibles.nodeSetName(x2, 'x2')
+  fusibles.nodeSetName(x3, 'x3')
 
-  ngh.nodeSetName(n1, 'n1')
-  ngh.nodeSetName(n2, 'n2')
-  ngh.nodeSetName(n3, 'n3')
+  fusibles.nodeSetName(n1, 'n1')
+  fusibles.nodeSetName(n2, 'n2')
+  fusibles.nodeSetName(n3, 'n3')
 
-  ngh.walkAddParents(n3)
-  ngh.dot(n3, '', 'testAddTanhMulBeforeInvert')
+  fusibles.walkAddParents(n3)
+  fusibles.dot(n3, '', 'testAddTanhMulBeforeInvert')
 
-  x = ngh.invertGraph(n3)
-  ngh.walkRemoveBidirectional(x)
-  ngh.walkAddDataIds(x)
+  x = fusibles.invertGraph(n3)
+  fusibles.walkRemoveBidirectional(x)
+  fusibles.walkAddDataIds(x)
 
-  ngh.dot(x, '', 'testAddTanhMulBefore')
+  fusibles.dot(x, '', 'testAddTanhMulBefore')
   fusion.walkConvertToApply(x)
-  tester:asserteq(ngh.count(x), 8)
-  tester:asserteq(ngh.walkValidate(x), true)
-  ngh.printGraph(x)
+  tester:asserteq(fusibles.count(x), 8)
+  tester:asserteq(fusibles.walkValidate(x), true)
+  fusibles.printGraph(x)
 
   local it = 0
   print('it ' .. it .. ' ===============')
-  ngh.printGraphWithLinks(x)
+  fusibles.printGraphWithLinks(x)
   while fusion.doFuseIteration(x) do
     it = it + 1
     print('it ' .. it .. ' ===============')
-    tester:asserteq(ngh.walkValidate(x), true)
-    ngh.printGraphWithLinks(x)
+    tester:asserteq(fusibles.walkValidate(x), true)
+    fusibles.printGraphWithLinks(x)
   end
 
---  ngh.printGraphWithLinks(x)
+--  fusibles.printGraphWithLinks(x)
 
-  tester:asserteq(ngh.walkValidate(x), true)
-  ngh.printGraph(x)
-  ngh.dot(x, '', 'testAddTanhMulAfter')
-  tester:asserteq(ngh.count(x), 6)
+  tester:asserteq(fusibles.walkValidate(x), true)
+  fusibles.printGraph(x)
+  fusibles.dot(x, '', 'testAddTanhMulAfter')
+  tester:asserteq(fusibles.count(x), 6)
 
   local fused = x.children[1].children[1].children[1]
-  local fdat = fused.data
-  tester:asserteq(ngh.nodeGetName(fused), 'n3.n2.n1')
+  local fdat = fused
+  tester:asserteq(fusibles.nodeGetName(fused), 'n3.n2.n1')
   tester:asserteq(#fdat.feobj, 3)
   tester:asserteq(fdat.feobj[1].template, '{{output1}} = {{input1}} + {{input2}};')
   tester:asserteq(fdat.feobj[2].template, '{{output1}} = tanh({{input1}});')
@@ -550,9 +554,9 @@ function fusiontests.testAddTanhMul()
   tester:asserteq(fdat.feobj[3].transforms.output1.src, 'output')
   tester:asserteq(fdat.feobj[3].transforms.output1.idx, 1)
 
-  tester:asserteq(ngh.getLinkPos(x1.children[1].parents, x1), 1)
-  tester:asserteq(ngh.getLinkPos(x2.children[1].parents, x2), 2)
-  tester:asserteq(ngh.getLinkPos(x3.children[1].parents, x3), 3)
+  tester:asserteq(fusibles.getLinkPos(x1.children[1].parents, x1), 1)
+  tester:asserteq(fusibles.getLinkPos(x2.children[1].parents, x2), 2)
+  tester:asserteq(fusibles.getLinkPos(x3.children[1].parents, x3), 3)
 
   fusion.generateKernels(x)
 end
@@ -564,48 +568,48 @@ function fusiontests.testSigMulAdd()
   local n2 = nn.CMulTable()({x1, n1})
   local n3 = nn.CAddTable()({n2, x3})
 
-  ngh.nodeSetName(x, 'x')
-  ngh.nodeSetName(x1, 'x1')
-  ngh.nodeSetName(x2, 'x2')
-  ngh.nodeSetName(x3, 'x3')
+  fusibles.nodeSetName(x, 'x')
+  fusibles.nodeSetName(x1, 'x1')
+  fusibles.nodeSetName(x2, 'x2')
+  fusibles.nodeSetName(x3, 'x3')
 
-  ngh.nodeSetName(n1, 'n1')
-  ngh.nodeSetName(n2, 'n2')
-  ngh.nodeSetName(n3, 'n3')
+  fusibles.nodeSetName(n1, 'n1')
+  fusibles.nodeSetName(n2, 'n2')
+  fusibles.nodeSetName(n3, 'n3')
 
-  ngh.walkAddParents(n3)
-  ngh.dot(n3, '', 'testSigMulAddBeforeInvert')
+  fusibles.walkAddParents(n3)
+  fusibles.dot(n3, '', 'testSigMulAddBeforeInvert')
 
-  x = ngh.invertGraph(n3)
-  ngh.walkRemoveBidirectional(x)
-  ngh.walkAddDataIds(x)
+  x = fusibles.invertGraph(n3)
+  fusibles.walkRemoveBidirectional(x)
+  fusibles.walkAddDataIds(x)
 
-  ngh.dot(x, '', 'testSigMulAddBefore')
+  fusibles.dot(x, '', 'testSigMulAddBefore')
   fusion.walkConvertToApply(x)
-  tester:asserteq(ngh.count(x), 8)
-  tester:asserteq(ngh.walkValidate(x), true)
-  ngh.printGraph(x)
+  tester:asserteq(fusibles.count(x), 8)
+  tester:asserteq(fusibles.walkValidate(x), true)
+  fusibles.printGraph(x)
 
   local it = 0
   print('it ' .. it .. ' ===============')
-  ngh.printGraphWithLinks(x)
+  fusibles.printGraphWithLinks(x)
   while fusion.doFuseIteration(x) do
     it = it + 1
     print('it ' .. it .. ' ===============')
-    tester:asserteq(ngh.walkValidate(x), true)
-    ngh.printGraphWithLinks(x)
+    tester:asserteq(fusibles.walkValidate(x), true)
+    fusibles.printGraphWithLinks(x)
   end
 
---  ngh.printGraphWithLinks(x)
+--  fusibles.printGraphWithLinks(x)
 
-  tester:asserteq(ngh.walkValidate(x), true)
-  ngh.printGraph(x)
-  ngh.dot(x, '', 'testSigMulAddAfter')
-  tester:asserteq(ngh.count(x), 6)
+  tester:asserteq(fusibles.walkValidate(x), true)
+  fusibles.printGraph(x)
+  fusibles.dot(x, '', 'testSigMulAddAfter')
+  tester:asserteq(fusibles.count(x), 6)
 
   local fused = x.children[1].children[1].children[1]
-  local fdat = fused.data
-  tester:asserteq(ngh.nodeGetName(fused), 'n3.n2.n1')
+  local fdat = fused
+  tester:asserteq(fusibles.nodeGetName(fused), 'n3.n2.n1')
   tester:asserteq(#fdat.feobj, 3)
   tester:asserteq(fdat.feobj[1].template, '{{output1}} = 1.f / (1.f + exp( - {{input1}}));')
   tester:asserteq(fdat.feobj[2].template, '{{output1}} = {{input1}} * {{input2}};')
@@ -636,9 +640,9 @@ function fusiontests.testSigMulAdd()
   tester:asserteq(fdat.feobj[3].transforms.output1.src, 'output')
   tester:asserteq(fdat.feobj[3].transforms.output1.idx, 1)
 
-  tester:asserteq(ngh.getLinkPos(x1.children[1].parents, x1), 1)
-  tester:asserteq(ngh.getLinkPos(x2.children[1].parents, x2), 2)
-  tester:asserteq(ngh.getLinkPos(x3.children[1].parents, x3), 3)
+  tester:asserteq(fusibles.getLinkPos(x1.children[1].parents, x1), 1)
+  tester:asserteq(fusibles.getLinkPos(x2.children[1].parents, x2), 2)
+  tester:asserteq(fusibles.getLinkPos(x3.children[1].parents, x3), 3)
 
   fusion.generateKernels(x)
 end
@@ -650,41 +654,41 @@ function fusiontests.testInputOrderThreeWay()
   local n2 = nn.CAddTable()({x1, n1})
   local n3 = nn.CMulTable()({n2, x3})
 
-  ngh.nodeSetName(x, 'x')
+  fusibles.nodeSetName(x, 'x')
 
-  ngh.nodeSetName(x1, 'x1')
-  ngh.nodeSetName(x2, 'x2')
-  ngh.nodeSetName(x3, 'x3')
+  fusibles.nodeSetName(x1, 'x1')
+  fusibles.nodeSetName(x2, 'x2')
+  fusibles.nodeSetName(x3, 'x3')
 
-  ngh.nodeSetName(n1, 'n1')
-  ngh.nodeSetName(n2, 'n2')
-  ngh.nodeSetName(n3, 'n3')
+  fusibles.nodeSetName(n1, 'n1')
+  fusibles.nodeSetName(n2, 'n2')
+  fusibles.nodeSetName(n3, 'n3')
 
-  ngh.walkAddParents(n3)
-  x = ngh.invertGraph(n3)
-  ngh.walkRemoveBidirectional(x)
-  ngh.walkAddDataIds(x)
+  fusibles.walkAddParents(n3)
+  x = fusibles.invertGraph(n3)
+  fusibles.walkRemoveBidirectional(x)
+  fusibles.walkAddDataIds(x)
 
-  ngh.dot(x, '', 'testInputOrderThreeWayadd')
+  fusibles.dot(x, '', 'testInputOrderThreeWayadd')
   fusion.walkConvertToApply(x)
-  tester:asserteq(ngh.count(x), 8)
-  tester:asserteq(ngh.walkValidate(x), true)
-  ngh.dot(x, '', 'testInputOrderThreeWayBefore')
-  tester:asserteq(ngh.walkValidate(x), true)
-  local xold = ngh.walkClone(x)
-  tester:asserteq(ngh.walkValidate(x), true)
-  ngh.printGraph(x)
+  tester:asserteq(fusibles.count(x), 8)
+  tester:asserteq(fusibles.walkValidate(x), true)
+  fusibles.dot(x, '', 'testInputOrderThreeWayBefore')
+  tester:asserteq(fusibles.walkValidate(x), true)
+  local xold = fusibles.walkClone(x)
+  tester:asserteq(fusibles.walkValidate(x), true)
+  fusibles.printGraph(x)
   local it = 0
-  ngh.dot(x, '', 'xit' .. it)
+  fusibles.dot(x, '', 'xit' .. it)
   while fusion.doFuseIteration(x) do
     it = it + 1
     print('it ' .. it .. ' ======================')
-    tester:asserteq(ngh.walkValidate(x), true)
-    ngh.dot(x, '', 'xit' .. it)
+    tester:asserteq(fusibles.walkValidate(x), true)
+    fusibles.dot(x, '', 'xit' .. it)
     fusion.generateKernels(x)
-    ngh.printGraphWithLinks(x)
-    ngh.walkApply(x, function(node)
-      local dat = node.data
+    fusibles.printGraphWithLinks(x)
+    fusibles.walkApply(x, function(node)
+      local dat = node
       if dat.feobj ~= nil then
         for i, feobj in ipairs(dat.feobj) do
           for k, v in pairs(feobj.transforms) do
@@ -695,11 +699,11 @@ function fusiontests.testInputOrderThreeWay()
       end
     end)
   end
-  ngh.dot(x, '', 'testInputOrderThreeWayAfter')
+  fusibles.dot(x, '', 'testInputOrderThreeWayAfter')
 
-  tester:asserteq(ngh.getLinkPos(x1.children[1].parents, x1), 1)
-  tester:asserteq(ngh.getLinkPos(x2.children[1].parents, x2), 2)
-  tester:asserteq(ngh.getLinkPos(x3.children[1].parents, x3), 3)
+  tester:asserteq(fusibles.getLinkPos(x1.children[1].parents, x1), 1)
+  tester:asserteq(fusibles.getLinkPos(x2.children[1].parents, x2), 2)
+  tester:asserteq(fusibles.getLinkPos(x3.children[1].parents, x3), 3)
 
   fusion.generateKernels(x)
 end
@@ -713,38 +717,38 @@ function fusiontests.testClonedOutput()
   local n3 = nn.Sigmoid()(n1)
   local n4 = nn.CAddTable()({n2, n3})
 
-  ngh.nodeSetName(x, 'x')
+  fusibles.nodeSetName(x, 'x')
 
-  ngh.nodeSetName(n1, 'n1')
-  ngh.nodeSetName(n2, 'n2')
-  ngh.nodeSetName(n3, 'n3')
-  ngh.nodeSetName(n4, 'n4')
+  fusibles.nodeSetName(n1, 'n1')
+  fusibles.nodeSetName(n2, 'n2')
+  fusibles.nodeSetName(n3, 'n3')
+  fusibles.nodeSetName(n4, 'n4')
 
-  ngh.walkAddParents(n4)
-  x = ngh.invertGraph(n4)
-  ngh.walkRemoveBidirectional(x)
-  ngh.walkAddDataIds(x)
+  fusibles.walkAddParents(n4)
+  x = fusibles.invertGraph(n4)
+  fusibles.walkRemoveBidirectional(x)
+  fusibles.walkAddDataIds(x)
 
-  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', name .. 'Orig') end
+  if os.getenv('TESTS') ~= nil then fusibles.dot(x, '', name .. 'Orig') end
   fusion.walkConvertToApply(x)
-  tester:asserteq(ngh.count(x), 5)
-  tester:asserteq(ngh.walkValidate(x), true)
-  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', name .. 'Before') end
-  tester:asserteq(ngh.walkValidate(x), true)
-  local xold = ngh.walkClone(x)
-  tester:asserteq(ngh.walkValidate(x), true)
-  ngh.printGraph(x)
+  tester:asserteq(fusibles.count(x), 5)
+  tester:asserteq(fusibles.walkValidate(x), true)
+  if os.getenv('TESTS') ~= nil then fusibles.dot(x, '', name .. 'Before') end
+  tester:asserteq(fusibles.walkValidate(x), true)
+  local xold = fusibles.walkClone(x)
+  tester:asserteq(fusibles.walkValidate(x), true)
+  fusibles.printGraph(x)
   local it = 0
-  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', 'xit' .. it) end
+  if os.getenv('TESTS') ~= nil then fusibles.dot(x, '', 'xit' .. it) end
   while fusion.doFuseIteration(x) do
     it = it + 1
     print('it ' .. it .. ' ======================')
-    tester:asserteq(ngh.walkValidate(x), true)
-    if os.getenv('TESTS') ~= nil then ngh.dot(x, '', 'xit' .. it) end
+    tester:asserteq(fusibles.walkValidate(x), true)
+    if os.getenv('TESTS') ~= nil then fusibles.dot(x, '', 'xit' .. it) end
 --    fusion.generateKernels(x)
-    ngh.printGraphWithLinks(x)
-    ngh.walkApply(x, function(node)
-      local dat = node.data
+    fusibles.printGraphWithLinks(x)
+    fusibles.walkApply(x, function(node)
+      local dat = node
       if dat.feobj ~= nil then
         for i, feobj in ipairs(dat.feobj) do
           for k, v in pairs(feobj.transforms) do
@@ -755,13 +759,13 @@ function fusiontests.testClonedOutput()
       end
     end)
   end
-  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', name .. 'After') end
+  if os.getenv('TESTS') ~= nil then fusibles.dot(x, '', name .. 'After') end
 
-  tester:asserteq(x.children[1].data.module.numInputs, 2)
+  tester:asserteq(x.children[1].module.numInputs, 2)
 
---  tester:asserteq(ngh.getLinkPos(x1.children[1].parents, x1), 1)
---  tester:asserteq(ngh.getLinkPos(x2.children[1].parents, x2), 2)
---  tester:asserteq(ngh.getLinkPos(x3.children[1].parents, x3), 3)
+--  tester:asserteq(fusibles.getLinkPos(x1.children[1].parents, x1), 1)
+--  tester:asserteq(fusibles.getLinkPos(x2.children[1].parents, x2), 2)
+--  tester:asserteq(fusibles.getLinkPos(x3.children[1].parents, x3), 3)
 
 --  fusion.generateKernels(x)
 end
@@ -780,52 +784,52 @@ function fusiontests.testApplyCharRnn()
   local n9 = nn.CMulTable()({n7, n8})
   local out = nn.Identity()({n6, n9})
 
-  ngh.nodeSetName(x, 'x')
-  ngh.nodeSetName(xpre, 'xpre')
-  ngh.nodeSetName(x1, 'x1')
-  ngh.nodeSetName(x2, 'x2')
-  ngh.nodeSetName(x3, 'x3')
-  ngh.nodeSetName(x4, 'x4')
-  ngh.nodeSetName(n1, 'n1')
-  ngh.nodeSetName(n2, 'n2')
-  ngh.nodeSetName(n3, 'n3')
-  ngh.nodeSetName(n4, 'n4')
-  ngh.nodeSetName(n5, 'n5')
-  ngh.nodeSetName(n6, 'n6')
-  ngh.nodeSetName(n7, 'n7')
-  ngh.nodeSetName(n8, 'n8')
-  ngh.nodeSetName(n9, 'n9')
-  ngh.nodeSetName(out, 'out')
+  fusibles.nodeSetName(x, 'x')
+  fusibles.nodeSetName(xpre, 'xpre')
+  fusibles.nodeSetName(x1, 'x1')
+  fusibles.nodeSetName(x2, 'x2')
+  fusibles.nodeSetName(x3, 'x3')
+  fusibles.nodeSetName(x4, 'x4')
+  fusibles.nodeSetName(n1, 'n1')
+  fusibles.nodeSetName(n2, 'n2')
+  fusibles.nodeSetName(n3, 'n3')
+  fusibles.nodeSetName(n4, 'n4')
+  fusibles.nodeSetName(n5, 'n5')
+  fusibles.nodeSetName(n6, 'n6')
+  fusibles.nodeSetName(n7, 'n7')
+  fusibles.nodeSetName(n8, 'n8')
+  fusibles.nodeSetName(n9, 'n9')
+  fusibles.nodeSetName(out, 'out')
 
-  ngh.walkAddParents(n9)
-  x = ngh.invertGraph(n9)
-  ngh.walkRemoveBidirectional(x)
-  ngh.walkAddDataIds(x)
+  fusibles.walkAddParents(n9)
+  x = fusibles.invertGraph(n9)
+  fusibles.walkRemoveBidirectional(x)
+  fusibles.walkAddDataIds(x)
 
-  ngh.dot(x, '', 'add')
+  fusibles.dot(x, '', 'add')
   fusion.walkConvertToApply(x)
-  tester:asserteq(ngh.count(x), 16)
-  tester:asserteq(ngh.walkValidate(x), true)
-  ngh.dot(x, '', 'xold')
-  tester:asserteq(ngh.walkValidate(x), true)
-  local xold = ngh.walkClone(x)
-  tester:asserteq(ngh.walkValidate(x), true)
-  ngh.printGraph(x)
+  tester:asserteq(fusibles.count(x), 16)
+  tester:asserteq(fusibles.walkValidate(x), true)
+  fusibles.dot(x, '', 'xold')
+  tester:asserteq(fusibles.walkValidate(x), true)
+  local xold = fusibles.walkClone(x)
+  tester:asserteq(fusibles.walkValidate(x), true)
+  fusibles.printGraph(x)
   local it = 0
-  ngh.dot(x, '', 'xit' .. it)
+  fusibles.dot(x, '', 'xit' .. it)
   while fusion.doFuseIteration(x) do
     it = it + 1
     print('it ' .. it .. ' ======================')
-    tester:asserteq(ngh.walkValidate(x), true)
-    ngh.dot(x, '', 'xit' .. it)
+    tester:asserteq(fusibles.walkValidate(x), true)
+    fusibles.dot(x, '', 'xit' .. it)
 --    fusion.generateKernels(x)
-    ngh.printGraphWithLinks(x)
+    fusibles.printGraphWithLinks(x)
 --    if it >= 8 then
 --      os.exit(0)
 --    end
 --    fusion.generateKernels(x)
---    ngh.walkApply(x, function(node)
---      local dat = node.data
+--    fusibles.walkApply(x, function(node)
+--      local dat = node
 --      if dat.feobj ~= nil then
 --        for i, feobj in ipairs(dat.feobj) do
 --          for k, v in pairs(feobj.transforms) do
@@ -837,16 +841,16 @@ function fusiontests.testApplyCharRnn()
 --    end)
   end
 --  fusion.doFuse(x)
-  tester:asserteq(ngh.walkValidate(x), true)
-  ngh.printGraph(x)
-  ngh.dot(x, '', 'xnew')
-  tester:asserteq(ngh.count(x), 8)
+  tester:asserteq(fusibles.walkValidate(x), true)
+  fusibles.printGraph(x)
+  fusibles.dot(x, '', 'xnew')
+  tester:asserteq(fusibles.count(x), 8)
 
-  tester:asserteq(torch.type(x.data.module), 'nn.Identity')
+  tester:asserteq(torch.type(x.module), 'nn.Identity')
 
   local fused = x.children[1].children[1].children[1]
-  local fdat = fused.data
-  tester:asserteq(ngh.nodeGetName(fused), 'n9.n7.n6.n4.n1.n5.n2.n3.n8')
+  local fdat = fused
+  tester:asserteq(fusibles.nodeGetName(fused), 'n9.n7.n6.n4.n1.n5.n2.n3.n8')
   tester:asserteq(#fdat.feobj, 9)
   tester:asserteq(fdat.feobj[1].template, '{{output1}} = 1.f / (1.f + exp( - {{input1}}));')
   tester:asserteq(fdat.feobj[2].template, '{{output1}} = tanh({{input1}});')
@@ -878,14 +882,14 @@ function fusiontests.forward1()
   local outputbefore = g:forward(input)
   print('outputbefore', outputbefore)
 
-  local x = ngh.nnGraphToNgh(g)
+  local x = fusibles.nnGraphToNgh(g)
   
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(fusibles.walkValidate(x), true)
   fusion.walkConvertToApply(x)
   fusion.generateKernels(x)
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(fusibles.walkValidate(x), true)
 
-  local g2 = ngh.nghToNnGraph(x)
+  local g2 = fusibles.nghToNnGraph(x)
   local outputafter = g2:forward(input)
   print('outputafter', outputafter)
 
@@ -904,17 +908,17 @@ function fusiontests.forward2()
   local outputbefore = g:forward(input)
   print('outputbefore', outputbefore)
 
-  local x = ngh.nnGraphToNgh(g)
+  local x = fusibles.nnGraphToNgh(g)
   
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(fusibles.walkValidate(x), true)
   fusion.walkConvertToApply(x)
   while fusion.doFuseIteration(x) do
   end
   fusion.generateKernels(x)
-  tester:asserteq(ngh.walkValidate(x), true)
-  ngh.printGraphWithLinks(x)
+  tester:asserteq(fusibles.walkValidate(x), true)
+  fusibles.printGraphWithLinks(x)
 
-  local g2 = ngh.nghToNnGraph(x)
+  local g2 = fusibles.nghToNnGraph(x)
   if os.getenv('TESTS') ~= nil then
     graph.dot(g2.fg, '', 'g2')
   end
@@ -938,17 +942,17 @@ function fusiontests.forward2inputs()
   local outputbefore = g:forward(inputs)
   print('outputbefore', outputbefore)
 
-  local x = ngh.nnGraphToNgh(g)
+  local x = fusibles.nnGraphToNgh(g)
   
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(fusibles.walkValidate(x), true)
   fusion.walkConvertToApply(x)
   while fusion.doFuseIteration(x) do
   end
-  ngh.printGraphWithLinks(x)
+  fusibles.printGraphWithLinks(x)
   fusion.generateKernels(x)
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(fusibles.walkValidate(x), true)
 
-  local g2 = ngh.nghToNnGraph(x)
+  local g2 = fusibles.nghToNnGraph(x)
   if os.getenv('TESTS') ~= nil then
     graph.dot(g2.fg, '', 'g2')
   end
@@ -974,17 +978,17 @@ function fusiontests.forward2inputs2()
   local outputbefore = g:forward(inputs)
   print('outputbefore', outputbefore)
 
-  local x = ngh.nnGraphToNgh(g)
+  local x = fusibles.nnGraphToNgh(g)
   
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(fusibles.walkValidate(x), true)
   fusion.walkConvertToApply(x)
   while fusion.doFuseIteration(x) do
   end
   fusion.generateKernels(x)
-  ngh.printGraphWithLinks(x)
-  tester:asserteq(ngh.walkValidate(x), true)
+  fusibles.printGraphWithLinks(x)
+  tester:asserteq(fusibles.walkValidate(x), true)
 
-  local g2 = ngh.nghToNnGraph(x)
+  local g2 = fusibles.nghToNnGraph(x)
   if os.getenv('TESTS') ~= nil then
     graph.dot(g2.fg, '', 'g2')
   end
@@ -1011,17 +1015,17 @@ function fusiontests.forwardThreeWay()
   local outputbefore = g:forward(inputs)
   print('outputbefore', outputbefore)
 
-  local x = ngh.nnGraphToNgh(g)
+  local x = fusibles.nnGraphToNgh(g)
   
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(fusibles.walkValidate(x), true)
   fusion.walkConvertToApply(x)
   while fusion.doFuseIteration(x) do
   end
   fusion.generateKernels(x)
-  ngh.printGraphWithLinks(x)
-  tester:asserteq(ngh.walkValidate(x), true)
+  fusibles.printGraphWithLinks(x)
+  tester:asserteq(fusibles.walkValidate(x), true)
 
-  local g2 = ngh.nghToNnGraph(x)
+  local g2 = fusibles.nghToNnGraph(x)
   if os.getenv('TESTS') ~= nil then
     graph.dot(g2.fg, '', 'g2')
   end
@@ -1047,18 +1051,18 @@ function fusiontests.forwardLSTMNofuse()
   local outputbefore = lstm:forward(inputs)
   print('output', outputbefore)
 
-  x = ngh.nnGraphToNgh(lstm)
-  ngh.printGraph(x)
+  x = fusibles.nnGraphToNgh(lstm)
+  fusibles.printGraph(x)
   if os.getenv('TESTS') ~= nil then
-    ngh.dot(x, '', 'lstm1')
+    fusibles.dot(x, '', 'lstm1')
   end
 
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(fusibles.walkValidate(x), true)
   fusion.walkConvertToApply(x)
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(fusibles.walkValidate(x), true)
   fusion.generateKernels(x)
 
-  local g2 = ngh.nghToNnGraph(x)
+  local g2 = fusibles.nghToNnGraph(x)
   if os.getenv('TESTS') ~= nil then
     graph.dot(g2.fg, '', 'g2')
   end
@@ -1072,12 +1076,12 @@ function fusiontests.forwardLSTMNofuse()
 
 --  local it = 0
 --  print('it ' .. it .. ' ======================')
---  ngh.dot(x, '', 'xit' .. it)
+--  fusibles.dot(x, '', 'xit' .. it)
 --  while fusion.doFuseIteration(x) do
 --    it = it + 1
 --    print('it ' .. it .. ' ======================')
---    tester:asserteq(ngh.walkValidate(x), true)
---    ngh.dot(x, '', 'xit' .. it)
+--    tester:asserteq(fusibles.walkValidate(x), true)
+--    fusibles.dot(x, '', 'xit' .. it)
 --  end
 
 --  fusion.generateKernels(x)
@@ -1098,31 +1102,31 @@ function fusiontests.forwardLSTMFused()
   local outputbefore = lstm:forward(inputs)
   print('output', outputbefore)
 
-  x = ngh.nnGraphToNgh(lstm)
-  ngh.walkApply(x, function(node)
-    ngh.nodeSetName(node, 'node ' .. node.data.id)
+  x = fusibles.nnGraphToNgh(lstm)
+  fusibles.walkApply(x, function(node)
+    fusibles.nodeSetName(node, 'node ' .. node.id)
   end)
-  ngh.printGraph(x)
-  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', 'lstm1') end
+  fusibles.printGraph(x)
+  if os.getenv('TESTS') ~= nil then fusibles.dot(x, '', 'lstm1') end
 
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(fusibles.walkValidate(x), true)
   fusion.walkConvertToApply(x)
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(fusibles.walkValidate(x), true)
 
   it = 0
   print('it ' .. it .. ' ======================')
-  if os.getenv('TESTS') ~= nil then ngh.dot(x, '', 'xit' .. it) end
+  if os.getenv('TESTS') ~= nil then fusibles.dot(x, '', 'xit' .. it) end
   while fusion.doFuseIteration(x) do
     it = it + 1
     print('it ' .. it .. ' ======================')
-    tester:asserteq(ngh.walkValidate(x), true)
-    if os.getenv('TESTS') ~= nil then ngh.dot(x, '', 'xit' .. it) end
+    tester:asserteq(fusibles.walkValidate(x), true)
+    if os.getenv('TESTS') ~= nil then fusibles.dot(x, '', 'xit' .. it) end
   end
 
   fusion.generateKernels(x)
 
-  ngh.printGraphWithLinks(x)
-  local g2 = ngh.nghToNnGraph(x)
+  fusibles.printGraphWithLinks(x)
+  local g2 = fusibles.nghToNnGraph(x)
   if os.getenv('TESTS') ~= nil then graph.dot(g2.fg, '', 'g2') end
   local outputafter = g2:forward(inputs)
   print('outputafter', outputafter)
@@ -1134,12 +1138,12 @@ function fusiontests.forwardLSTMFused()
 
 --  local it = 0
 --  print('it ' .. it .. ' ======================')
---  ngh.dot(x, '', 'xit' .. it)
+--  fusibles.dot(x, '', 'xit' .. it)
 --  while fusion.doFuseIteration(x) do
 --    it = it + 1
 --    print('it ' .. it .. ' ======================')
---    tester:asserteq(ngh.walkValidate(x), true)
---    ngh.dot(x, '', 'xit' .. it)
+--    tester:asserteq(fusibles.walkValidate(x), true)
+--    fusibles.dot(x, '', 'xit' .. it)
 --  end
 
 --  fusion.generateKernels(x)
@@ -1150,22 +1154,22 @@ function fusiontests.testLSTM()
   local LSTM = require('test.lstm.LSTM')
   lstm = LSTM.lstm(65, 128, 2, 0)
   graph.dot(lstm.fg, '', 'lstm.g')
-  x = ngh.nnGraphToNgh(lstm)
-  ngh.printGraph(x)
-  ngh.dot(x, '', 'lstm1')
+  x = fusibles.nnGraphToNgh(lstm)
+  fusibles.printGraph(x)
+  fusibles.dot(x, '', 'lstm1')
 
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(fusibles.walkValidate(x), true)
   fusion.walkConvertToApply(x)
-  tester:asserteq(ngh.walkValidate(x), true)
+  tester:asserteq(fusibles.walkValidate(x), true)
 
   local it = 0
   print('it ' .. it .. ' ======================')
-  ngh.dot(x, '', 'xit' .. it)
+  fusibles.dot(x, '', 'xit' .. it)
   while fusion.doFuseIteration(x) do
     it = it + 1
     print('it ' .. it .. ' ======================')
-    tester:asserteq(ngh.walkValidate(x), true)
-    ngh.dot(x, '', 'xit' .. it)
+    tester:asserteq(fusibles.walkValidate(x), true)
+    fusibles.dot(x, '', 'xit' .. it)
   end
 
   fusion.generateKernels(x)

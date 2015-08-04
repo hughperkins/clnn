@@ -1,18 +1,18 @@
 fusion = {}
 
--- this assumes inverted, wrt g.bg, ie root of nodes, highest parent, is x, input
+-- this assumes inverted, wrt g.bg, ie root of fusibles, highest parent, is x, input
 -- and bottom, the child, is results
 -- in other words, its inverted wrt the graph created by doing like nn.Tanh()(nn.Sigmoid()()),
 -- which would make tanh a parent of sigmoid.  here we expect tanh to be the child of sigmoid,
 -- in this example
 
-local ngh = require('nodeGraphHelper')
+--local ngh = require('fusibleGraphHelper')
 
-function fusion.isNodeApply(node)
-  if node.data.module == nil then
+function fusion.isNodeApply(fusible)
+  if fusible.module == nil then
     return false
    end
-  if torch.type(node.data.module) == 'nn.Apply' then
+  if torch.type(fusible.module) == 'nn.Apply' then
     return true
   end
   return false
@@ -25,28 +25,28 @@ function fusion.isModuleApply(module)
   return false
 end
 
-function fusion.initClonedOutputs(node)
-  local dat = node.data
-  dat.outputs = {}
-  local outputs = dat.outputs
-  for i, child in ipairs(node.children) do
-    -- inputIdx is idx of the input into child node
-    -- to get this, we assume that all inputs into child are 
-    -- unique, and we look at the sequence number in the 
-    -- child.parents table
-    -- we are only going to store an outputs table, no inputs table
-    -- we can get the outputs table from the child, via the parent link
-    -- note that child can have multiple inputs from each parent
-    local inputIdx = ngh.getLinkPos(child.parents, node)
-    local output = {outputIdx=1, child=child, inputIdx=inputIdx}
-    table.insert(outputs, output)
-  end
-end
+--function fusion.initClonedOutputs(fusible)
+--  local dat = fusible
+--  dat.outputs = {}
+--  local outputs = dat.outputs
+--  for i, child in ipairs(fusible.children) do
+--    -- inputIdx is idx of the input into child fusible
+--    -- to get this, we assume that all inputs into child are 
+--    -- unique, and we look at the sequence number in the 
+--    -- child.parents table
+--    -- we are only going to store an outputs table, no inputs table
+--    -- we can get the outputs table from the child, via the parent link
+--    -- note that child can have multiple inputs from each parent
+--    local inputIdx = nn.Fusible.getLinkPos(child.parents, fusible)
+--    local output = {outputIdx=1, child=child, inputIdx=inputIdx}
+--    table.insert(outputs, output)
+--  end
+--end
 
-function fusion.convertToApply(node)
-  local moduletype = torch.type(node.data.module)
+function fusion.convertToApply(fusible)
+  local moduletype = torch.type(fusible.module)
   if moduletype == 'nn.Tanh' then
-    local dat = node.data
+    local dat = fusible
     dat.name = moduletype
     dat.numVirtualOutputs = 0
     dat.feobj = {}
@@ -61,10 +61,10 @@ function fusion.convertToApply(node)
     ]], [[
       {{gradInput}} = {{gradOutput}} * (1 - {{output}} * {{output}});
     ]], moduletype)
-    node.data.module = apply
-    fusion.initClonedOutputs(node)
+    fusible.module = apply
+--    fusion.initClonedOutputs(fusible)
   elseif moduletype == 'nn.Sigmoid' then
-    local dat = node.data
+    local dat = fusible
     dat.name = moduletype
     dat.numVirtualOutputs = 0
     dat.feobj = {}
@@ -79,10 +79,10 @@ function fusion.convertToApply(node)
     ]], [[
       {{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});
     ]], moduletype)
-    node.data.module = apply
-    fusion.initClonedOutputs(node)
+    fusible.module = apply
+--    fusion.initClonedOutputs(fusible)
   elseif moduletype == 'nn.Exp' then
-    local dat = node.data
+    local dat = fusible
     dat.name = moduletype
     dat.numVirtualOutputs = 0
     dat.feobj = {}
@@ -97,10 +97,10 @@ function fusion.convertToApply(node)
     ]], [[
       {{gradInput}} = {{gradOutput}} * {{output}};
     ]], moduletype)
-    node.data.module = apply
-    fusion.initClonedOutputs(node)
+    fusible.module = apply
+--    fusion.initClonedOutputs(fusible)
   elseif moduletype == 'nn.Abs' then
-    local dat = node.data
+    local dat = fusible
     dat.name = moduletype
     dat.numVirtualOutputs = 0
     dat.feobj = {}
@@ -115,10 +115,10 @@ function fusion.convertToApply(node)
     ]], [[
       {{gradInput}} = {{input}} < 0 ? - {{gradOutput}} : {{gradOutput}};
     ]], moduletype)
-    node.data.module = apply
-    fusion.initClonedOutputs(node)
+    fusible.module = apply
+--    fusion.initClonedOutputs(fusible)
   elseif moduletype == 'nn.CAddTable' then
-    local dat = node.data
+    local dat = fusible
     dat.name = moduletype
     dat.numVirtualOutputs = 0
     dat.feobj = {}
@@ -136,10 +136,10 @@ function fusion.convertToApply(node)
       {{gradInput1}} = {{gradOutput}};
       {{gradInput2}} = {{gradOutput}};
     ]], moduletype)
-    node.data.module = apply
-    fusion.initClonedOutputs(node)
+    fusible.module = apply
+--    fusion.initClonedOutputs(fusible)
   elseif moduletype == 'nn.CMulTable' then
-    local dat = node.data
+    local dat = fusible
     dat.name = moduletype
     dat.numVirtualOutputs = 0
     dat.feobj = {}
@@ -157,10 +157,10 @@ function fusion.convertToApply(node)
       {{gradInput1}} = {{gradOutput}};
       {{gradInput2}} = {{gradOutput}};
     ]], moduletype)
-    node.data.module = apply
-    fusion.initClonedOutputs(node)
+    fusible.module = apply
+--    fusion.initClonedOutputs(fusible)
   elseif false and moduletype == 'nil' then
-    local dat = node.data
+    local dat = fusible
     dat.name = moduletype
     dat.numVirtualOutputs = 0
     dat.feobj = {}
@@ -178,34 +178,34 @@ function fusion.convertToApply(node)
       {{gradInput1}} = {{gradOutput}};
       {{gradInput2}} = {{gradOutput}};
     ]], moduletype)
-    node.data.module = apply
-    fusion.initClonedOutputs(node)
+    fusible.module = apply
+--    fusion.initClonedOutputs(fusible)
   end
 end
 
-function fusion.walkConvertToApply(nodes)
-  ngh.walkApply(nodes, function(node)
-    fusion.convertToApply(node)
+function fusion.walkConvertToApply(fusibles)
+  nn.Fusible.walkApply(fusibles, function(fusible)
+    fusion.convertToApply(fusible)
   end)
 end
 
 function fusion.reverseWalkConvertToApply(x)
-  ngh.reverseWalkApply(x, function(node)
-    fusion.convertToApply(node)
+  nn.Fusible.reverseWalkApply(x, function(fusible)
+    fusion.convertToApply(fusible)
   end)
 end
 
 function fusion.getFusiblePair(x)
   local n1 = nil
   local n2 = nil
-  ngh.walkApply(x, function(node)
+  nn.Fusible.walkApply(x, function(fusible)
     if n1 ~= nil then
       return
     end
-    if fusion.isNodeApply(node) then
-      for j, child in ipairs(node.children) do  -- I know this is rubbish n-squared, fix this later..
+    if fusion.isNodeApply(fusible) then
+      for j, child in ipairs(fusible.children) do  -- I know this is rubbish n-squared, fix this later..
         if fusion.isNodeApply(child) then
-          n1 = node
+          n1 = fusible
           n2 = child
           return
         end
@@ -294,29 +294,29 @@ end
 
 function fusion.generateKernels(x)
   local seen = {}
-  ngh.walkApply(x, function(node)
-    if seen[node] then
+  nn.Fusible.walkApply(x, function(fusible)
+    if seen[fusible] then
       return
     end
-    seen[node] = true
---    print('apply node', node.data.module)
---    print('node ' .. ngh.nodeGetName(node))
-    if fusion.isNodeApply(node) then
+    seen[fusible] = true
+--    print('apply fusible', fusible.module)
+--    print('fusible ' .. nn.Fusible.fusibleGetName(fusible))
+    if fusion.isNodeApply(fusible) then
       local fe = ''
       local be = ''
-      for i, onefe in ipairs(node.data.feobj) do
-        fe = fe .. fusion.expandTemplate(node.data, onefe, 'template', 'forward') .. '\n'
-        be = be .. fusion.expandTemplate(node.data, onefe, 'template', 'backward') .. '\n'
+      for i, onefe in ipairs(fusible.feobj) do
+        fe = fe .. fusion.expandTemplate(fusible, onefe, 'template', 'forward') .. '\n'
+        be = be .. fusion.expandTemplate(fusible, onefe, 'template', 'backward') .. '\n'
       end
-      for i=#node.data.feobj, 1, -1 do
-        local onefe = node.data.feobj[i]
+      for i=#fusible.feobj, 1, -1 do
+        local onefe = fusible.feobj[i]
 --        print('onefe', onefe)
---      for i, onefe in ipairs(node.data.feobj) do
-        be = be .. fusion.expandTemplate(node.data, onefe, 'backward', 'backward') .. '\n'
+--      for i, onefe in ipairs(fusible.feobj) do
+        be = be .. fusion.expandTemplate(fusible, onefe, 'backward', 'backward') .. '\n'
       end
 --      print('fe', fe)
 --      print('be', be)
-      local dat = node.data
+      local dat = fusible
       local mod = dat.module
       mod:updateExpressions(mod.numInputs, mod.numOutputs, fe, be)
 --      print(mod.forwardKernel:getRenderedKernel())
@@ -350,7 +350,7 @@ function fusion.doFuseIteration(x)
   local p_outputs = pmod.numOutputs
   local c_outputs = cmod.numOutputs
 
-  parentIsWhichInput = ngh.getLinkPos(c.parents, p)
+  parentIsWhichInput = nn.Fusible.getLinkPos(c.parents, p)
 
   local pfo = pdat.feobj
   local cfo = cdat.feobj
@@ -369,8 +369,8 @@ function fusion.doFuseIteration(x)
   -- - there is one parent output that feeds into child.  this will create one additional virtuaoutput
   --   - we should find what is the input index for child, and output index for parent
   -- - input idxes in child need to be shifted by amount equal to number of inputs in parent - 1
-  local childIndexInParent = ngh.getLinkPos(p.children, c)
-  local parentIndexInChild = ngh.getLinkPos(c.parents, p)
+  local childIndexInParent = nn.Fusible.getLinkPos(p.children, c)
+  local parentIndexInChild = nn.Fusible.getLinkPos(c.parents, p)
   print('link pos childinparent=' .. childIndexInParent .. ' parentinchild=' .. parentIndexInChild)
   local fusedfos = {}
 
@@ -424,7 +424,7 @@ function fusion.doFuseIteration(x)
     end
   end
   -- move outputs from child to parent, merging any duplicates
-  local parentOuts = {} -- set of parent output nodes, for quick lookup
+  local parentOuts = {} -- set of parent output fusibles, for quick lookup
   for j, parentOut in ipairs(pdat.outputs) do
     parentOuts[parentOut.child] = j
   end
@@ -437,7 +437,7 @@ function fusion.doFuseIteration(x)
     end
   end
 
-  local fused = ngh.reduceEdge(p, c)
+  local fused = nn.Fusible.reduceEdge(p, c)
   local fdat = fused.data
   fdat.feobj = fusedfos
   fdat.id = pdat.id .. '.' .. cdat.id
@@ -446,7 +446,7 @@ function fusion.doFuseIteration(x)
   fmod.numOutputs = newNumOutputs
   fmod.forwardExpression = fusedExp
   fdat.numVirtualOutputs = newNumVirtualOutputs
-  ngh.nodeSetName(fused, ngh.nodeGetName(c) .. '.' .. ngh.nodeGetName(p))
+  nn.Fusible.fusibleSetName(fused, nn.Fusible.fusibleGetName(c) .. '.' .. nn.Fusible.fusibleGetName(p))
 
   return true
 end
