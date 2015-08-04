@@ -3,12 +3,12 @@ local Fusible = torch.class('nn.Fusible')
 Fusibles = {}
 fusibles = Fusibles
 
-function Fusible:__init(numOutputs, name)
+function Fusible:__init(numInputs, numOutputs, name)
   self.outputs = {}
   self.inputs = {}
-  self.name = name or ''
+  self.numInputs = numInputs or 1
   self.numOutputs = numOutputs or 1
-  self.numInputs = 0
+  self.name = name or ''
 end
 
 function Fusible:__tostring()
@@ -34,7 +34,6 @@ function Fusible:add(child)
     local output = {child=child, outputIdx=i, inputIdx=#child.inputs}
     table.insert(self.outputs, output)
   end
-  child.numInputs = child.numInputs + self.numOutputs
   return child
 end
 

@@ -45,8 +45,8 @@ function fusibletests.testBasic()
 end
 
 function fusibletests.testSimpleAdd()
-  local x = nn.Fusible(1, 'x')
-  local n1 = nn.Fusible(1, 'n1')
+  local x = nn.Fusible(1, 1, 'x')
+  local n1 = nn.Fusible(1, 1, 'n1')
 
   x:add(n1)
   x:printGraph()
@@ -58,11 +58,15 @@ function fusibletests.testSimpleAdd()
   tester:asserteq(#x.outputs, 1)
   tester:asserteq(#n1.inputs, 1)
   tester:asserteq(#n1.outputs, 0)
+  tester:asserteq(x.numInputs, 1)
+  tester:asserteq(x.numOutputs, 1)
+  tester:asserteq(n1.numOutputs, 1)
+  tester:asserteq(n1.numInputs, 1)
 end
 
 function fusibletests.testReduceEdge1()
-  local x = nn.Fusible(1, 'x')
-  local n1 = nn.Fusible(1, 'n1')
+  local x = nn.Fusible(1, 1, 'x')
+  local n1 = nn.Fusible(1, 1, 'n1')
 
   x:add(n1)
   x:printGraph()
@@ -84,9 +88,9 @@ function fusibletests.testReduceEdge1()
 end
 
 function fusibletests.testReduceEdgeChildHasChild()
-  local x = nn.Fusible(1, 'x')
-  local n1 = nn.Fusible(1, 'n1')
-  local n2 = nn.Fusible(1, 'n2')
+  local x = nn.Fusible(1, 1, 'x')
+  local n1 = nn.Fusible(1, 1, 'n1')
+  local n2 = nn.Fusible(1, 1, 'n2')
 
   x:add(n1)
     :add(n2)
@@ -110,6 +114,14 @@ function fusibletests.testReduceEdgeChildHasChild()
   tester:asserteq(#x.outputs, 1)  
   tester:asserteq(#n2.inputs, 1)
   tester:asserteq(#n2.outputs, 0)
+  tester:asserteq(x.outputs[1].child, n2)
+  tester:asserteq(x.outputs[1].outputIdx, 1)
+  tester:asserteq(x.outputs[1].inputIdx, 1)
+  tester:asserteq(x.numOutputs, 1)
+  tester:asserteq(x.numInputs, 1)
+  tester:asserteq(n2.inputs[1], x)
+  tester:asserteq(n2.numInputs, 1)
+  tester:asserteq(n2.numOutputs, 1)
 end
 
 function go()
