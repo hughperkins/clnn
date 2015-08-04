@@ -289,13 +289,13 @@ function Fusible.fromNodes(node)
   local all_nodes = {}
   fusibles.walkNngraphNodesApply(node, function(node)
     print('adding ', node.data.module)
-    all_nodes[node] = node
+    table.insert(all_nodes, node)
   end)
 
   -- first create fusibles for each node
   local all_fusibles = {}
   local fusible_by_node = {}
-  for node, _ in pairs(all_nodes) do
+  for i, node in ipairs(all_nodes) do
     if fusible_by_node[node] == nil then
       local fusible = nn.Fusible()
       print('fusible', fusible)
@@ -321,7 +321,7 @@ function Fusible.fromNodes(node)
   -- and also inputs, which points to appropriate
   -- inputs
   -- remember that in the incoming graph, the children are the inputs
-  for node, _ in pairs(all_nodes) do
+  for _, node in ipairs(all_nodes) do
     local data = node.data
     local fusible = fusible_by_node[node]
     for i, child in ipairs(node.children) do
