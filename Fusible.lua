@@ -35,7 +35,7 @@ function Fusible:add(child)
     table.insert(self.outputs, output)
   end
   child.numInputs = child.numInputs + self.numOutputs
-  return self
+  return child
 end
 
 -- Fusibles basically take just the 'data' bit of the nnGraph nodes, without

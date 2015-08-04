@@ -39,7 +39,7 @@ function nn.Fusible.moveEdgeParent(child, oldParent, newParent)
   nn.Fusible.addLink(newParent.children, child)
 end
 
-function nn.Fusible.getChildIndexInParent(parent, child)
+function nn.Fusible.getChildOutputIndexInParent(parent, child)
   for i, output in ipairs(parent.outputs) do
     if output.child == child then
       return i
@@ -129,6 +129,16 @@ function nn.Fusible.reduceEdge(parent, child)
     end
   end
   parent.inputs = newParentInputs
+
+  -- parent should no longer link to child
+  -- there might be several links, we should remove all
+  -- should walk in inverse order...
+  for i=#parent.outputs, 1, -1 do
+    local output = parent.outputs[i]
+    if output.child == child then
+      table.remove(parent.outputs, i)
+    end
+  end
 
 -- need to keep order of parent links, so first first parent index from child
 --  local parentIndexFromChild = nn.Fusible.getLinkPos(child.inputs, parent)

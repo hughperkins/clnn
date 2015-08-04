@@ -80,7 +80,36 @@ function fusibletests.testReduceEdge1()
 
   x = x:reduceEdge(n1)
   tester:asserteq(#x.inputs, 0)
+  tester:asserteq(#x.outputs, 0)
+end
+
+function fusibletests.testReduceEdgeChildHasChild()
+  local x = nn.Fusible(1, 'x')
+  local n1 = nn.Fusible(1, 'n1')
+  local n2 = nn.Fusible(1, 'n2')
+
+  x:add(n1)
+    :add(n2)
+  x:printGraph()
+
+--  local g = nn.gModule({x}, {n1})
+
+--  x = nn.Fusible.fromNnGraph(g)
+  if os.getenv('TESTS') ~= nil then x:dot('', 'x') end
+  n1 = x.outputs[1].child
+
+  tester:asserteq(#x.inputs, 0)
+  tester:asserteq(#x.outputs, 1)
+  tester:asserteq(#n1.inputs, 1)
+  tester:asserteq(#n1.outputs, 1)
+  tester:asserteq(#n2.inputs, 1)
+  tester:asserteq(#n2.outputs, 0)
+
+  x = x:reduceEdge(n1)
+  tester:asserteq(#x.inputs, 0)
   tester:asserteq(#x.outputs, 1)  
+  tester:asserteq(#n2.inputs, 1)
+  tester:asserteq(#n2.outputs, 0)
 end
 
 function go()
