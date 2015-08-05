@@ -1,7 +1,6 @@
 local Fusible = nn.Fusible
 
 function Fusible.walkApply(fusible, func, visited)
-  print('fusible', fusible)
   visited = visited or {}
   if visited[fusible] then
     return
@@ -48,6 +47,10 @@ function Fusible.reverseWalkApply(fusible, func)
   for i, input in ipairs(fusible.inputs) do
     Fusible.reverseWalkApply(input, func)
   end
+end
+
+function Fusible.firstChild(self)
+  return self.outputs[1].child
 end
 
 function Fusible.reversePrintGraph(fusible, prefix, printed)

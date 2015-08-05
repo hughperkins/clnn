@@ -47,7 +47,9 @@ function fusion.convertToApply(fusible)
   local moduletype = torch.type(fusible.module)
   if moduletype == 'nn.Tanh' then
     local dat = fusible
-    dat.name = moduletype
+    if fusible.name == nil or fusible.name == '' then
+      dat.name = moduletype
+    end
     dat.numVirtualOutputs = 0
     dat.feobj = {}
     dat.beobj = {}
@@ -65,7 +67,9 @@ function fusion.convertToApply(fusible)
 --    fusion.initClonedOutputs(fusible)
   elseif moduletype == 'nn.Sigmoid' then
     local dat = fusible
-    dat.name = moduletype
+    if fusible.name == nil or fusible.name == '' then
+      dat.name = moduletype
+    end
     dat.numVirtualOutputs = 0
     dat.feobj = {}
     dat.beobj = {}
@@ -83,7 +87,9 @@ function fusion.convertToApply(fusible)
 --    fusion.initClonedOutputs(fusible)
   elseif moduletype == 'nn.Exp' then
     local dat = fusible
-    dat.name = moduletype
+    if fusible.name == nil or fusible.name == '' then
+      dat.name = moduletype
+    end
     dat.numVirtualOutputs = 0
     dat.feobj = {}
     dat.beobj = {}
@@ -101,7 +107,9 @@ function fusion.convertToApply(fusible)
 --    fusion.initClonedOutputs(fusible)
   elseif moduletype == 'nn.Abs' then
     local dat = fusible
-    dat.name = moduletype
+    if fusible.name == nil or fusible.name == '' then
+      dat.name = moduletype
+    end
     dat.numVirtualOutputs = 0
     dat.feobj = {}
     dat.beobj = {}
@@ -119,7 +127,9 @@ function fusion.convertToApply(fusible)
 --    fusion.initClonedOutputs(fusible)
   elseif moduletype == 'nn.CAddTable' then
     local dat = fusible
-    dat.name = moduletype
+    if fusible.name == nil or fusible.name == '' then
+      dat.name = moduletype
+    end
     dat.numVirtualOutputs = 0
     dat.feobj = {}
     dat.beobj = {}
@@ -140,7 +150,9 @@ function fusion.convertToApply(fusible)
 --    fusion.initClonedOutputs(fusible)
   elseif moduletype == 'nn.CMulTable' then
     local dat = fusible
-    dat.name = moduletype
+    if fusible.name == nil or fusible.name == '' then
+      dat.name = moduletype
+    end
     dat.numVirtualOutputs = 0
     dat.feobj = {}
     dat.beobj = {}
@@ -161,7 +173,9 @@ function fusion.convertToApply(fusible)
 --    fusion.initClonedOutputs(fusible)
   elseif false and moduletype == 'nil' then
     local dat = fusible
-    dat.name = moduletype
+    if fusible.name == nil or fusible.name == '' then
+      dat.name = moduletype
+    end
     dat.numVirtualOutputs = 0
     dat.feobj = {}
     dat.beobj = {}

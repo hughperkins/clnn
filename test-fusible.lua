@@ -165,6 +165,9 @@ function fusibletests.testSimpleAddModules()
   local x = nn.Identity()()
   local n1 = nn.Tanh()(x)
 
+  x.data.annotations.name = 'x'
+  n1.data.annotations.name = 'n1'
+
   print('calling gmodule...')
   local g = nn.gModule({x}, {n1})
   x = nn.Fusible.fromNnGraph(g)
@@ -180,8 +183,10 @@ function fusibletests.testSimpleAddModules()
   tester:asserteq(#n1.outputs, 1)
   tester:asserteq(x.numInputs, 1)
   tester:asserteq(x.numOutputs, 1)
+  tester:asserteq(x.name, 'x')
   tester:asserteq(n1.numOutputs, 1)
   tester:asserteq(n1.numInputs, 1)
+  tester:asserteq(n1.name, 'n1')
 end
 
 function fusibletests.testReduceEdge1Modules()

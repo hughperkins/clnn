@@ -29,7 +29,6 @@ function Fusible:__tostring()
 end
 
 function Fusible.__concat(a, b)
---  print('concat a=', a, 'b=', b)
   return tostring(a) .. tostring(b)
 end
 
@@ -119,7 +118,6 @@ end
 -- create a set of nn.Nodes, using the Fusibles
 -- as the data...
 function fusibles.walkFusiblesToNodes(fusible, seen)
-  print('fusible', fusible)
   seen = seen or {}
   if seen[fusible] ~= nil then
     return seen[fusible]
@@ -177,6 +175,7 @@ function Fusible.walkClone(fusible, newByOld)
   newFusible.id = fusible.id
   newFusible.numOutputs = fusible.numOutputs
   newFusible.numInputs = fusible.numInputs
+  newFusible.name = fusible.name
   local newByOld = newByOld or {}
   newByOld[fusible] = newFusible
   for i, output in ipairs(fusible.outputs) do
@@ -246,7 +245,6 @@ function fusibles.walkReverseAddDataIds(node, dataId)
 end
 
 function fusibles.walkNngraphNodesApply(node, func, visited)
-  print('node', node)
   visited = visited or {}
   if visited[node] then
     return
@@ -277,7 +275,6 @@ function Fusible.fromNodes(node)
   -- and then we convert each one
   local all_nodes = {}
   fusibles.walkNngraphNodesApply(node, function(node)
-    print('adding ', node.data.module)
     table.insert(all_nodes, node)
   end)
 
@@ -287,15 +284,16 @@ function Fusible.fromNodes(node)
   for i, node in ipairs(all_nodes) do
     if fusible_by_node[node] == nil then
       local fusible = nn.Fusible()
-      print('fusible', fusible)
       fusible.module = node.data.module
       if fusible.module ~= nil then
         fusible.numInputs = fusible.module.numInputs
         fusible.numOutputs = fusible.module.numOutputs
       end
+      if node.data.annotations.name ~= nil then
+        fusible.name = node.data.annotations.name
+      end
       fusible.selectindex = node.data.selectindex
       fusible.nSplitOutputs = node.data.nSplitOutputs
-      print('selectindex ', node.data.selectindex)
       fusible_by_node[node] = fusible
       table.insert(all_fusibles, fusible)
 --      fusible.id = #all_fusibles
@@ -317,11 +315,9 @@ function Fusible.fromNodes(node)
     local data = node.data
     local fusible = fusible_by_node[node]
     for i, child in ipairs(node.children) do
-      print('fromNodes child', node.data.module, i, child.data.module)
       local childfusible = fusible_by_node[child]
       table.insert(fusible.inputs, childfusible)
       local output = {child=fusible, outputIdx=#childfusible.outputs + 1, inputIdx=#fusible.inputs}
-      print('  outputIdx', output.outputIdx, 'inputIdx', output.inputIdx)
       table.insert(childfusible.outputs, output)
     end
   end
@@ -333,7 +329,6 @@ function Fusible.fromNodes(node)
     if fusible.numInputs == 0 then
       fusible.numInputs = 1
     end
-    print('walk nodes2 fusible ' .. fusible .. ' numoutputs ' .. #fusible.outputs .. ' numinputs ' .. #fusible.inputs)
   end
 
 --  fusibles.walkAddParents(node)

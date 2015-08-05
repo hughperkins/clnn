@@ -477,18 +477,33 @@ function fusiontests.testAddTanhMul()
   local n2 = nn.Tanh()({n1})
   local n3 = nn.CMulTable()({n2, x3})
 
-  fusibles.nodeSetName(x, 'x')
-  fusibles.nodeSetName(x1, 'x1')
-  fusibles.nodeSetName(x2, 'x2')
-  fusibles.nodeSetName(x3, 'x3')
+  x.data.annotations.name = 'x'
+  x1.data.annotations.name = 'x1'
+  x2.data.annotations.name = 'x2'
+  x3.data.annotations.name = 'x3'
 
-  fusibles.nodeSetName(n1, 'n1')
-  fusibles.nodeSetName(n2, 'n2')
-  fusibles.nodeSetName(n3, 'n3')
+  n1.data.annotations.name = 'n1'
+  n2.data.annotations.name = 'n2'
+  n3.data.annotations.name = 'n3'
+
+  tester:asserteq(n1.data.annotations.name, 'n1')
 
   if os.getenv('TESTS') ~= nil then graph.dot(n3:graph(), '', 'n3g') end
 
+  tester:asserteq(n1.data.annotations.name, 'n1')
+
   x = nn.Fusible.fromNodes(n3)
+  x1 = x:firstChild().outputs[1].child
+  x2 = x:firstChild().outputs[2].child
+  x3 = x:firstChild().outputs[3].child
+  n1 = x1:firstChild()
+  n2 = n1:firstChild()
+  n3 = n2:firstChild()
+
+  tester:asserteq(x.name, 'x')
+  tester:asserteq(n1.name, 'n1')
+  tester:asserteq(n2.name, 'n2')
+
 --  fusibles.walkAddParents(n3)
 --  fusibles.dot(n3, '', 'testAddTanhMulBeforeInvert')
 
@@ -501,6 +516,8 @@ function fusiontests.testAddTanhMul()
   tester:asserteq(x:count(), 8)
   tester:asserteq(x:walkValidate(), true)
   x:printGraph()
+
+  tester:asserteq(n1.name, 'n1')
 
   local it = 0
   print('it ' .. it .. ' ===============')
@@ -519,7 +536,7 @@ function fusiontests.testAddTanhMul()
   if os.getenv('TESTS') ~= nil then x:dot('', 'testAddTanhMulAfter') end
   tester:asserteq(x:count(), 6)
 
-  local fused = x.children[1].children[1].children[1]
+  local fused = x:firstChild():firstChild():firstChild()
   local fdat = fused
   tester:asserteq(fused.name, 'n3.n2.n1')
   tester:asserteq(#fdat.feobj, 3)
