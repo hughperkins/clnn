@@ -510,8 +510,6 @@ function fusiontests.testAddTanhMul()
   tester:asserteq(n1.name, 'n1')
   tester:asserteq(n2.name, 'n2')
 
-  x = nn.Fusible.fromNodes(n3)
-
   if os.getenv('TESTS') ~= nil then x:dot('', 'testAddTanhMulBefore') end
   fusion.walkConvertToApply(x)
   tester:asserteq(x:count(), 8)
