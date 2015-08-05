@@ -195,6 +195,9 @@ function fusiontests.testFuseTanhSigmoid()
   out.data.annotations.name = 'out'
 
   x = nn.Fusible.fromNodes(out)
+  n1 = x:firstChild()
+  n2 = n1:firstChild()
+  out = n2:firstChild()
 
   tester:asserteq(x:walkValidate(), true)
 
