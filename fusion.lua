@@ -231,7 +231,7 @@ end
 
 function fusion.expandTemplate(dat, feo, templateName, passName)
   local fe = feo[templateName]
---  print('incoming fe: ' .. fe)
+  print('incoming fe: ' .. fe)
   for target, value in pairs(feo.transforms) do
     if templateName == 'template' then
       if passName == 'forward' then
@@ -244,8 +244,15 @@ function fusion.expandTemplate(dat, feo, templateName, passName)
           else
             fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
           end
+        elseif value.src == 'output' then
+          -- create virtualoutput, in case other operations need it, and also write
+          -- to output
+          local virtualOutputIdx = dat.numVirtualOutputs + value.idx
+          local fe1 = fe:gsub('{{' .. target .. '}}', 'float virtualOutput' .. virtualOutputIdx)
+          local fe2 = value.src .. value.idx .. '_data[n] = virtualOutput' .. virtualOutputIdx .. ';'
+          fe = fe1 .. '\n' .. fe2
         else
-          fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
+          error('Unknown src ' .. value.src)
         end
       elseif passName == 'backward' then
         -- === updateGradInput, forward section ====================
@@ -261,6 +268,8 @@ function fusion.expandTemplate(dat, feo, templateName, passName)
           -- convert to virtualOutput
           local virtualOutputIdx = dat.numVirtualOutputs + value.idx
           fe = fe:gsub('{{' .. target .. '}}', 'float virtualOutput' .. virtualOutputIdx)
+        else
+          error('Unknown src ' .. value.src)
         end
   --      if target:find('input') ~= nil then
   --        fe = fe:gsub('{{' .. target:gsub('input', 'gradInput') .. '}}', declaration .. value.src:gsub('input', 'gradInput') .. value.idx)
@@ -297,12 +306,12 @@ function fusion.expandTemplate(dat, feo, templateName, passName)
       else
         error('unknown value.src %s', value.src)
       end
---      print('    ->' .. fe)
+      print('    ->' .. fe)
     else
       error('Unknown template name %s', templateName)
     end
   end
-  --print(fe)
+  print('  fe', fe)
   return fe
 end
 
