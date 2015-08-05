@@ -155,27 +155,32 @@ function fusiontests.testOutputsTwoOutput()
   local n3 = nn.Tanh()(n1)
   local out = nn.Identity()({n2, n3})
 
-  nn.Fusible.nodeSetName(x, 'x')
-  nn.Fusible.nodeSetName(n1, 'n1')
-  nn.Fusible.nodeSetName(n2, 'n2')
-  nn.Fusible.nodeSetName(n3, 'n3')
-  nn.Fusible.nodeSetName(out, 'out')
+  x.data.annotations.name = 'x'
+  n1.data.annotations.name = 'n1'
+  n2.data.annotations.name = 'n2'
+  n3.data.annotations.name = 'n3'
+  out.data.annotations.name = 'out'
 
-  fusibles.walkAddParents(out)
-  fusibles.walkRemoveBidirectional(out)
-  tester:asserteq(fusibles.walkValidate(out), true)
-  x = fusibles.invertGraph(out)
-  fusibles.walkAddDataIds(x)
+  x = nn.Fusible.fromNodes(out)
+  n1 = x:firstChild()
+  n2 = n1:firstChild()
+  n3 = n1.outputs[2].child
+  out = n2:firstChild()
+
   tester:asserteq(x:walkValidate(), true)
   fusion.walkConvertToApply(x)
   tester:asserteq(x:walkValidate(), true)
   if os.getenv('TESTS') ~= nil then x:dot('', 'x') end
 
+  tester:asserteq(#x.outputs, 1) 
   tester:asserteq(#n1.outputs, 2) 
-  tester:asserteq(#n1.outputs[1].outputIdx, 1) 
-  tester:asserteq(#n1.outputs[1].child, n2)
-  tester:asserteq(#n1.outputs[2].outputIdx, 1) 
-  tester:asserteq(#n1.outputs[2].child, n3)
+  tester:asserteq(#n2.outputs, 1) 
+  tester:asserteq(#n3.outputs, 1) 
+  tester:asserteq(#out.outputs, 0) 
+  tester:asserteq(n1.outputs[1].outputIdx, 1) 
+  tester:asserteq(n1.outputs[1].child, n2)
+  tester:asserteq(n1.outputs[2].outputIdx, 2) 
+  tester:asserteq(n1.outputs[2].child, n3)
 end
 
 function fusiontests.testFuseTanhSigmoid()
@@ -184,10 +189,10 @@ function fusiontests.testFuseTanhSigmoid()
   local n2 = nn.Tanh()(n1)
   local out = nn.Identity()({n2})
 
-  nn.Fusible.nodeSetName(x, 'x')
-  nn.Fusible.nodeSetName(n1, 'n1')
-  nn.Fusible.nodeSetName(n2, 'n2')
-  nn.Fusible.nodeSetName(out, 'out')
+  x.data.annotations.name = 'x'
+  n1.data.annotations.name = 'n1'
+  n2.data.annotations.name = 'n2'
+  out.data.annotations.name = 'out'
 
   x = nn.Fusible.fromNodes(out)
 
@@ -237,10 +242,10 @@ function fusiontests.testFuseExpTanhSigmoid()
   local n2 = nn.Tanh()(n1)
   local n3 = nn.Exp()(n2)
 
-  nn.Fusible.nodeSetName(x, 'x')
-  nn.Fusible.nodeSetName(n1, 'n1')
-  nn.Fusible.nodeSetName(n2, 'n2')
-  nn.Fusible.nodeSetName(n3, 'n3')
+  x.data.annotations.name = 'x'
+  n1.data.annotations.name = 'n1'
+  n2.data.annotations.name = 'n2'
+  n3.data.annotations.name = 'n3'
 
   fusibles.walkAddParents(n3)
   fusibles.walkRemoveBidirectional(n3)
