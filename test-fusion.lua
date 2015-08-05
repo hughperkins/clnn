@@ -250,10 +250,7 @@ function fusiontests.testFuseExpTanhSigmoid()
   n2.data.annotations.name = 'n2'
   n3.data.annotations.name = 'n3'
 
-  fusibles.walkAddParents(n3)
-  fusibles.walkRemoveBidirectional(n3)
-  x = fusibles.invertGraph(n2)
-  fusibles.walkAddDataIds(x)
+  x = nn.Fusible.fromNodes(n3)
 
   fusion.walkConvertToApply(x)
   tester:asserteq(x:count(), 4)
@@ -263,11 +260,11 @@ function fusiontests.testFuseExpTanhSigmoid()
 
   tester:asserteq(torch.type(x.module), 'nn.Identity')
 
-  tester:asserteq(fusibles.nodeGetName(x), 'x')
-  tester:asserteq(#x.children, 1)
-  tester:asserteq(#x.children[1].children, 0)
+  tester:asserteq(x.name, 'x')
+  tester:asserteq(#x.outputs, 1)
+  tester:asserteq(#x.outputs[1].child.outputs, 0)
 
-  local fused = x.children[1]
+  local fused = x.outputs[1].child
   local fdat = fused
   tester:asserteq(fused.name, 'n3.n2.n1')
   tester:asserteq(#fdat.feobj, 3)
@@ -353,10 +350,11 @@ function fusiontests.testApplyConvertMultiInputAdd()
   n1.data.annotations.name = 'n1'
   n2.data.annotations.name = 'n2'
 
-  fusibles.walkAddParents(n2)
-  x = fusibles.invertGraph(n2)
-  fusibles.walkRemoveBidirectional(x)
-  fusibles.walkAddDataIds(x)
+  x = nn.Fusible.fromNodes(n2)
+  x1 = x:firstChild():firstChild()
+  x2 = x:firstChild().outputs[2].child
+  n1 = x1:firstChild()
+  n2 = n1:firstChild()
 
   fusion.walkConvertToApply(x)
 --  x:dot('', 'add')
@@ -364,7 +362,7 @@ function fusiontests.testApplyConvertMultiInputAdd()
   tester:asserteq(x:walkValidate(), true)
 --  x:dot('', 'xold')
   tester:asserteq(x:walkValidate(), true)
---  local xold = fusibles.walkClone(x)
+--  local xold = x:walkClone()
 --  tester:asserteq(x:walkValidate(), true)
 --  x:printGraph()
   fusion.doFuse(x)
@@ -375,7 +373,7 @@ function fusiontests.testApplyConvertMultiInputAdd()
 
   tester:asserteq(torch.type(x.module), 'nn.Identity')
 
-  local fused = x.children[1].children[1].children[1]
+  local fused = x:firstChild():firstChild():firstChild()
   local fdat = fused
   tester:asserteq(fused.name, 'n2.n1')
   tester:asserteq(#fdat.feobj, 2)
@@ -401,8 +399,8 @@ function fusiontests.testApplyConvertMultiInputAdd()
   tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
   tester:asserteq(fdat.feobj[2].transforms.output1.idx, 1)
 
-  tester:asserteq(Fusible.getLinkPos(x1.children[1].inputs, x1), 1)
-  tester:asserteq(Fusible.getLinkPos(x2.children[1].inputs, x2), 2)
+  tester:asserteq(Fusible.getLinkPos(x1:firstChild().inputs, x1), 1)
+  tester:asserteq(Fusible.getLinkPos(x2:firstChild().inputs, x2), 2)
 
   fusion.generateKernels(x)
 end
@@ -420,10 +418,12 @@ function fusiontests.testApplyConvertMultiInputAdd3()
   n1.data.annotations.name = 'n1'
   n2.data.annotations.name = 'n2'
 
-  fusibles.walkAddParents(n2)
-  x = fusibles.invertGraph(n2)
-  fusibles.walkRemoveBidirectional(x)
-  fusibles.walkAddDataIds(x)
+  x = nn.Fusible.fromNodes(n2)
+  x1 = x:firstChild():firstChild()
+  x2 = x:firstChild().outputs[2].child
+  x3 = x:firstChild().outputs[3].child
+  n1 = x1:firstChild()
+  n2 = n1:firstChild()
 
   fusion.walkConvertToApply(x)
   x:dot('', 'add')
@@ -431,7 +431,7 @@ function fusiontests.testApplyConvertMultiInputAdd3()
   tester:asserteq(x:walkValidate(), true)
   x:dot('', 'xold')
   tester:asserteq(x:walkValidate(), true)
-  local xold = fusibles.walkClone(x)
+  local xold = x:walkClone()
   tester:asserteq(x:walkValidate(), true)
 --  x:printGraph()
   fusion.doFuse(x)
@@ -442,7 +442,7 @@ function fusiontests.testApplyConvertMultiInputAdd3()
 
   tester:asserteq(torch.type(x.module), 'nn.Identity')
 
-  local fused = x.children[1].children[1].children[1]
+  local fused = x:firstChild():firstChild():firstChild()
   local fdat = fused
   tester:asserteq(fused.name, 'n2.n1')
   tester:asserteq(#fdat.feobj, 2)
@@ -469,9 +469,9 @@ function fusiontests.testApplyConvertMultiInputAdd3()
   tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
   tester:asserteq(fdat.feobj[2].transforms.output1.idx, 1)
 
-  tester:asserteq(Fusible.getLinkPos(x1.children[1].inputs, x1), 1)
-  tester:asserteq(Fusible.getLinkPos(x2.children[1].inputs, x2), 2)
-  tester:asserteq(Fusible.getLinkPos(x3.children[1].inputs, x3), 3)
+  tester:asserteq(Fusible.getLinkPos(x1:firstChild().inputs, x1), 1)
+  tester:asserteq(Fusible.getLinkPos(x2:firstChild().inputs, x2), 2)
+  tester:asserteq(Fusible.getLinkPos(x3:firstChild().inputs, x3), 3)
 
   fusion.generateKernels(x)
 end
@@ -510,12 +510,7 @@ function fusiontests.testAddTanhMul()
   tester:asserteq(n1.name, 'n1')
   tester:asserteq(n2.name, 'n2')
 
---  fusibles.walkAddParents(n3)
---  fusibles.dot(n3, '', 'testAddTanhMulBeforeInvert')
-
---  x = fusibles.invertGraph(n3)
---  fusibles.walkRemoveBidirectional(x)
---  fusibles.walkAddDataIds(x)
+  x = nn.Fusible.fromNodes(n3)
 
   if os.getenv('TESTS') ~= nil then x:dot('', 'testAddTanhMulBefore') end
   fusion.walkConvertToApply(x)
@@ -535,7 +530,7 @@ function fusiontests.testAddTanhMul()
     x:printGraphWithLinks()
   end
 
---  fusibles.printGraphWithLinks(x)
+--  x:printGraphWithLinks()
 
   tester:asserteq(x:walkValidate(), true)
   x:printGraph()
@@ -591,21 +586,22 @@ function fusiontests.testSigMulAdd()
   local n2 = nn.CMulTable()({x1, n1})
   local n3 = nn.CAddTable()({n2, x3})
 
-  nn.Fusible.nodeSetName(x, 'x')
-  nn.Fusible.nodeSetName(x1, 'x1')
-  nn.Fusible.nodeSetName(x2, 'x2')
-  nn.Fusible.nodeSetName(x3, 'x3')
+  x.data.annotations.name = 'x'
+  x1.data.annotations.name = 'x1'
+  x2.data.annotations.name = 'x2'
+  x3.data.annotations.name = 'x3'
 
-  nn.Fusible.nodeSetName(n1, 'n1')
-  nn.Fusible.nodeSetName(n2, 'n2')
-  nn.Fusible.nodeSetName(n3, 'n3')
+  n1.data.annotations.name = 'n1'
+  n2.data.annotations.name = 'n2'
+  n3.data.annotations.name = 'n3'
 
-  fusibles.walkAddParents(n3)
-  fusibles.dot(n3, '', 'testSigMulAddBeforeInvert')
-
-  x = fusibles.invertGraph(n3)
-  fusibles.walkRemoveBidirectional(x)
-  fusibles.walkAddDataIds(x)
+  x = nn.Fusible.fromNodes(n3)
+  x1 = x:firstChild():firstChild()
+  x2 = x:firstChild().outputs[2].child
+  x3 = x:firstChild().outputs[3].child
+  n1 = x2:firstChild()
+  n2 = x1:firstChild()
+  n3 = n2:firstChild()
 
   x:dot('', 'testSigMulAddBefore')
   fusion.walkConvertToApply(x)
@@ -615,22 +611,22 @@ function fusiontests.testSigMulAdd()
 
   local it = 0
   print('it ' .. it .. ' ===============')
-  fusibles.printGraphWithLinks(x)
+  x:printGraphWithLinks()
   while fusion.doFuseIteration(x) do
     it = it + 1
     print('it ' .. it .. ' ===============')
     tester:asserteq(x:walkValidate(), true)
-    fusibles.printGraphWithLinks(x)
+    x:printGraphWithLinks()
   end
 
---  fusibles.printGraphWithLinks(x)
+--  x:printGraphWithLinks()
 
   tester:asserteq(x:walkValidate(), true)
   x:printGraph()
   x:dot('', 'testSigMulAddAfter')
   tester:asserteq(x:count(), 6)
 
-  local fused = x.children[1].children[1].children[1]
+  local fused = x:firstChild():firstChild():firstChild()
   local fdat = fused
   tester:asserteq(fused.name, 'n3.n2.n1')
   tester:asserteq(#fdat.feobj, 3)
@@ -663,9 +659,9 @@ function fusiontests.testSigMulAdd()
   tester:asserteq(fdat.feobj[3].transforms.output1.src, 'output')
   tester:asserteq(fdat.feobj[3].transforms.output1.idx, 1)
 
-  tester:asserteq(Fusible.getLinkPos(x1.children[1].inputs, x1), 1)
-  tester:asserteq(Fusible.getLinkPos(x2.children[1].inputs, x2), 2)
-  tester:asserteq(Fusible.getLinkPos(x3.children[1].inputs, x3), 3)
+  tester:asserteq(Fusible.getLinkPos(x1:firstChild().inputs, x1), 1)
+  tester:asserteq(Fusible.getLinkPos(x2:firstChild().inputs, x2), 2)
+  tester:asserteq(Fusible.getLinkPos(x3:firstChild().inputs, x3), 3)
 
   fusion.generateKernels(x)
 end
@@ -677,20 +673,22 @@ function fusiontests.testInputOrderThreeWay()
   local n2 = nn.CAddTable()({x1, n1})
   local n3 = nn.CMulTable()({n2, x3})
 
-  nn.Fusible.nodeSetName(x, 'x')
+  x.data.annotations.name = 'x'
+  x1.data.annotations.name = 'x1'
+  x2.data.annotations.name = 'x2'
+  x3.data.annotations.name = 'x3'
 
-  nn.Fusible.nodeSetName(x1, 'x1')
-  nn.Fusible.nodeSetName(x2, 'x2')
-  nn.Fusible.nodeSetName(x3, 'x3')
+  n1.data.annotations.name = 'n1'
+  n2.data.annotations.name = 'n2'
+  n3.data.annotations.name = 'n3'
 
-  nn.Fusible.nodeSetName(n1, 'n1')
-  nn.Fusible.nodeSetName(n2, 'n2')
-  nn.Fusible.nodeSetName(n3, 'n3')
-
-  fusibles.walkAddParents(n3)
-  x = fusibles.invertGraph(n3)
-  fusibles.walkRemoveBidirectional(x)
-  fusibles.walkAddDataIds(x)
+  x = nn.Fusible.fromNodes(n3)
+  x1 = x:firstChild():firstChild()
+  x2 = x:firstChild().outputs[2].child
+  x3 = x:firstChild().outputs[3].child
+  n1 = x2:firstChild()
+  n2 = x1:firstChild()
+  n3 = n2:firstChild()
 
   x:dot('', 'testInputOrderThreeWayadd')
   fusion.walkConvertToApply(x)
@@ -698,7 +696,7 @@ function fusiontests.testInputOrderThreeWay()
   tester:asserteq(x:walkValidate(), true)
   x:dot('', 'testInputOrderThreeWayBefore')
   tester:asserteq(x:walkValidate(), true)
-  local xold = fusibles.walkClone(x)
+  local xold = x:walkClone()
   tester:asserteq(x:walkValidate(), true)
   x:printGraph()
   local it = 0
@@ -709,8 +707,8 @@ function fusiontests.testInputOrderThreeWay()
     tester:asserteq(x:walkValidate(), true)
     x:dot('', 'xit' .. it)
     fusion.generateKernels(x)
-    fusibles.printGraphWithLinks(x)
-    fusibles.walkApply(x, function(node)
+    x:printGraphWithLinks()
+    x:walkApply(function(node)
       local dat = node
       if dat.feobj ~= nil then
         for i, feobj in ipairs(dat.feobj) do
@@ -724,9 +722,9 @@ function fusiontests.testInputOrderThreeWay()
   end
   x:dot('', 'testInputOrderThreeWayAfter')
 
-  tester:asserteq(Fusible.getLinkPos(x1.children[1].inputs, x1), 1)
-  tester:asserteq(Fusible.getLinkPos(x2.children[1].inputs, x2), 2)
-  tester:asserteq(Fusible.getLinkPos(x3.children[1].inputs, x3), 3)
+  tester:asserteq(Fusible.getLinkPos(x1:firstChild().inputs, x1), 1)
+  tester:asserteq(Fusible.getLinkPos(x2:firstChild().inputs, x2), 2)
+  tester:asserteq(Fusible.getLinkPos(x3:firstChild().inputs, x3), 3)
 
   fusion.generateKernels(x)
 end
@@ -740,17 +738,18 @@ function fusiontests.testClonedOutput()
   local n3 = nn.Sigmoid()(n1)
   local n4 = nn.CAddTable()({n2, n3})
 
-  nn.Fusible.nodeSetName(x, 'x')
+  x.data.annotations.name = 'x'
 
-  nn.Fusible.nodeSetName(n1, 'n1')
-  nn.Fusible.nodeSetName(n2, 'n2')
-  nn.Fusible.nodeSetName(n3, 'n3')
-  nn.Fusible.nodeSetName(n4, 'n4')
+  n1.data.annotations.name = 'n1'
+  n2.data.annotations.name = 'n2'
+  n3.data.annotations.name = 'n3'
+  n4.data.annotations.name = 'n4'
 
-  fusibles.walkAddParents(n4)
-  x = fusibles.invertGraph(n4)
-  fusibles.walkRemoveBidirectional(x)
-  fusibles.walkAddDataIds(x)
+  x = nn.Fusible.fromNodes(n4)
+  n1 = x:firstChild()
+  n2 = n1:firstChild()
+  n3 = n1.outputs[2].child
+  n4 = n2:firstChild()
 
   if os.getenv('TESTS') ~= nil then x:dot('', name .. 'Orig') end
   fusion.walkConvertToApply(x)
@@ -758,7 +757,7 @@ function fusiontests.testClonedOutput()
   tester:asserteq(x:walkValidate(), true)
   if os.getenv('TESTS') ~= nil then x:dot('', name .. 'Before') end
   tester:asserteq(x:walkValidate(), true)
-  local xold = fusibles.walkClone(x)
+  local xold = x:walkClone()
   tester:asserteq(x:walkValidate(), true)
   x:printGraph()
   local it = 0
@@ -769,8 +768,8 @@ function fusiontests.testClonedOutput()
     tester:asserteq(x:walkValidate(), true)
     if os.getenv('TESTS') ~= nil then x:dot('', 'xit' .. it) end
 --    fusion.generateKernels(x)
-    fusibles.printGraphWithLinks(x)
-    fusibles.walkApply(x, function(node)
+    x:printGraphWithLinks()
+    x:walkApply(function(node)
       local dat = node
       if dat.feobj ~= nil then
         for i, feobj in ipairs(dat.feobj) do
@@ -784,11 +783,11 @@ function fusiontests.testClonedOutput()
   end
   if os.getenv('TESTS') ~= nil then x:dot('', name .. 'After') end
 
-  tester:asserteq(x.children[1].module.numInputs, 2)
+  tester:asserteq(x:firstChild().numInputs, 1)
 
---  tester:asserteq(Fusible.getLinkPos(x1.children[1].inputs, x1), 1)
---  tester:asserteq(Fusible.getLinkPos(x2.children[1].inputs, x2), 2)
---  tester:asserteq(Fusible.getLinkPos(x3.children[1].inputs, x3), 3)
+--  tester:asserteq(Fusible.getLinkPos(x1:firstChild().inputs, x1), 1)
+--  tester:asserteq(Fusible.getLinkPos(x2:firstChild().inputs, x2), 2)
+--  tester:asserteq(Fusible.getLinkPos(x3:firstChild().inputs, x3), 3)
 
 --  fusion.generateKernels(x)
 end
@@ -807,27 +806,26 @@ function fusiontests.testApplyCharRnn()
   local n9 = nn.CMulTable()({n7, n8})
   local out = nn.Identity()({n6, n9})
 
-  nn.Fusible.nodeSetName(x, 'x')
-  nn.Fusible.nodeSetName(xpre, 'xpre')
-  nn.Fusible.nodeSetName(x1, 'x1')
-  nn.Fusible.nodeSetName(x2, 'x2')
-  nn.Fusible.nodeSetName(x3, 'x3')
-  nn.Fusible.nodeSetName(x4, 'x4')
-  nn.Fusible.nodeSetName(n1, 'n1')
-  nn.Fusible.nodeSetName(n2, 'n2')
-  nn.Fusible.nodeSetName(n3, 'n3')
-  nn.Fusible.nodeSetName(n4, 'n4')
-  nn.Fusible.nodeSetName(n5, 'n5')
-  nn.Fusible.nodeSetName(n6, 'n6')
-  nn.Fusible.nodeSetName(n7, 'n7')
-  nn.Fusible.nodeSetName(n8, 'n8')
-  nn.Fusible.nodeSetName(n9, 'n9')
-  nn.Fusible.nodeSetName(out, 'out')
+  x.data.annotations.name = 'x'
+  xpre.data.annotations.name = 'xpre'
+  x1.data.annotations.name = 'x1'
+  x2.data.annotations.name = 'x2'
+  x3.data.annotations.name = 'x3'
+  x4.data.annotations.name = 'x4'
 
-  fusibles.walkAddParents(n9)
-  x = fusibles.invertGraph(n9)
-  fusibles.walkRemoveBidirectional(x)
-  fusibles.walkAddDataIds(x)
+  n1.data.annotations.name = 'n1'
+  n2.data.annotations.name = 'n2'
+  n3.data.annotations.name = 'n3'
+  n4.data.annotations.name = 'n4'
+  n5.data.annotations.name = 'n5'
+  n6.data.annotations.name = 'n6'
+  n7.data.annotations.name = 'n7'
+  n8.data.annotations.name = 'n8'
+  n9.data.annotations.name = 'n9'
+
+  out.data.annotations.name = 'out'
+
+  x = nn.Fusible.fromNodes(n9)
 
   x:dot('', 'add')
   fusion.walkConvertToApply(x)
@@ -835,7 +833,7 @@ function fusiontests.testApplyCharRnn()
   tester:asserteq(x:walkValidate(), true)
   x:dot('', 'xold')
   tester:asserteq(x:walkValidate(), true)
-  local xold = fusibles.walkClone(x)
+  local xold = x:walkClone()
   tester:asserteq(x:walkValidate(), true)
   x:printGraph()
   local it = 0
@@ -846,12 +844,12 @@ function fusiontests.testApplyCharRnn()
     tester:asserteq(x:walkValidate(), true)
     x:dot('', 'xit' .. it)
 --    fusion.generateKernels(x)
-    fusibles.printGraphWithLinks(x)
+    x:printGraphWithLinks()
 --    if it >= 8 then
 --      os.exit(0)
 --    end
 --    fusion.generateKernels(x)
---    fusibles.walkApply(x, function(node)
+--    x:walkApply(function(node)
 --      local dat = node
 --      if dat.feobj ~= nil then
 --        for i, feobj in ipairs(dat.feobj) do
@@ -871,7 +869,7 @@ function fusiontests.testApplyCharRnn()
 
   tester:asserteq(torch.type(x.module), 'nn.Identity')
 
-  local fused = x.children[1].children[1].children[1]
+  local fused = x:firstChild():firstChild():firstChild()
   local fdat = fused
   tester:asserteq(fused.name, 'n9.n7.n6.n4.n1.n5.n2.n3.n8')
   tester:asserteq(#fdat.feobj, 9)
@@ -939,7 +937,7 @@ function fusiontests.forward2()
   end
   fusion.generateKernels(x)
   tester:asserteq(x:walkValidate(), true)
-  fusibles.printGraphWithLinks(x)
+  x:printGraphWithLinks()
 
   local g2 = fusibles.nghToNnGraph(x)
   if os.getenv('TESTS') ~= nil then
@@ -971,7 +969,7 @@ function fusiontests.forward2inputs()
   fusion.walkConvertToApply(x)
   while fusion.doFuseIteration(x) do
   end
-  fusibles.printGraphWithLinks(x)
+  x:printGraphWithLinks()
   fusion.generateKernels(x)
   tester:asserteq(x:walkValidate(), true)
 
@@ -1008,7 +1006,7 @@ function fusiontests.forward2inputs2()
   while fusion.doFuseIteration(x) do
   end
   fusion.generateKernels(x)
-  fusibles.printGraphWithLinks(x)
+  x:printGraphWithLinks()
   tester:asserteq(x:walkValidate(), true)
 
   local g2 = fusibles.nghToNnGraph(x)
@@ -1045,7 +1043,7 @@ function fusiontests.forwardThreeWay()
   while fusion.doFuseIteration(x) do
   end
   fusion.generateKernels(x)
-  fusibles.printGraphWithLinks(x)
+  x:printGraphWithLinks()
   tester:asserteq(x:walkValidate(), true)
 
   local g2 = fusibles.nghToNnGraph(x)
@@ -1126,7 +1124,7 @@ function fusiontests.forwardLSTMFused()
   print('output', outputbefore)
 
   x = fusibles.nnGraphToNgh(lstm)
-  fusibles.walkApply(x, function(node)
+  x:walkApply(function(node)
     nn.Fusible.nodeSetName(node, 'node ' .. node.id)
   end)
   x:printGraph()
@@ -1148,7 +1146,7 @@ function fusiontests.forwardLSTMFused()
 
   fusion.generateKernels(x)
 
-  fusibles.printGraphWithLinks(x)
+  x:printGraphWithLinks()
   local g2 = fusibles.nghToNnGraph(x)
   if os.getenv('TESTS') ~= nil then graph.dot(g2.fg, '', 'g2') end
   local outputafter = g2:forward(inputs)
