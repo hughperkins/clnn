@@ -124,7 +124,7 @@ function fusibles.walkFusiblesToNodes(fusible, seen)
   end
   local node = nngraph.Node({module=fusible.module, annotations={}})
   node.data.annotations.name = fusible.name
-  node.id = fusible.id
+--  node.id = fusible.id
   node.data.module = fusible.module
   node.data.selectindex = fusible.selectindex
   node.data.nSplitOutputs = fusible.nSplitOutputs

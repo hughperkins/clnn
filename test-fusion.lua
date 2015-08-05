@@ -8,29 +8,29 @@ local Fusible = nn.Fusible
 
 local fusiontests = {}
 
-function nngraph.Node:graphNodeName()
-  if self.id ~= nil then
-    res = tostring(self.id)
-    local dat = self
-    if dat.module ~= nil then
-      local mod = dat.module
-      res = res .. ' ' .. torch.type(mod)
-      if mod.numInputs ~= nil then
-        if dat.numVirtualOutputs ~= nil and dat.numVirtualOutputs > 0 then
-          res = res .. ' ' .. mod.numInputs.. ' -> (' .. dat.numVirtualOutputs .. ')' .. ' -> ' .. mod.numOutputs
-        else
-          res = res .. ' ' .. mod.numInputs .. ' -> ' .. mod.numOutputs
-        end
-      end
-    end
-    return res
-  end
-  if self.annotations.name then
-    return self.annotations.name .. ' (' .. self.id .. ')'
-  else
-    return 'Node' .. self.id
-  end
-end
+--function nngraph.Node:graphNodeName()
+--  if self.id ~= nil then
+--    res = tostring(self.id)
+--    local dat = self
+--    if dat.module ~= nil then
+--      local mod = dat.module
+--      res = res .. ' ' .. torch.type(mod)
+--      if mod.numInputs ~= nil then
+--        if dat.numVirtualOutputs ~= nil and dat.numVirtualOutputs > 0 then
+--          res = res .. ' ' .. mod.numInputs.. ' -> (' .. dat.numVirtualOutputs .. ')' .. ' -> ' .. mod.numOutputs
+--        else
+--          res = res .. ' ' .. mod.numInputs .. ' -> ' .. mod.numOutputs
+--        end
+--      end
+--    end
+--    return res
+--  end
+--  if self.annotations.name then
+--    return self.annotations.name .. ' (' .. self.id .. ')'
+--  else
+--    return 'Node' .. self.id
+--  end
+--end
 
 function normalizeWhite(input)
   old = nil
@@ -903,7 +903,7 @@ function fusiontests.forward1()
   local outputbefore = g:forward(input)
   print('outputbefore', outputbefore)
 
-  local x = fusibles.nnGraphToNgh(g)
+  local x = nn.Fusible.fromNnGraph(g)
   
   tester:asserteq(x:walkValidate(), true)
   fusion.walkConvertToApply(x)
@@ -1175,7 +1175,8 @@ function fusiontests.testLSTM()
   local LSTM = require('test.lstm.LSTM')
   lstm = LSTM.lstm(65, 128, 2, 0)
   graph.dot(lstm.fg, '', 'lstm.g')
-  x = fusibles.nnGraphToNgh(lstm)
+  x = nn.Fusible.fromNnGraph(lstm)
+--  x = fusibles.nnGraphToNgh(lstm)
   x:printGraph()
   x:dot('', 'lstm1')
 
