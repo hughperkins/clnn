@@ -164,7 +164,7 @@ function fusion.convertToApply(fusible)
 {{gradInput2}} = {{gradOutput}};]],
       transforms={gradInput1='gradInput1', gradInput2='gradInput2', gradOutput='gradOutput1'}})
     local apply = nn.Apply(2, 1, [[
-      {{output}} = {{input1}} + {{input2}};
+      {{output}} = {{input1}} * {{input2}};
     ]], [[
       {{gradInput1}} = {{gradOutput}};
       {{gradInput2}} = {{gradOutput}};
@@ -333,7 +333,7 @@ function fusion.generateKernels(x)
       local dat = fusible
       local mod = dat.module
       mod:updateExpressions(mod.numInputs, mod.numOutputs, fe, be)
---      print(mod.forwardKernel:getRenderedKernel())
+      print(mod.forwardKernel:getRenderedKernel())
 --      print(mod.backwardKernel:getRenderedKernel())
     end
   end)

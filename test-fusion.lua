@@ -823,11 +823,13 @@ function fusiontests.testApplyCharRnn()
 
   out.data.annotations.name = 'out'
 
-  x = nn.Fusible.fromNodes(n9)
+  if os.getenv('TESTS') ~= nil then graph.dot(out:graph(), '', 'nodesbefore') end
+  x = nn.Fusible.fromNodes(out)
+  if os.getenv('TESTS') ~= nil then x:dot('', 'xbeforeapply') end
 
   x:dot('', 'add')
   fusion.walkConvertToApply(x)
-  tester:asserteq(x:count(), 16)
+  tester:asserteq(x:count(), 17)
   tester:asserteq(x:walkValidate(), true)
   x:dot('', 'xold')
   tester:asserteq(x:walkValidate(), true)
@@ -863,7 +865,7 @@ function fusiontests.testApplyCharRnn()
   tester:asserteq(x:walkValidate(), true)
   x:printGraph()
   x:dot('', 'xnew')
-  tester:asserteq(x:count(), 8)
+  tester:asserteq(x:count(), 9)
 
   tester:asserteq(torch.type(x.module), 'nn.Identity')
 
