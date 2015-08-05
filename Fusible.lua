@@ -212,11 +212,11 @@ function fusibles.addDataLink(from, to, tableName)
   end  
 end
 
-function fusibles.nodeGetName(fusible)
+function Fusible.getName(fusible)
   return fusible.name
 end
 
-function fusibles.nodeSetName(fusible, name)
+function Fusible.setName(fusible, name)
   fusible.name = name
 end
 

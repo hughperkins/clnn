@@ -80,12 +80,12 @@ function fusiontests.testApplyConvertSigmoid()
   local x = nn.Identity()()
   local n1 = nn.Sigmoid()(x)
 
-  fusibles.walkAddParents(n1)
-  x = fusibles.invertGraph(n1)
-  fusibles.walkRemoveBidirectional(x)
+  x = nn.Fusible.fromNodes(n1)
+
   tester:asserteq(x:walkValidate(), true)
   fusion.walkConvertToApply(x)
   tester:asserteq(x:walkValidate(), true)
+  n1 = x:firstChild()
 
   tester:asserteq(torch.type(n1.module), 'nn.Apply')
   tester:asserteq(torch.type(x.module), 'nn.Identity')
@@ -155,11 +155,11 @@ function fusiontests.testOutputsTwoOutput()
   local n3 = nn.Tanh()(n1)
   local out = nn.Identity()({n2, n3})
 
-  fusibles.nodeSetName(x, 'x')
-  fusibles.nodeSetName(n1, 'n1')
-  fusibles.nodeSetName(n2, 'n2')
-  fusibles.nodeSetName(n3, 'n3')
-  fusibles.nodeSetName(out, 'out')
+  nn.Fusible.nodeSetName(x, 'x')
+  nn.Fusible.nodeSetName(n1, 'n1')
+  nn.Fusible.nodeSetName(n2, 'n2')
+  nn.Fusible.nodeSetName(n3, 'n3')
+  nn.Fusible.nodeSetName(out, 'out')
 
   fusibles.walkAddParents(out)
   fusibles.walkRemoveBidirectional(out)
@@ -184,10 +184,10 @@ function fusiontests.testFuseTanhSigmoid()
   local n2 = nn.Tanh()(n1)
   local out = nn.Identity()({n2})
 
-  fusibles.nodeSetName(x, 'x')
-  fusibles.nodeSetName(n1, 'n1')
-  fusibles.nodeSetName(n2, 'n2')
-  fusibles.nodeSetName(out, 'out')
+  nn.Fusible.nodeSetName(x, 'x')
+  nn.Fusible.nodeSetName(n1, 'n1')
+  nn.Fusible.nodeSetName(n2, 'n2')
+  nn.Fusible.nodeSetName(out, 'out')
 
   x = nn.Fusible.fromNodes(out)
 
@@ -237,10 +237,10 @@ function fusiontests.testFuseExpTanhSigmoid()
   local n2 = nn.Tanh()(n1)
   local n3 = nn.Exp()(n2)
 
-  fusibles.nodeSetName(x, 'x')
-  fusibles.nodeSetName(n1, 'n1')
-  fusibles.nodeSetName(n2, 'n2')
-  fusibles.nodeSetName(n3, 'n3')
+  nn.Fusible.nodeSetName(x, 'x')
+  nn.Fusible.nodeSetName(n1, 'n1')
+  nn.Fusible.nodeSetName(n2, 'n2')
+  nn.Fusible.nodeSetName(n3, 'n3')
 
   fusibles.walkAddParents(n3)
   fusibles.walkRemoveBidirectional(n3)
@@ -290,14 +290,11 @@ function fusiontests.testApplyConvertSigmoidAddTable()
   local n1 = nn.Sigmoid()(x)
   local n2 = nn.CAddTable()({n1, x})
 
-  fusibles.nodeSetName(x, 'x')
-  fusibles.nodeSetName(n1, 'n1')
-  fusibles.nodeSetName(n2, 'n2')
+  x.data.annotations.name = 'x'
+  n1.data.annotations.name = 'n1'
+  n2.data.annotations.name = 'n2'
 
-  fusibles.walkAddParents(n2)
-  fusibles.walkRemoveBidirectional(n2)
-  x = fusibles.invertGraph(n2)
-  fusibles.walkAddDataIds(x)
+  x = nn.Fusible.fromNodes(n2)
 
   fusion.walkConvertToApply(x)
   tester:asserteq(x:count(), 3)
@@ -308,7 +305,7 @@ function fusiontests.testApplyConvertSigmoidAddTable()
 
   tester:asserteq(torch.type(x.module), 'nn.Identity')
 
-  local fused = x.children[1]
+  local fused = x:firstChild()
   local fdat = fused
   tester:asserteq(fused.name, 'n2.n1')
   tester:asserteq(#fdat.feobj, 2)
@@ -342,11 +339,11 @@ function fusiontests.testApplyConvertMultiInputAdd()
   local n1 = nn.Tanh()(x1)
   local n2 = nn.CAddTable()({n1, x2})
 
-  fusibles.nodeSetName(x, 'x')
-  fusibles.nodeSetName(x1, 'x1')
-  fusibles.nodeSetName(x2, 'x2')
-  fusibles.nodeSetName(n1, 'n1')
-  fusibles.nodeSetName(n2, 'n2')
+  x.data.annotations.name = 'x'
+  x1.data.annotations.name = 'x1'
+  x2.data.annotations.name = 'x2'
+  n1.data.annotations.name = 'n1'
+  n2.data.annotations.name = 'n2'
 
   fusibles.walkAddParents(n2)
   x = fusibles.invertGraph(n2)
@@ -408,12 +405,12 @@ function fusiontests.testApplyConvertMultiInputAdd3()
   local n1 = nn.CMulTable()({x1, x2})
   local n2 = nn.CAddTable()({n1, x3})
 
-  fusibles.nodeSetName(x, 'x')
-  fusibles.nodeSetName(x1, 'x1')
-  fusibles.nodeSetName(x2, 'x2')
-  fusibles.nodeSetName(x3, 'x3')
-  fusibles.nodeSetName(n1, 'n1')
-  fusibles.nodeSetName(n2, 'n2')
+  x.data.annotations.name = 'x'
+  x1.data.annotations.name = 'x1'
+  x2.data.annotations.name = 'x2'
+  x3.data.annotations.name = 'x3'
+  n1.data.annotations.name = 'n1'
+  n2.data.annotations.name = 'n2'
 
   fusibles.walkAddParents(n2)
   x = fusibles.invertGraph(n2)
@@ -586,14 +583,14 @@ function fusiontests.testSigMulAdd()
   local n2 = nn.CMulTable()({x1, n1})
   local n3 = nn.CAddTable()({n2, x3})
 
-  fusibles.nodeSetName(x, 'x')
-  fusibles.nodeSetName(x1, 'x1')
-  fusibles.nodeSetName(x2, 'x2')
-  fusibles.nodeSetName(x3, 'x3')
+  nn.Fusible.nodeSetName(x, 'x')
+  nn.Fusible.nodeSetName(x1, 'x1')
+  nn.Fusible.nodeSetName(x2, 'x2')
+  nn.Fusible.nodeSetName(x3, 'x3')
 
-  fusibles.nodeSetName(n1, 'n1')
-  fusibles.nodeSetName(n2, 'n2')
-  fusibles.nodeSetName(n3, 'n3')
+  nn.Fusible.nodeSetName(n1, 'n1')
+  nn.Fusible.nodeSetName(n2, 'n2')
+  nn.Fusible.nodeSetName(n3, 'n3')
 
   fusibles.walkAddParents(n3)
   fusibles.dot(n3, '', 'testSigMulAddBeforeInvert')
@@ -672,15 +669,15 @@ function fusiontests.testInputOrderThreeWay()
   local n2 = nn.CAddTable()({x1, n1})
   local n3 = nn.CMulTable()({n2, x3})
 
-  fusibles.nodeSetName(x, 'x')
+  nn.Fusible.nodeSetName(x, 'x')
 
-  fusibles.nodeSetName(x1, 'x1')
-  fusibles.nodeSetName(x2, 'x2')
-  fusibles.nodeSetName(x3, 'x3')
+  nn.Fusible.nodeSetName(x1, 'x1')
+  nn.Fusible.nodeSetName(x2, 'x2')
+  nn.Fusible.nodeSetName(x3, 'x3')
 
-  fusibles.nodeSetName(n1, 'n1')
-  fusibles.nodeSetName(n2, 'n2')
-  fusibles.nodeSetName(n3, 'n3')
+  nn.Fusible.nodeSetName(n1, 'n1')
+  nn.Fusible.nodeSetName(n2, 'n2')
+  nn.Fusible.nodeSetName(n3, 'n3')
 
   fusibles.walkAddParents(n3)
   x = fusibles.invertGraph(n3)
@@ -735,12 +732,12 @@ function fusiontests.testClonedOutput()
   local n3 = nn.Sigmoid()(n1)
   local n4 = nn.CAddTable()({n2, n3})
 
-  fusibles.nodeSetName(x, 'x')
+  nn.Fusible.nodeSetName(x, 'x')
 
-  fusibles.nodeSetName(n1, 'n1')
-  fusibles.nodeSetName(n2, 'n2')
-  fusibles.nodeSetName(n3, 'n3')
-  fusibles.nodeSetName(n4, 'n4')
+  nn.Fusible.nodeSetName(n1, 'n1')
+  nn.Fusible.nodeSetName(n2, 'n2')
+  nn.Fusible.nodeSetName(n3, 'n3')
+  nn.Fusible.nodeSetName(n4, 'n4')
 
   fusibles.walkAddParents(n4)
   x = fusibles.invertGraph(n4)
@@ -802,22 +799,22 @@ function fusiontests.testApplyCharRnn()
   local n9 = nn.CMulTable()({n7, n8})
   local out = nn.Identity()({n6, n9})
 
-  fusibles.nodeSetName(x, 'x')
-  fusibles.nodeSetName(xpre, 'xpre')
-  fusibles.nodeSetName(x1, 'x1')
-  fusibles.nodeSetName(x2, 'x2')
-  fusibles.nodeSetName(x3, 'x3')
-  fusibles.nodeSetName(x4, 'x4')
-  fusibles.nodeSetName(n1, 'n1')
-  fusibles.nodeSetName(n2, 'n2')
-  fusibles.nodeSetName(n3, 'n3')
-  fusibles.nodeSetName(n4, 'n4')
-  fusibles.nodeSetName(n5, 'n5')
-  fusibles.nodeSetName(n6, 'n6')
-  fusibles.nodeSetName(n7, 'n7')
-  fusibles.nodeSetName(n8, 'n8')
-  fusibles.nodeSetName(n9, 'n9')
-  fusibles.nodeSetName(out, 'out')
+  nn.Fusible.nodeSetName(x, 'x')
+  nn.Fusible.nodeSetName(xpre, 'xpre')
+  nn.Fusible.nodeSetName(x1, 'x1')
+  nn.Fusible.nodeSetName(x2, 'x2')
+  nn.Fusible.nodeSetName(x3, 'x3')
+  nn.Fusible.nodeSetName(x4, 'x4')
+  nn.Fusible.nodeSetName(n1, 'n1')
+  nn.Fusible.nodeSetName(n2, 'n2')
+  nn.Fusible.nodeSetName(n3, 'n3')
+  nn.Fusible.nodeSetName(n4, 'n4')
+  nn.Fusible.nodeSetName(n5, 'n5')
+  nn.Fusible.nodeSetName(n6, 'n6')
+  nn.Fusible.nodeSetName(n7, 'n7')
+  nn.Fusible.nodeSetName(n8, 'n8')
+  nn.Fusible.nodeSetName(n9, 'n9')
+  nn.Fusible.nodeSetName(out, 'out')
 
   fusibles.walkAddParents(n9)
   x = fusibles.invertGraph(n9)
@@ -1122,7 +1119,7 @@ function fusiontests.forwardLSTMFused()
 
   x = fusibles.nnGraphToNgh(lstm)
   fusibles.walkApply(x, function(node)
-    fusibles.nodeSetName(node, 'node ' .. node.id)
+    nn.Fusible.nodeSetName(node, 'node ' .. node.id)
   end)
   x:printGraph()
   if os.getenv('TESTS') ~= nil then x:dot('', 'lstm1') end
