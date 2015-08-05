@@ -790,6 +790,55 @@ function fusiontests.testClonedOutput()
 --  fusion.generateKernels(x)
 end
 
+function fusiontests.testFusionFromAbove()
+  local x = nn.Identity()()
+  local xpre, n1, n5 = x:split(3)
+  local n4 = nn.CMulTable()({xpre, n1})
+  local n6 = nn.CAddTable()({n4, n5})
+  local n7 = nn.Tanh()(n6)
+  local out = nn.Identity()({n6, n7})
+
+  x.data.annotations.name = 'x'
+  xpre.data.annotations.name = 'xpre'
+  n4.data.annotations.name = 'n4'
+  n6.data.annotations.name = 'n6'
+  n7.data.annotations.name = 'n7'
+  out.data.annotations.name = 'out'
+
+  if os.getenv('TESTS') ~= nil then graph.dot(out:graph(), '', 'nodesbefore') end
+  x = nn.Fusible.fromNodes(out)
+  if os.getenv('TESTS') ~= nil then x:dot('', 'xbeforeapply') end
+
+  x:dot('', 'add')
+  fusion.walkConvertToApply(x)
+  tester:asserteq(x:count(), 9)
+  tester:asserteq(x:walkValidate(), true)
+  x:dot('', 'xold')
+  tester:asserteq(x:walkValidate(), true)
+  local xold = x:walkClone()
+  tester:asserteq(x:walkValidate(), true)
+  x:printGraph()
+  local it = 0
+  x:dot('', 'xit' .. it)
+  while fusion.doFuseIteration(x) do
+    it = it + 1
+    print('it ' .. it .. ' ======================')
+    tester:asserteq(x:walkValidate(), true)
+    x:dot('', 'xit' .. it)
+    x:printGraphWithLinks()
+    fusion.generateKernels(x)
+    if it >= 2 then
+--      os.exit(0)
+    end
+  end
+  tester:asserteq(x:walkValidate(), true)
+  x:printGraph()
+  x:dot('', 'xnew')
+  tester:asserteq(x:count(), 7)
+
+  tester:asserteq(torch.type(x.module), 'nn.Identity')
+end
+
 function fusiontests.testApplyCharRnn()
   local x = nn.Identity()()
   local xpre, x1, x2, x3, x4 = x:split(5)
@@ -845,10 +894,10 @@ function fusiontests.testApplyCharRnn()
     x:dot('', 'xit' .. it)
 --    fusion.generateKernels(x)
     x:printGraphWithLinks()
---    if it >= 8 then
---      os.exit(0)
---    end
---    fusion.generateKernels(x)
+    fusion.generateKernels(x)
+    if it >= 2 then
+      os.exit(0)
+    end
 --    x:walkApply(function(node)
 --      local dat = node
 --      if dat.feobj ~= nil then
