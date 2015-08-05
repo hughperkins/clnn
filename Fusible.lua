@@ -19,6 +19,12 @@ function Fusible:__tostring()
     res = res .. ' ' .. tostring(self.module)
   end
   res = res .. ' ' .. tostring(self.numInputs) .. ' -> ' .. tostring(self.numOutputs)
+  if self.nSplitOutputs ~= nil then
+    res = res .. ' nSplitOutputs=' .. self.nSplitOutputs
+  end
+  if self.selectindex ~= nil then
+    res = res .. ' selectindex=' .. self.selectindex
+  end
   return res
 end
 
@@ -122,6 +128,8 @@ function fusibles.walkFusiblesToNodes(fusible, seen)
   node.data.annotations.name = fusible.name
   node.id = fusible.id
   node.data.module = fusible.module
+  node.data.selectindex = fusible.selectindex
+  node.data.nSplitOutputs = fusible.nSplitOutputs
   seen[fusible] = node
   for i, output in ipairs(fusible.outputs) do
     childNode = fusibles.walkFusiblesToNodes(output.child, seen)
@@ -252,14 +260,6 @@ end
 
 function fusibles.nodeToString(fusible)
   return tostring(fusible)
---  local res = tostring(node.data.id)
---  if node.data.fusiblesnotations ~= nil and node.data.fusiblesnotations.name ~= nil then
---    res = res .. ' ' .. node.data.fusiblesnotations.name
---  end
---  if node.data.module ~= nil then
---    res = res .. ' ' .. tostring(node.data.module)
---  end
---  return res
 end
 
 --function fusibles.walkAddParents(node)
@@ -269,33 +269,6 @@ end
 --    fusibles.addLink(child.parents, node)
 --    fusibles.walkAddParents(child)
 --  end
---end
-
---function fusibles.walkRemoveBidirectional(node)
---  fusibles.walkApply(node, function(node)
---    node.data.mapindex = nil
---    for k,v in pairs(node.children) do
---      if torch.type(k) ~= 'number' then
---        node.children[k] = nil
---      end
---    end
---    for k,v in pairs(node.parents) do
---      if torch.type(k) ~= 'number' then
---        node.parents[k] = nil
---      end
---    end
---  end)
---end
-
---function fusibles.walkAddBidirectional(node)
---  fusibles.walkApply(node, function(node)
---    node.data.mapindex = {}
---    for i,v in ipairs(node.children) do
---      node.children[v] = i
---      node.data.mapindex[v.data] = i
---      node.data.mapindex[i] = v.data
---    end
---  end)
 --end
 
 function Fusible.fromNodes(node)
@@ -320,6 +293,9 @@ function Fusible.fromNodes(node)
         fusible.numInputs = fusible.module.numInputs
         fusible.numOutputs = fusible.module.numOutputs
       end
+      fusible.selectindex = node.data.selectindex
+      fusible.nSplitOutputs = node.data.nSplitOutputs
+      print('selectindex ', node.data.selectindex)
       fusible_by_node[node] = fusible
       table.insert(all_fusibles, fusible)
 --      fusible.id = #all_fusibles

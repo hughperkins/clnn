@@ -360,10 +360,10 @@ function fusiontests.testApplyConvertMultiInputAdd()
   tester:asserteq(x:walkValidate(), true)
 --  local xold = fusibles.walkClone(x)
 --  tester:asserteq(x:walkValidate(), true)
---  fusibles.printGraph(x)
+--  x:printGraph()
   fusion.doFuse(x)
   tester:asserteq(x:walkValidate(), true)
---  fusibles.printGraph(x)
+--  x:printGraph()
 --  x:dot('', 'xnew')
   tester:asserteq(x:count(), 5)
 
@@ -427,10 +427,10 @@ function fusiontests.testApplyConvertMultiInputAdd3()
   tester:asserteq(x:walkValidate(), true)
   local xold = fusibles.walkClone(x)
   tester:asserteq(x:walkValidate(), true)
---  fusibles.printGraph(x)
+--  x:printGraph()
   fusion.doFuse(x)
   tester:asserteq(x:walkValidate(), true)
---  fusibles.printGraph(x)
+--  x:printGraph()
   x:dot('', 'xnew')
   tester:asserteq(x:count(), 6)
 
@@ -486,34 +486,37 @@ function fusiontests.testAddTanhMul()
   fusibles.nodeSetName(n2, 'n2')
   fusibles.nodeSetName(n3, 'n3')
 
-  fusibles.walkAddParents(n3)
-  fusibles.dot(n3, '', 'testAddTanhMulBeforeInvert')
+  if os.getenv('TESTS') ~= nil then graph.dot(n3:graph(), '', 'n3g') end
 
-  x = fusibles.invertGraph(n3)
-  fusibles.walkRemoveBidirectional(x)
-  fusibles.walkAddDataIds(x)
+  x = nn.Fusible.fromNodes(n3)
+--  fusibles.walkAddParents(n3)
+--  fusibles.dot(n3, '', 'testAddTanhMulBeforeInvert')
 
-  x:dot('', 'testAddTanhMulBefore')
+--  x = fusibles.invertGraph(n3)
+--  fusibles.walkRemoveBidirectional(x)
+--  fusibles.walkAddDataIds(x)
+
+  if os.getenv('TESTS') ~= nil then x:dot('', 'testAddTanhMulBefore') end
   fusion.walkConvertToApply(x)
   tester:asserteq(x:count(), 8)
   tester:asserteq(x:walkValidate(), true)
-  fusibles.printGraph(x)
+  x:printGraph()
 
   local it = 0
   print('it ' .. it .. ' ===============')
-  fusibles.printGraphWithLinks(x)
+  x:printGraphWithLinks()
   while fusion.doFuseIteration(x) do
     it = it + 1
     print('it ' .. it .. ' ===============')
     tester:asserteq(x:walkValidate(), true)
-    fusibles.printGraphWithLinks(x)
+    x:printGraphWithLinks()
   end
 
 --  fusibles.printGraphWithLinks(x)
 
   tester:asserteq(x:walkValidate(), true)
-  fusibles.printGraph(x)
-  x:dot('', 'testAddTanhMulAfter')
+  x:printGraph()
+  if os.getenv('TESTS') ~= nil then x:dot('', 'testAddTanhMulAfter') end
   tester:asserteq(x:count(), 6)
 
   local fused = x.children[1].children[1].children[1]
@@ -585,7 +588,7 @@ function fusiontests.testSigMulAdd()
   fusion.walkConvertToApply(x)
   tester:asserteq(x:count(), 8)
   tester:asserteq(x:walkValidate(), true)
-  fusibles.printGraph(x)
+  x:printGraph()
 
   local it = 0
   print('it ' .. it .. ' ===============')
@@ -600,7 +603,7 @@ function fusiontests.testSigMulAdd()
 --  fusibles.printGraphWithLinks(x)
 
   tester:asserteq(x:walkValidate(), true)
-  fusibles.printGraph(x)
+  x:printGraph()
   x:dot('', 'testSigMulAddAfter')
   tester:asserteq(x:count(), 6)
 
@@ -674,7 +677,7 @@ function fusiontests.testInputOrderThreeWay()
   tester:asserteq(x:walkValidate(), true)
   local xold = fusibles.walkClone(x)
   tester:asserteq(x:walkValidate(), true)
-  fusibles.printGraph(x)
+  x:printGraph()
   local it = 0
   x:dot('', 'xit' .. it)
   while fusion.doFuseIteration(x) do
@@ -734,7 +737,7 @@ function fusiontests.testClonedOutput()
   tester:asserteq(x:walkValidate(), true)
   local xold = fusibles.walkClone(x)
   tester:asserteq(x:walkValidate(), true)
-  fusibles.printGraph(x)
+  x:printGraph()
   local it = 0
   if os.getenv('TESTS') ~= nil then x:dot('', 'xit' .. it) end
   while fusion.doFuseIteration(x) do
@@ -811,7 +814,7 @@ function fusiontests.testApplyCharRnn()
   tester:asserteq(x:walkValidate(), true)
   local xold = fusibles.walkClone(x)
   tester:asserteq(x:walkValidate(), true)
-  fusibles.printGraph(x)
+  x:printGraph()
   local it = 0
   x:dot('', 'xit' .. it)
   while fusion.doFuseIteration(x) do
@@ -839,7 +842,7 @@ function fusiontests.testApplyCharRnn()
   end
 --  fusion.doFuse(x)
   tester:asserteq(x:walkValidate(), true)
-  fusibles.printGraph(x)
+  x:printGraph()
   x:dot('', 'xnew')
   tester:asserteq(x:count(), 8)
 
@@ -1049,7 +1052,7 @@ function fusiontests.forwardLSTMNofuse()
   print('output', outputbefore)
 
   x = fusibles.nnGraphToNgh(lstm)
-  fusibles.printGraph(x)
+  x:printGraph()
   if os.getenv('TESTS') ~= nil then
     x:dot('', 'lstm1')
   end
@@ -1103,7 +1106,7 @@ function fusiontests.forwardLSTMFused()
   fusibles.walkApply(x, function(node)
     fusibles.nodeSetName(node, 'node ' .. node.id)
   end)
-  fusibles.printGraph(x)
+  x:printGraph()
   if os.getenv('TESTS') ~= nil then x:dot('', 'lstm1') end
 
   tester:asserteq(x:walkValidate(), true)
@@ -1152,7 +1155,7 @@ function fusiontests.testLSTM()
   lstm = LSTM.lstm(65, 128, 2, 0)
   graph.dot(lstm.fg, '', 'lstm.g')
   x = fusibles.nnGraphToNgh(lstm)
-  fusibles.printGraph(x)
+  x:printGraph()
   x:dot('', 'lstm1')
 
   tester:asserteq(x:walkValidate(), true)
