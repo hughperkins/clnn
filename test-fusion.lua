@@ -365,7 +365,7 @@ function fusiontests.testApplyConvertSigmoidAddTable()
   tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
   tester:asserteq(fdat.feobj[2].transforms.output1.outputIdx, 1)
 
-  fusion.generateKernels(x)
+--  fusion.generateKernels(x)
 end
 
 function fusiontests.testApplyConvertMultiInputAdd()
