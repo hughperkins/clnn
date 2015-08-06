@@ -132,15 +132,14 @@ function Fusible.fromNodes(node)
   -- that points to the appropriate datas
   -- and also inputs, which points to appropriate
   -- inputs
-  -- remember that in the incoming graph, the children are the inputs
   for _, node in ipairs(all_nodes) do
     local data = node.data
     local fusible = fusible_by_node[node]
     for i, child in ipairs(node.children) do
       local childfusible = fusible_by_node[child]
-      table.insert(fusible.inputs, childfusible)
-      local output = {child=fusible, outputIdx=#childfusible.outputs + 1, inputIdx=#fusible.inputs}
-      table.insert(childfusible.outputs, output)
+      table.insert(childfusible.inputs, fusible)
+      local output = {child=childfusible, outputIdx=#fusible.outputs + 1, inputIdx=#childfusible.inputs}
+      table.insert(fusible.outputs, output)
     end
   end
 
