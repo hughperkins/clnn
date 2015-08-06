@@ -62,18 +62,6 @@ function fusibles.walkFusiblesToNodes(fusible, seen)
   return node
 end
 
---function fusibles.walkNngraphNodesApply(node, func, visited)
---  visited = visited or {}
---  if visited[node] then
---    return
---  end
---  visited[node] = true
---  func(node)
---  for i, child in ipairs(node.children) do
---    fusibles.walkNngraphNodesApply(child, func, visited)
---  end
---end
-
 function Fusible.fromNodes(node)
   -- add parents
   -- invert
@@ -116,16 +104,6 @@ function Fusible.fromNodes(node)
     end
   end
 
-  for i, fusible in ipairs(all_fusibles) do
-    local selectstr = ''
-    if fusible.selectindex then selectstr = ' selectindex=' .. fusible.selectindex end
-    print('walk 2 i=', i, ' ', torch.type(fusible.module) .. selectstr)
-  end
-
---  for k, v in pairs(fusible_by_node) do
---    print('k', k, 'v', v)
---  end
-
   -- now, copy the links from nodes
   -- to fusibles
   -- first add outputs to each node.data
@@ -143,9 +121,6 @@ function Fusible.fromNodes(node)
     end
   end
 
---  local moduleType = torch.type(fusible.module)
---  for i=#all_fusibles, 1, -1 do
- --   local fusible = all_fusibles[i]
   for i, fusible in ipairs(all_fusibles) do
     fusible.numOutputs = 1
     fusible.numInputs = #fusible.inputs
@@ -157,8 +132,6 @@ function Fusible.fromNodes(node)
   node = nngraph.nodeGraphHelper.invert(node)
   nngraph.nodeGraphHelper.removeParents(node)  
 
---  fusibles.walkAddParents(node)
---  fusibles.walkRemoveBidirectional(node)
   local top = fusible_by_node[node]:getTop()
   top:walkAddDataIds()
   return top

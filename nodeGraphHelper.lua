@@ -4,10 +4,6 @@ nngraph.nodeGraphHelper = {}
 local ngh = nngraph.nodeGraphHelper
 
 function ngh.walkApply(node, func, seen)
-  if seen == nil then
-    print('')
-  end
-  print('ngh.walkApply node ', torch.type(node.data.module))
   seen = seen or {}
   if seen[node] then
     return
@@ -21,7 +17,6 @@ end
 
 function ngh.addParents(node)
   ngh.walkApply(node, function(node)
-    print('addParents node', torch.type(node.data.module))
     node.parents = node.parents or {}
     for i, child in ipairs(node.children) do
       child.parents = child.parents or {}

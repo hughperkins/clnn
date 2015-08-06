@@ -521,7 +521,7 @@ function fusiontests.testApplyConvertMultiInputAdd3()
   tester:asserteq(Fusible.getLinkPos(x2:firstChild().inputs, x2), 2)
   tester:asserteq(Fusible.getLinkPos(x3:firstChild().inputs, x3), 3)
 
-  fusion.generateKernels(x)
+--  fusion.generateKernels(x)
 end
 
 function fusiontests.testAddTanhMul()

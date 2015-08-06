@@ -309,6 +309,7 @@ function fusion.generateKernels(x)
 end
 
 function fusion.doFuse(x)
+  fusion.walkAssignVirtualIdx(x)
   while fusion.doFuseIteration(x) do
   end
 end
@@ -336,20 +337,10 @@ function fusion.doFuseIteration(x)
   local pmod = pdat.module
   local cmod = cdat.module
 
---  local p_inputs = pmod.numInputs
---  local c_inputs = cmod.numInputs
---  local p_outputs = pmod.numOutputs
---  local c_outputs = cmod.numOutputs
-
   parentIsWhichInput = nn.Fusible.getLinkPos(c.inputs, p)
 
   local pfo = pdat.feobj
   local cfo = cdat.feobj
-
-  -- for all child inputs which dont come from parent, and there will be exactly one from
-  -- parent, add them to parent inputs
-  local newNumInputs = pmod.numInputs + cmod.numInputs - 1  -- -1, because one came from parent
-  local newNumOutputs = pmod.numOutputs + cmod.numOutputs - 1  -- -1, because one came from parent
 
   local newVirtualsBase = pdat.numVirtualOutputs + cdat.numVirtualOutputs
   local newNumVirtualOutputs = pdat.numVirtualOutputs + cdat.numVirtualOutputs + pmod.numOutputs
