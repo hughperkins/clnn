@@ -243,7 +243,7 @@ function fusiontests.testFuseTanhSigmoid()
     end
   end
 
---  fusion.generateKernels(x)
+  fusion.generateKernels(x)
 end
 
 function fusiontests.testFuseExpTanhSigmoid()
@@ -315,19 +315,28 @@ function fusiontests.testApplyConvertSigmoidAddTable()
   local x = nn.Identity()()
   local n1 = nn.Sigmoid()(x)
   local n2 = nn.CAddTable()({n1, x})
+  local out = nn.Identity()({n2})
 
   x.data.annotations.name = 'x'
   n1.data.annotations.name = 'n1'
   n2.data.annotations.name = 'n2'
+  out.data.annotations.name = 'out'
 
-  x = nn.Fusible.fromNodes(n2)
+  if os.getenv('TESTS') ~= nil then graph.dot(out:graph(), '', 'out.graph') end
+  x = nn.Fusible.fromNodes(out)
+  if os.getenv('TESTS') ~= nil then x:printGraphWithLinks() end
 
   fusion.walkConvertToApply(x)
-  tester:asserteq(x:count(), 3)
+  fusion.walkAssignVirtualIdx(x)
+  if os.getenv('TESTS') ~= nil then x:printGraphWithLinks() end
+  tester:asserteq(x:count(), 4)
   tester:asserteq(x:walkValidate(), true)
+  if os.getenv('TESTS') ~= nil then x:dot('', 'xbefore') end
   fusion.doFuse(x)
+  if os.getenv('TESTS') ~= nil then x:printGraphWithLinks() end
+  if os.getenv('TESTS') ~= nil then x:dot('', 'xafter') end
   tester:asserteq(x:walkValidate(), true)
-  tester:asserteq(x:count(), 2)
+  tester:asserteq(x:count(), 3)
 
   tester:asserteq(torch.type(x.module), 'nn.Identity')
 
