@@ -320,9 +320,9 @@ function fusion.doFuseIteration(x)
   for i=1,#cfo do
     local thiscfo = cfo[i]
     for _, transform in pairs(thiscfo.transforms) do
-      if transform.src == 'virtualOutput' then
-        transform.idx = transform.idx + pdat.numVirtualOutputs
-        transform.idx = transform.idx + pdat.numVirtualOutputs
+      if transform.src == 'output' then
+        transform.virtualIdx = transform.virtualIdx + pdat.numVirtualOutputs
+--        transform.idx = transform.idx + pdat.numVirtualOutputs
       end
     end
   end
