@@ -22,6 +22,7 @@ if nn.gModule ~= nil then
   end
 end
 
+include 'nodeGraphHelper.lua'
 include 'Fusible.lua'
 include 'Apply.lua'
 

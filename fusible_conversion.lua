@@ -62,35 +62,42 @@ function fusibles.walkFusiblesToNodes(fusible, seen)
   return node
 end
 
-function fusibles.walkNngraphNodesApply(node, func, visited)
-  visited = visited or {}
-  if visited[node] then
-    return
-  end
-  visited[node] = true
-  func(node)
-  for i, child in ipairs(node.children) do
-    fusibles.walkNngraphNodesApply(child, func, visited)
-  end
-end
+--function fusibles.walkNngraphNodesApply(node, func, visited)
+--  visited = visited or {}
+--  if visited[node] then
+--    return
+--  end
+--  visited[node] = true
+--  func(node)
+--  for i, child in ipairs(node.children) do
+--    fusibles.walkNngraphNodesApply(child, func, visited)
+--  end
+--end
 
 function Fusible.fromNodes(node)
+  -- add parents
+  -- invert
+  -- convert
+  -- reinvert
+  -- remove parents
+  nngraph.nodeGraphHelper.addParents(node)
+  node = nngraph.nodeGraphHelper.invert(node)
+
   -- first it adds all nodes to a list, so 
   -- we can operate on each one on its own
   -- and then we convert each one
   local all_nodes = {}
-  fusibles.walkNngraphNodesApply(node, function(node)
-    print('fromNodes walk1 node', node.data.module)
+  nngraph.nodeGraphHelper.walkApply(node, function(node)
+    local selectstr = ''
+    if node.data.selectindex then selectstr = ' selectindex=' .. node.data.selectindex end
+    print('fromNodes walk1 node ', torch.type(node.data.module) .. selectstr)
     table.insert(all_nodes, node)
   end)
 
   -- first create fusibles for each node
   local all_fusibles = {}
   local fusible_by_node = {}
-  -- walk in reverse order
-  for i=#all_nodes, 1, -1 do
-    local node = all_nodes[i]
-  --for i, node in ipairs(all_nodes) do
+  for i, node in ipairs(all_nodes) do
     if fusible_by_node[node] == nil then
       local fusible = nn.Fusible()
       fusible.module = node.data.module
@@ -109,6 +116,12 @@ function Fusible.fromNodes(node)
     end
   end
 
+  for i, fusible in ipairs(all_fusibles) do
+    local selectstr = ''
+    if fusible.selectindex then selectstr = ' selectindex=' .. fusible.selectindex end
+    print('walk 2 i=', i, ' ', torch.type(fusible.module) .. selectstr)
+  end
+
 --  for k, v in pairs(fusible_by_node) do
 --    print('k', k, 'v', v)
 --  end
@@ -120,9 +133,7 @@ function Fusible.fromNodes(node)
   -- and also inputs, which points to appropriate
   -- inputs
   -- remember that in the incoming graph, the children are the inputs
-  for i=#all_nodes, 1, -1 do
-    local node = all_nodes[i]
---  for _, node in ipairs(all_nodes) do
+  for _, node in ipairs(all_nodes) do
     local data = node.data
     local fusible = fusible_by_node[node]
     for i, child in ipairs(node.children) do
@@ -134,6 +145,8 @@ function Fusible.fromNodes(node)
   end
 
 --  local moduleType = torch.type(fusible.module)
+--  for i=#all_fusibles, 1, -1 do
+ --   local fusible = all_fusibles[i]
   for i, fusible in ipairs(all_fusibles) do
     fusible.numOutputs = 1
     fusible.numInputs = #fusible.inputs
@@ -141,6 +154,9 @@ function Fusible.fromNodes(node)
       fusible.numInputs = 1
     end
   end
+
+  node = nngraph.nodeGraphHelper.invert(node)
+  nngraph.nodeGraphHelper.removeParents(node)  
 
 --  fusibles.walkAddParents(node)
 --  fusibles.walkRemoveBidirectional(node)

@@ -24,7 +24,7 @@ set(src init.cpp utils.c SpatialConvolutionMM.cpp SpatialMaxPooling.cpp )
 set(luasrc init.lua MSECriterion.lua Tanh.lua Pointwise.lua Threshold.lua
   LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua Apply.lua gApply.lua
   fusion.lua graphHelper.lua Fusible.lua fusible_walk.lua fusible_surgery.lua
-  fusible_conversion.lua
+  fusible_conversion.lua nodeGraphHelper.lua
   Narrow.lua CMulTable.lua test.lua)
 ADD_TORCH_PACKAGE(clnn "${src}" "${luasrc}" )
 

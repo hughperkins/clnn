@@ -370,7 +370,7 @@ function fusiontests.testApplyConvertSigmoidAddTable()
   tester:asserteq(fdat.feobj[2].transforms.output1.outputIdx, 1)
   tester:asserteq(fdat.feobj[2].transforms.output1.virtualIdx, 2)
 
---  fusion.generateKernels(x)
+  fusion.generateKernels(x)
 end
 
 function fusiontests.testApplyConvertMultiInputAdd()
@@ -378,18 +378,23 @@ function fusiontests.testApplyConvertMultiInputAdd()
   local x1, x2 = x:split(2)
   local n1 = nn.Tanh()(x1)
   local n2 = nn.CAddTable()({n1, x2})
+  local out = nn.Identity()({n2})
 
   x.data.annotations.name = 'x'
   x1.data.annotations.name = 'x1'
   x2.data.annotations.name = 'x2'
   n1.data.annotations.name = 'n1'
   n2.data.annotations.name = 'n2'
+  out.data.annotations.name = 'out'
 
-  x = nn.Fusible.fromNodes(n2)
+  if os.getenv('TESTS') ~= nil then graph.dot(out:graph(), '', 'out.graph') end
+  x = nn.Fusible.fromNodes(out)
+  if os.getenv('TESTS') ~= nil then x:dot('', 'xbefore') end
   x1 = x:firstChild():firstChild()
   x2 = x:firstChild().outputs[2].child
   n1 = x1:firstChild()
   n2 = n1:firstChild()
+  out = n2:firstChild()
 
   fusion.walkConvertToApply(x)
 --  x:dot('', 'add')
@@ -401,6 +406,7 @@ function fusiontests.testApplyConvertMultiInputAdd()
 --  tester:asserteq(x:walkValidate(), true)
 --  x:printGraph()
   fusion.doFuse(x)
+  if os.getenv('TESTS') ~= nil then x:dot('', 'xafter') end
   tester:asserteq(x:walkValidate(), true)
 --  x:printGraph()
 --  x:dot('', 'xnew')
