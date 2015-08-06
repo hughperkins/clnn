@@ -43,157 +43,68 @@ end
 --  end
 --end
 
+function fusion._createApply(params)
+  local fusible = params.fusible
+  local moduletype = params.moduletype
+  local forwardExpression = params.forwardExpression
+  local backwardExpression = params.backwardExpression
+  local numInputs = params.numInputs or 1
+  local numOutputs = params.numOutputs or 1
+
+  if fusible.name == nil or fusible.name == '' then
+    fusible.name = moduletype
+  end
+  fusible.feobj = {}
+  fusible.beobj = {}
+  local apply = nn.Apply(numInputs, numOutputs, '', '', moduletype)
+  local transforms = {}
+  for i=1, numInputs do
+    transforms['input' .. i] = {src='input', idx=i}
+  end
+  for i=1, numOutputs do
+    transforms['output' .. i] = {src='output', idx=i, virtualIdx=i}
+  end
+  table.insert(fusible.feobj, {template=forwardExpression, backward=backwardExpression,
+    transforms=transforms})
+  fusible.module = apply
+  fusible.numInputs = numInputs
+  fusible.numOutputs = numOutputs
+  fusible.numVirtualOutputs = numOutputs
+end
+
 function fusion.convertToApply(fusible)
   local moduletype = torch.type(fusible.module)
   if moduletype == 'nn.Tanh' then
-    local dat = fusible
-    if fusible.name == nil or fusible.name == '' then
-      dat.name = moduletype
-    end
-    dat.numVirtualOutputs = 0
-    dat.feobj = {}
-    dat.beobj = {}
-    table.insert(dat.feobj, {template='{{output1}} = tanh({{input1}});',
-      transforms={input1={src='input',idx=1}, output1={src='output',idx=1}},
-      backward='{{gradInput1}} = {{gradOutput1}} * (1 - {{output1}} * {{output1}});'})
-    table.insert(dat.beobj, {template='{{gradInput1}} = {{gradOutput1}} * (1 - {{output1}} * {{output1}});',
-      transforms={gradInput1='gradInput', gradOutput1='gradOutput', output1='output'}})
-    local apply = nn.Apply(1, 1, [[
-      {{output}} = tanh({{input}});
-    ]], [[
-      {{gradInput}} = {{gradOutput}} * (1 - {{output}} * {{output}});
-    ]], moduletype)
-    fusible.module = apply
---    fusion.initClonedOutputs(fusible)
+    fusion._createApply({fusible=fusible, moduletype=moduletype, 
+      forwardExpression='{{output1}} = tanh({{input1}});', 
+      backwardExpression='{{gradInput1}} = {{gradOutput1}} * (1 - {{output1}} * {{output1}});',
+      numInputs=1, numOutputs=1})
   elseif moduletype == 'nn.Sigmoid' then
-    local dat = fusible
-    if fusible.name == nil or fusible.name == '' then
-      dat.name = moduletype
-    end
-    dat.numVirtualOutputs = 0
-    dat.feobj = {}
-    dat.beobj = {}
-    table.insert(dat.feobj, {template='{{output1}} = 1.f / (1.f + exp( - {{input1}}));',
-      transforms={input1={src='input', idx=1}, output1={src='output', idx=1}},
-      backward='{{gradInput1}} = {{gradOutput1}} * {{output1}} * (1.f - {{output1}});'})
-    table.insert(dat.beobj, {template='{{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});',
-      transforms={gradInput='gradInput', gradOutput='gradOutput', output='output'}})
-    local apply = nn.Apply(1, 1, [[
-      {{output}} =  1.f / (1.f + exp( - {{input}}));
-    ]], [[
-      {{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});
-    ]], moduletype)
-    fusible.module = apply
---    fusion.initClonedOutputs(fusible)
+    fusion._createApply({fusible=fusible, moduletype=moduletype, 
+      forwardExpression='{{output1}} = 1.f / (1.f + exp( - {{input1}}));', 
+      backwardExpression='{{gradInput1}} = {{gradOutput1}} * {{output1}} * (1.f - {{output1}});',
+      numInputs=1, numOutputs=1})
   elseif moduletype == 'nn.Exp' then
-    local dat = fusible
-    if fusible.name == nil or fusible.name == '' then
-      dat.name = moduletype
-    end
-    dat.numVirtualOutputs = 0
-    dat.feobj = {}
-    dat.beobj = {}
-    table.insert(dat.feobj, {template='{{output1}} = exp({{input1}});',
-      transforms={input1={src='input', idx=1}, output1={src='output', idx=1}},
-      backward='{{gradInput1}} = {{gradOutput1}} * {{output1}};'})
-    table.insert(dat.beobj, {template='{{gradInput1}} = {{gradOutput1}} * {{output1}};',
-      transforms={gradInput1='gradInput1', gradOutput1='gradOutput1', output1='output1'}})
-    local apply = nn.Apply(1, 1, [[
-      {{output}} =  exp({{input}});
-    ]], [[
-      {{gradInput}} = {{gradOutput}} * {{output}};
-    ]], moduletype)
-    fusible.module = apply
---    fusion.initClonedOutputs(fusible)
+    fusion._createApply({fusible=fusible, moduletype=moduletype, 
+      forwardExpression='{{output1}} = exp({{input1}});', 
+      backwardExpression='{{gradInput1}} = {{gradOutput1}} * {{output1}};',
+      numInputs=1, numOutputs=1})
   elseif moduletype == 'nn.Abs' then
-    local dat = fusible
-    if fusible.name == nil or fusible.name == '' then
-      dat.name = moduletype
-    end
-    dat.numVirtualOutputs = 0
-    dat.feobj = {}
-    dat.beobj = {}
-    table.insert(dat.feobj, {template='{{output1}} = fabs({{input1}});',
-      transforms={input={src='input', idx=1}, output1={src='output', idx=1}},
-      backward='{{gradInput1}} = {{input1}} < 0 ? - {{gradOutput1}} : {{gradOutput1}};'})
-    table.insert(dat.beobj, {template='{{gradInput1}} = {{input1}} < 0 ? - {{gradOutput1}} : {{gradOutput1}};',
-      transforms={gradInput1='gradInput1', gradOutput1='gradOutput1', input1='input1'}})
-    local apply = nn.Apply(1, 1, [[
-      {{output}} =  fabs({{input}});
-    ]], [[
-      {{gradInput}} = {{input}} < 0 ? - {{gradOutput}} : {{gradOutput}};
-    ]], moduletype)
-    fusible.module = apply
---    fusion.initClonedOutputs(fusible)
+    fusion._createApply({fusible=fusible, moduletype=moduletype, 
+      forwardExpression='{{output1}} = fabs({{input1}});', 
+      backwardExpression='{{gradInput1}} = {{input1}} < 0 ? - {{gradOutput1}} : {{gradOutput1}};',
+      numInputs=1, numOutputs=1})
   elseif moduletype == 'nn.CAddTable' then
-    local dat = fusible
-    if fusible.name == nil or fusible.name == '' then
-      dat.name = moduletype
-    end
-    dat.numVirtualOutputs = 0
-    dat.feobj = {}
-    dat.beobj = {}
-    table.insert(dat.feobj, {template='{{output1}} = {{input1}} + {{input2}};',
-      transforms={input1={src='input', idx=1}, input2={src='input', idx=2}, output1={src='output', idx=1}},
-      backward='{{gradInput1}} = {{gradOutput1}}; {{gradInput2}} = {{gradOutput1}};'})
-    table.insert(dat.beobj, {template=
-[[{{gradInput1}} = {{gradOutput}};
-{{gradInput2}} = {{gradOutput}};]],
-      transforms={gradInput1='gradInput1', gradInput2='gradInput2', gradOutput1='gradOutput1'}})
-    local apply = nn.Apply(2, 1, [[
-      {{output}} = {{input1}} + {{input2}};
-    ]], [[
-      {{gradInput1}} = {{gradOutput}};
-      {{gradInput2}} = {{gradOutput}};
-    ]], moduletype)
-    fusible.module = apply
---    fusion.initClonedOutputs(fusible)
+    fusion._createApply({fusible=fusible, moduletype=moduletype, 
+      forwardExpression='{{output1}} = {{input1}} + {{input2}};', 
+      backwardExpression='{{gradInput1}} = {{gradOutput1}}; {{gradInput2}} = {{gradOutput1}};',
+      numInputs=2, numOutputs=1})
   elseif moduletype == 'nn.CMulTable' then
-    local dat = fusible
-    if fusible.name == nil or fusible.name == '' then
-      dat.name = moduletype
-    end
-    dat.numVirtualOutputs = 0
-    dat.feobj = {}
-    dat.beobj = {}
-    table.insert(dat.feobj, {template='{{output1}} = {{input1}} * {{input2}};',
-      transforms={input1={src='input', idx=1}, input2={src='input', idx=2}, output1={src='output', idx=1}},
-      backward='{{gradInput1}} = {{gradOutput1}}; {{gradInput2}} = {{gradOutput1}};'})
-    table.insert(dat.beobj, {template=
-[[{{gradInput1}} = {{gradOutput1}};
-{{gradInput2}} = {{gradOutput}};]],
-      transforms={gradInput1='gradInput1', gradInput2='gradInput2', gradOutput='gradOutput1'}})
-    local apply = nn.Apply(2, 1, [[
-      {{output}} = {{input1}} * {{input2}};
-    ]], [[
-      {{gradInput1}} = {{gradOutput}};
-      {{gradInput2}} = {{gradOutput}};
-    ]], moduletype)
-    fusible.module = apply
---    fusion.initClonedOutputs(fusible)
+    fusion._createApply({fusible=fusible, moduletype=moduletype, 
+      forwardExpression='{{output1}} = {{input1}} * {{input2}};', 
+      backwardExpression='{{gradInput1}} = {{gradOutput1}}; {{gradInput2}} = {{gradOutput1}};',
+      numInputs=2, numOutputs=1})
   elseif false and moduletype == 'nil' then
-    local dat = fusible
-    if fusible.name == nil or fusible.name == '' then
-      dat.name = moduletype
-    end
-    dat.numVirtualOutputs = 0
-    dat.feobj = {}
-    dat.beobj = {}
-    table.insert(dat.feobj, {template='{{output1}} = {{input1}};',
-      transforms={input1={src='input', idx=1}, output1={src='output', idx=1}},
-      backward='{{gradInput1}} = {{gradOutput1}};'})
-    table.insert(dat.beobj, {template=
-[[{{gradInput1}} = {{gradOutput1}};
-{{gradInput2}} = {{gradOutput}};]],
-      transforms={gradInput1='gradInput1', gradInput2='gradInput2', gradOutput='gradOutput1'}})
-    local apply = nn.Apply(1, 1, [[
-      {{output}} = {{input1}} + {{input2}};
-    ]], [[
-      {{gradInput1}} = {{gradOutput}};
-      {{gradInput2}} = {{gradOutput}};
-    ]], moduletype)
-    fusible.module = apply
---    fusion.initClonedOutputs(fusible)
   end
 end
 
@@ -247,9 +158,9 @@ function fusion.expandTemplate(dat, feo, templateName, passName)
         elseif value.src == 'output' then
           -- create virtualoutput, in case other operations need it, and also write
           -- to output
-          local virtualOutputIdx = dat.numVirtualOutputs + value.idx
-          local fe1 = fe:gsub('{{' .. target .. '}}', 'float virtualOutput' .. virtualOutputIdx)
-          local fe2 = value.src .. value.idx .. '_data[n] = virtualOutput' .. virtualOutputIdx .. ';'
+--          local virtualOutputIdx = dat.numVirtualOutputs + value.idx
+          local fe1 = fe:gsub('{{' .. target .. '}}', 'float virtualOutput' .. value.virtualIdx)
+          local fe2 = value.src .. value.idx .. '_data[n] = virtualOutput' .. value.virtualIdx .. ';'
           fe = fe1 .. '\n' .. fe2
         else
           error('Unknown src ' .. value.src)
@@ -266,8 +177,8 @@ function fusion.expandTemplate(dat, feo, templateName, passName)
           end
         elseif value.src == 'output' then
           -- convert to virtualOutput
-          local virtualOutputIdx = dat.numVirtualOutputs + value.idx
-          fe = fe:gsub('{{' .. target .. '}}', 'float virtualOutput' .. virtualOutputIdx)
+--          local virtualOutputIdx = dat.numVirtualOutputs + value.idx
+          fe = fe:gsub('{{' .. target .. '}}', 'float virtualOutput' .. value.virtualIdx)
         else
           error('Unknown src ' .. value.src)
         end
@@ -283,8 +194,8 @@ function fusion.expandTemplate(dat, feo, templateName, passName)
       if value.src == 'input' then
         fe = fe:gsub('{{' .. target:gsub('input', 'gradInput') .. '}}', 'gradInput' .. value.idx .. '_data[n]')
       elseif value.src == 'output' then
-        local virtualOutputIdx = dat.numVirtualOutputs + value.idx
-        fe = fe:gsub('{{' .. target .. '}}', 'virtualOutput' .. virtualOutputIdx)
+--        local virtualOutputIdx = dat.numVirtualOutputs + value.idx
+        fe = fe:gsub('{{' .. target .. '}}', 'virtualOutput' .. value.virtualIdx)
 --        fe = fe:gsub(target:gsub('output', 'gradOutput'), 'gradOutput' .. value.idx)
       elseif value.src == 'virtualOutput' then
         if target:find('input') ~= nil then
@@ -411,6 +322,7 @@ function fusion.doFuseIteration(x)
     for _, transform in pairs(thiscfo.transforms) do
       if transform.src == 'virtualOutput' then
         transform.idx = transform.idx + pdat.numVirtualOutputs
+        transform.idx = transform.idx + pdat.numVirtualOutputs
       end
     end
   end
@@ -420,7 +332,7 @@ function fusion.doFuseIteration(x)
     for _, transform in pairs(thispfo.transforms) do
       if transform.src == 'output' and transform.idx == childIndexInParent then
         transform.src = 'virtualOutput'
-        transform.idx = virtualOutputBase + 1
+--        transform.idx = virtualOutputBase + 1
       end
     end
     print('this pfo', thispfo)
@@ -434,11 +346,11 @@ function fusion.doFuseIteration(x)
     for _, transform in pairs(thiscfo.transforms) do
       if transform.src == 'input' and transform.idx == parentIndexInChild then
         transform.src = 'virtualOutput'
-        transform.idx = virtualOutputBase + 1
+--        transform.idx = virtualOutputBase + 1
       end
       if transform.src == 'input' and transform.idx ~= parentIndexInChild then
         if transform.idx > parentIndexInChild then
-          transform.idx = transform.idx + pmod.numInputs - 1
+--          transform.idx = transform.idx + pmod.numInputs - 1
         else
           bumpParentInputsAmount = bumpParentInputsAmount + 1
         end
@@ -450,7 +362,7 @@ function fusion.doFuseIteration(x)
     local thispfo = pfo[i]
     for _, transform in pairs(thispfo.transforms) do
       if transform.src == 'input' then
-        transform.idx = transform.idx + bumpParentInputsAmount
+--        transform.idx = transform.idx + bumpParentInputsAmount
       end
     end
   end
