@@ -59,10 +59,10 @@ function fusion._createApply(params)
   local apply = nn.Apply(numInputs, numOutputs, '', '', moduletype)
   local transforms = {}
   for i=1, numInputs do
-    transforms['input' .. i] = {src='input', idx=i}
+    transforms['input' .. i] = {src='input', inputIdx=i}
   end
   for i=1, numOutputs do
-    transforms['output' .. i] = {src='output', idx=i, virtualIdx=i}
+    transforms['output' .. i] = {src='output', outputIdx=i, virtualIdx=i}
   end
   table.insert(fusible.feobj, {template=forwardExpression, backward=backwardExpression,
     transforms=transforms})
@@ -114,6 +114,43 @@ function fusion.walkConvertToApply(fusibles)
   end)
 end
 
+-- assumes nothing has been fused yet, no existing
+-- virtual idxes, everything is either an input or output,
+-- for now
+-- if there were virtual idxes already, I suppose we could
+-- first walk over them, and start virtualidx numbering higher
+-- than them
+function fusion.walkAssignVirtualIdx(fusibles)
+  local virtualIdx = 1
+  nn.Fusible.walkApply(fusibles, function(fusible)
+    if not fusion.isNodeApply(fusible) then
+      return
+    end
+    print('fusible', fusible)
+    local transformByOutputIdx = {}
+    for k, transform in pairs(fusible.feobj[1].transforms) do
+      if transform.outputIdx ~= nil then
+        transformByOutputIdx[transform.outputIdx] = transform
+        print('transform.outputIdx', transform.outputIdx)
+      end
+    end
+    for i, output in ipairs(fusible.outputs) do
+      print('output.outputIdx', output.outputIdx)
+      local transform = transformByOutputIdx[output.outputIdx]
+      transform.virtualIdx = virtualIdx
+      if fusion.isNodeApply(output.child) then
+        local cfo = nil
+        for ck, ctrans in pairs(output.child.feobj[1].transforms) do
+          if ctrans.inputIdx == output.inputIdx then
+            ctrans.virtualIdx = virtualIdx
+          end
+        end
+      end
+      virtualIdx = virtualIdx + 1
+    end
+  end)
+end
+
 function fusion.reverseWalkConvertToApply(x)
   nn.Fusible.reverseWalkApply(x, function(fusible)
     fusion.convertToApply(fusible)
@@ -148,30 +185,39 @@ function fusion.expandTemplate(dat, feo, templateName, passName)
       if passName == 'forward' then
         -- === updateOutput forward section ====================
         if value.src == 'input' then
-          fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
-        elseif value.src == 'virtualOutput' then
-          if target:find('output') ~= nil then
-            fe = fe:gsub('{{' .. target .. '}}', 'float ' .. value.src .. value.idx)
+          if value.inputIdx ~= nil then
+            fe = fe:gsub('{{' .. target .. '}}', value.src .. value.inputIdx .. '_data[n]')
           else
-            fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
+            fe = fe:gsub('{{' .. target .. '}}', 'virtualOutput' .. value.virtualIdx)
           end
-        elseif value.src == 'output' then
+--        elseif value.src == 'virtualInput' then
+----          if target:find('output') ~= nil then
+----            fe = fe:gsub('{{' .. target .. '}}', 'float ' .. value.src .. value.idx)
+----          else
+--            fe = fe:gsub('{{' .. target .. '}}', value.src .. value.virtualIdx)
+----          end
+        else
+--        elseif value.src == 'output' then
           -- create virtualoutput, in case other operations need it, and also write
           -- to output
 --          local virtualOutputIdx = dat.numVirtualOutputs + value.idx
-          local fe1 = fe:gsub('{{' .. target .. '}}', 'float virtualOutput' .. value.virtualIdx)
-          local fe2 = value.src .. value.idx .. '_data[n] = virtualOutput' .. value.virtualIdx .. ';'
-          fe = fe1 .. '\n' .. fe2
-        else
-          error('Unknown src ' .. value.src)
+          fe = fe:gsub('{{' .. target .. '}}', 'float virtualOutput' .. value.virtualIdx)
+          if value.outputIdx ~= nil then
+            local fe2 = value.src .. value.outputIdx .. '_data[n] = virtualOutput' .. value.virtualIdx .. ';'
+            fe = fe .. '\n' .. fe2
+          end
+--        else
+--          error('Unknown src ' .. value.src)
         end
-      elseif passName == 'backward' then
+      elseif false and passName == 'backward' then
         -- === updateGradInput, forward section ====================
         if value.src == 'input' then
-          fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx .. '_data[n]')
+          fe = fe:gsub('{{' .. target .. '}}', value.src .. value.inputIdx .. '_data[n]')
+        elseif value.src == 'virtualInput' then
+          fe = fe:gsub('{{' .. target .. '}}', 'float virtualOutput' .. value.virtualIdx)
         elseif value.src == 'virtualOutput' then
           if target:find('output') ~= nil then
-            fe = fe:gsub('{{' .. target .. '}}', 'float ' .. value.src .. value.idx)
+            fe = fe:gsub('{{' .. target .. '}}', 'float ' .. value.src .. value.virtualIdx)
           else
             fe = fe:gsub('{{' .. target .. '}}', value.src .. value.idx)
           end
@@ -188,11 +234,13 @@ function fusion.expandTemplate(dat, feo, templateName, passName)
   --        fe = fe:gsub('{{' .. target:gsub('output', 'gradOutput') .. '}}', declaration .. value.src:gsub('output', 'gradOutput') .. value.idx)
   --      end
       end
-    elseif templateName == 'backward' then
+    elseif false and templateName == 'backward' then
       -- === updateGradInput, backward section ====================
 --      print('  target=' .. target .. ' value.src=' .. value.src .. ' value.idx=' .. value.idx)
       if value.src == 'input' then
-        fe = fe:gsub('{{' .. target:gsub('input', 'gradInput') .. '}}', 'gradInput' .. value.idx .. '_data[n]')
+        fe = fe:gsub('{{' .. target:gsub('input', 'gradInput') .. '}}', 'gradInput' .. value.inputIdx .. '_data[n]')
+      elseif value.src == 'virtualInput' then
+        fe = fe:gsub('{{' .. target .. '}}', 'virtualOutput' .. value.virtualIdx)
       elseif value.src == 'output' then
 --        local virtualOutputIdx = dat.numVirtualOutputs + value.idx
         fe = fe:gsub('{{' .. target .. '}}', 'virtualOutput' .. value.virtualIdx)
@@ -219,7 +267,7 @@ function fusion.expandTemplate(dat, feo, templateName, passName)
       end
       print('    ->' .. fe)
     else
-      error('Unknown template name %s', templateName)
+      -- error('Unknown template name %s', templateName)
     end
   end
   print('  fe', fe)
@@ -252,6 +300,7 @@ function fusion.generateKernels(x)
 --      print('be', be)
       local dat = fusible
       local mod = dat.module
+      be = ''
       mod:updateExpressions(mod.numInputs, mod.numOutputs, fe, be)
       print(mod.forwardKernel:getRenderedKernel())
 --      print(mod.backwardKernel:getRenderedKernel())
@@ -287,10 +336,10 @@ function fusion.doFuseIteration(x)
   local pmod = pdat.module
   local cmod = cdat.module
 
-  local p_inputs = pmod.numInputs
-  local c_inputs = cmod.numInputs
-  local p_outputs = pmod.numOutputs
-  local c_outputs = cmod.numOutputs
+--  local p_inputs = pmod.numInputs
+--  local c_inputs = cmod.numInputs
+--  local p_outputs = pmod.numOutputs
+--  local c_outputs = cmod.numOutputs
 
   parentIsWhichInput = nn.Fusible.getLinkPos(c.inputs, p)
 
@@ -302,7 +351,7 @@ function fusion.doFuseIteration(x)
   local newNumInputs = pmod.numInputs + cmod.numInputs - 1  -- -1, because one came from parent
   local newNumOutputs = pmod.numOutputs + cmod.numOutputs - 1  -- -1, because one came from parent
 
-  local virtualOutputBase = pdat.numVirtualOutputs + cdat.numVirtualOutputs
+  local newVirtualsBase = pdat.numVirtualOutputs + cdat.numVirtualOutputs
   local newNumVirtualOutputs = pdat.numVirtualOutputs + cdat.numVirtualOutputs + pmod.numOutputs
 
   -- actions on merge:
@@ -314,70 +363,108 @@ function fusion.doFuseIteration(x)
   local childIndexInParent = getChildIndexInParent(p, c)
   local parentIndexInChild = nn.Fusible.getLinkPos(c.inputs, p)
   print('link pos childinparent=' .. childIndexInParent .. ' parentinchild=' .. parentIndexInChild)
-  local fusedfos = {}
 
-  -- renumber virtualOutputs of child
-  for i=1,#cfo do
-    local thiscfo = cfo[i]
-    for _, transform in pairs(thiscfo.transforms) do
-      if transform.src == 'output' then
-        transform.virtualIdx = transform.virtualIdx + pdat.numVirtualOutputs
---        transform.idx = transform.idx + pdat.numVirtualOutputs
+  -- renumber virtualIdxs of child
+--  for i=1,#cfo do
+--    local thiscfo = cfo[i]
+--    for _, transform in pairs(thiscfo.transforms) do
+--      if transform.virtualIdx ~= nil then
+--        transform.virtualIdx = transform.virtualIdx + pdat.numVirtualOutputs
+--      end
+--    end
+--  end
+--   outputs from parent that go to child become virtual
+  -- input to child too
+  -- should have same virtual number
+--  local numVirtualizedLinks = 0  -- this will increment by one each time we hit one link
+  
+
+--  -- links from parent to child become virtuals
+  local ptransByOutputIdx = {}
+  for i, pfo in ipairs(p.feobj) do
+    for k, ptrans in pairs(pfo.transforms) do
+      if ptrans.outputIdx ~= nil then
+        ptransByOutputIdx[ptrans.outputIdx] = ptrans
       end
     end
   end
-  -- output from parent to child becomes virtualoutput
-  for i=1,#pfo do
-    local thispfo = pfo[i]
-    for _, transform in pairs(thispfo.transforms) do
-      if transform.src == 'output' and transform.idx == childIndexInParent then
-        transform.src = 'virtualOutput'
---        transform.idx = virtualOutputBase + 1
+  local ctransByInputIdx = {}
+  for i, cfo in ipairs(c.feobj) do
+    for k, ctrans in pairs(cfo.transforms) do
+      if ctrans.inputIdx ~= nil then
+        ctransByInputIdx[ctrans.inputIdx] = ctrans
       end
     end
-    print('this pfo', thispfo)
+  end
+  for i, output in ipairs(p.outputs) do
+    if output.child == c then
+      local ptrans = ptransByOutputIdx[output.outputIdx]
+      ptrans.outputIdx = nil
+      local ctrans = ctransByInputIdx[output.inputIdx]
+      ctrans.inputIdx = nil
+    end
+  end
+
+--  for i=1,#pfo do
+--    local thispfo = pfo[i]
+--    for _, transform in pairs(thispfo.transforms) do
+--      if transform.src == 'output' and transform.outputIdx == childIndexInParent then
+--        transform.outputIdx = nil
+--      end
+--    end
+--    print('this pfo', thispfo)
+--  end
+--  local bumpParentInputsAmount = 0  -- increment this for each child input that is left of parent link
+--  -- renumber inputs for child and parent, to preserve original relative order and not clobber each other
+--  -- child input from parent becomes virtualoutput
+--  for i=1,#cfo do
+--    local thiscfo = cfo[i]
+--    for _, transform in pairs(thiscfo.transforms) do
+--      if transform.src == 'input' and transform.inputIdx == parentIndexInChild then
+--        transform.inputIdx = nil
+----        transform.src = 'virtualInput'
+--        transform.virtualIdx = newVirtualsBase + 1
+----        transform.idx = virtualOutputBase + 1
+--      end
+--      if transform.src == 'input' and transform.inputIdx ~= nil and transform.inputIdx ~= parentIndexInChild then
+--        if transform.inputIdx > parentIndexInChild then
+----          transform.idx = transform.idx + pmod.numInputs - 1
+--        else
+--          bumpParentInputsAmount = bumpParentInputsAmount + 1
+--        end
+--      end
+--    end
+--  end
+--  for i=1,#pfo do
+--    local thispfo = pfo[i]
+--    for _, transform in pairs(thispfo.transforms) do
+--      if transform.src == 'input' and transform.inputIdx ~= nil then
+--        transform.inputIdx = transform.inputIdx + bumpParentInputsAmount
+--      end
+--    end
+--  end
+--  -- move outputs from child to parent, merging any duplicates
+--  local parentOuts = {} -- set of parent output fusibles, for quick lookup
+--  for j, parentOut in ipairs(pdat.outputs) do
+--    parentOuts[parentOut.child] = j
+--  end
+--  for i, childOut in ipairs(cdat.outputs) do
+--    if parentOuts[childOut.child] ~= nil then
+--      -- merge them
+--    else
+--      -- move from child to parent
+--      
+--    end
+--  end
+
+  local fusedfos = {}
+  for i=1,#pfo do
+    local thispfo = pfo[i]
     table.insert(fusedfos, thispfo)
   end
-  local bumpParentInputsAmount = 0  -- increment this for each child input that is left of parent link
-  -- renumber inputs for child and parent, to preserve original relative order and not clobber each other
-  -- child input from parent becomes virtualoutput
   for i=1,#cfo do
     local thiscfo = cfo[i]
-    for _, transform in pairs(thiscfo.transforms) do
-      if transform.src == 'input' and transform.idx == parentIndexInChild then
-        transform.src = 'virtualOutput'
---        transform.idx = virtualOutputBase + 1
-      end
-      if transform.src == 'input' and transform.idx ~= parentIndexInChild then
-        if transform.idx > parentIndexInChild then
---          transform.idx = transform.idx + pmod.numInputs - 1
-        else
-          bumpParentInputsAmount = bumpParentInputsAmount + 1
-        end
-      end
-    end
     table.insert(fusedfos, thiscfo)
-  end
-  for i=1,#pfo do
-    local thispfo = pfo[i]
-    for _, transform in pairs(thispfo.transforms) do
-      if transform.src == 'input' then
---        transform.idx = transform.idx + bumpParentInputsAmount
-      end
-    end
-  end
-  -- move outputs from child to parent, merging any duplicates
-  local parentOuts = {} -- set of parent output fusibles, for quick lookup
-  for j, parentOut in ipairs(pdat.outputs) do
-    parentOuts[parentOut.child] = j
-  end
-  for i, childOut in ipairs(cdat.outputs) do
-    if parentOuts[childOut.child] ~= nil then
-      -- merge them
-    else
-      -- move from child to parent
-      
-    end
   end
 
   local fused = nn.Fusible.reduceEdge(p, c)

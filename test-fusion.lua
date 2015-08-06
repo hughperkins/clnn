@@ -70,8 +70,8 @@ function fusiontests.testApplyConvertTanh()
 --  tester:asserteq(n1.beobj[1].template, '{{gradInput}} = {{gradOutput}} * (1 - {{output}} * {{output}});')
   tester:asserteq(n1.feobj[1].transforms.input1.src, 'input')
   tester:asserteq(n1.feobj[1].transforms.output1.src, 'output')
-  tester:asserteq(n1.feobj[1].transforms.input1.idx, 1)
-  tester:asserteq(n1.feobj[1].transforms.output1.idx, 1)
+  tester:asserteq(n1.feobj[1].transforms.input1.inputIdx, 1)
+  tester:asserteq(n1.feobj[1].transforms.output1.outputIdx, 1)
 
   fusion.generateKernels(x)
 end
@@ -96,8 +96,8 @@ function fusiontests.testApplyConvertSigmoid()
 --  tester:asserteq(n1.beobj[1].template, '{{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});')
   tester:asserteq(n1.feobj[1].transforms.input1.src, 'input')
   tester:asserteq(n1.feobj[1].transforms.output1.src, 'output')
-  tester:asserteq(n1.feobj[1].transforms.input1.idx, 1)
-  tester:asserteq(n1.feobj[1].transforms.output1.idx, 1)
+  tester:asserteq(n1.feobj[1].transforms.input1.inputIdx, 1)
+  tester:asserteq(n1.feobj[1].transforms.output1.outputIdx, 1)
 
   fusion.generateKernels(x)
 end
@@ -125,9 +125,9 @@ function fusiontests.testApplyConvertTanhSigmoid()
   tester:asserteq(n2.feobj[1].template, '{{output1}} = tanh({{input1}});')
 --  tester:asserteq(n2.beobj[1].template, '{{gradInput}} = {{gradOutput}} * (1 - {{output}} * {{output}});')
   tester:asserteq(n2.feobj[1].transforms.input1.src, 'input')
-  tester:asserteq(n2.feobj[1].transforms.input1.idx, 1)
+  tester:asserteq(n2.feobj[1].transforms.input1.inputIdx, 1)
   tester:asserteq(n2.feobj[1].transforms.output1.src, 'output')
-  tester:asserteq(n2.feobj[1].transforms.output1.idx, 1)
+  tester:asserteq(n2.feobj[1].transforms.output1.outputIdx, 1)
 
   tester:asserteq(torch.type(n1.module), 'nn.Apply')
   tester:asserteq(n1.numVirtualOutputs, 1)
@@ -136,16 +136,16 @@ function fusiontests.testApplyConvertTanhSigmoid()
   tester:asserteq(n1.feobj[1].template, '{{output1}} = 1.f / (1.f + exp( - {{input1}}));')
 --  tester:asserteq(n1.beobj[1].template, '{{gradInput}} = {{gradOutput}} * {{output}} * (1.f - {{output}});')
   tester:asserteq(n1.feobj[1].transforms.input1.src, 'input')
-  tester:asserteq(n1.feobj[1].transforms.input1.idx, 1)
+  tester:asserteq(n1.feobj[1].transforms.input1.inputIdx, 1)
   tester:asserteq(n1.feobj[1].transforms.output1.src, 'output')
-  tester:asserteq(n1.feobj[1].transforms.output1.idx, 1)
+  tester:asserteq(n1.feobj[1].transforms.output1.outputIdx, 1)
 
   tester:asserteq(#n1.outputs, 1)
   tester:asserteq(n1.outputs[1].child, n2)
   tester:asserteq(n1.outputs[1].outputIdx, 1)
   tester:asserteq(n1.outputs[1].inputIdx, 1)
 
-  fusion.generateKernels(x)
+--  fusion.generateKernels(x)
 end
 
 function fusiontests.testOutputsTwoOutput()
@@ -205,6 +205,7 @@ function fusiontests.testFuseTanhSigmoid()
   tester:asserteq(x:count(), 4)
   if os.getenv('TESTS') ~= nil then x:dot('', 'xbefore') end
   tester:asserteq(x:walkValidate(), true)
+  fusion.walkAssignVirtualIdx(x)
   fusion.doFuse(x)
   if os.getenv('TESTS') ~= nil then x:dot('', 'xafter') end
   tester:asserteq(x:walkValidate(), true)
@@ -222,13 +223,13 @@ function fusiontests.testFuseTanhSigmoid()
   tester:asserteq(fdat.feobj[1].template, '{{output1}} = 1.f / (1.f + exp( - {{input1}}));')
   tester:asserteq(fdat.feobj[2].template, '{{output1}} = tanh({{input1}});')
   tester:asserteq(fdat.feobj[1].transforms.input1.src, 'input')
-  tester:asserteq(fdat.feobj[1].transforms.input1.idx, 1)
-  tester:asserteq(fdat.feobj[1].transforms.output1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[1].transforms.output1.idx, 1)
-  tester:asserteq(fdat.feobj[2].transforms.input1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[2].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.input1.inputIdx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.output1.src, 'output')
+  tester:asserteq(fdat.feobj[1].transforms.output1.outputIdx, nil)
+  tester:asserteq(fdat.feobj[2].transforms.input1.src, 'input')
+  tester:asserteq(fdat.feobj[2].transforms.input1.inputIdx, nil)
   tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
-  tester:asserteq(fdat.feobj[2].transforms.output1.idx, 1)
+  tester:asserteq(fdat.feobj[2].transforms.output1.outputIdx, 1)
 
   tester:asserteq(#fused.outputs, 1)
   print('x.child.out[1]', fused.outputs[1].child.module)
@@ -236,7 +237,13 @@ function fusiontests.testFuseTanhSigmoid()
   tester:asserteq(fused.outputs[1].child, out)
   tester:asserteq(fused.outputs[1].outputIdx, 1)
 
-  fusion.generateKernels(x)
+  for i, feobj in ipairs(fdat.feobj) do
+    for k, v in pairs(feobj.transforms) do
+      print('feobj[' .. i .. ']', k, v)
+    end
+  end
+
+--  fusion.generateKernels(x)
 end
 
 function fusiontests.testFuseExpTanhSigmoid()
@@ -244,25 +251,28 @@ function fusiontests.testFuseExpTanhSigmoid()
   local n1 = nn.Sigmoid()(x)
   local n2 = nn.Tanh()(n1)
   local n3 = nn.Exp()(n2)
+  local out = nn.Identity()({n3})
 
   x.data.annotations.name = 'x'
   n1.data.annotations.name = 'n1'
   n2.data.annotations.name = 'n2'
   n3.data.annotations.name = 'n3'
+  out.data.annotations.name = 'out'
 
-  x = nn.Fusible.fromNodes(n3)
+  x = nn.Fusible.fromNodes(out)
 
   fusion.walkConvertToApply(x)
-  tester:asserteq(x:count(), 4)
+  tester:asserteq(x:count(), 5)
+  fusion.walkAssignVirtualIdx(x)
   fusion.doFuse(x)
   tester:asserteq(x:walkValidate(), true)
-  tester:asserteq(x:count(), 2)
+  tester:asserteq(x:count(), 3)
 
   tester:asserteq(torch.type(x.module), 'nn.Identity')
 
   tester:asserteq(x.name, 'x')
   tester:asserteq(#x.outputs, 1)
-  tester:asserteq(#x.outputs[1].child.outputs, 0)
+  tester:asserteq(#x.outputs[1].child.outputs, 1)
 
   local fused = x.outputs[1].child
   local fdat = fused
@@ -273,19 +283,30 @@ function fusiontests.testFuseExpTanhSigmoid()
   tester:asserteq(fdat.feobj[3].template, '{{output1}} = exp({{input1}});')
 
   tester:asserteq(fdat.feobj[1].transforms.input1.src, 'input')
-  tester:asserteq(fdat.feobj[1].transforms.input1.idx, 1)
-  tester:asserteq(fdat.feobj[1].transforms.output1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[1].transforms.output1.idx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.input1.inputIdx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.output1.src, 'output')
+  tester:asserteq(fdat.feobj[1].transforms.output1.virtualIdx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.output1.outputIdx, nil)
 
-  tester:asserteq(fdat.feobj[2].transforms.input1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[2].transforms.input1.idx, 1)
-  tester:asserteq(fdat.feobj[2].transforms.output1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[2].transforms.output1.idx, 2)
+  tester:asserteq(fdat.feobj[2].transforms.input1.src, 'input')
+  tester:asserteq(fdat.feobj[2].transforms.input1.inputIdx, nil)
+  tester:asserteq(fdat.feobj[2].transforms.input1.virtualIdx, 1)
+  tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
+  tester:asserteq(fdat.feobj[2].transforms.output1.outputIdx, nil)
+  tester:asserteq(fdat.feobj[2].transforms.output1.virtualIdx, 2)
 
-  tester:asserteq(fdat.feobj[3].transforms.input1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[3].transforms.input1.idx, 2)
+  tester:asserteq(fdat.feobj[3].transforms.input1.src, 'input')
+  tester:asserteq(fdat.feobj[3].transforms.input1.inputIdx, nil)
+  tester:asserteq(fdat.feobj[3].transforms.input1.virtualIdx, 2)
   tester:asserteq(fdat.feobj[3].transforms.output1.src, 'output')
-  tester:asserteq(fdat.feobj[3].transforms.output1.idx, 1)
+  tester:asserteq(fdat.feobj[3].transforms.output1.outputIdx, 1)
+  tester:asserteq(fdat.feobj[3].transforms.output1.virtualIdx, 3)
+
+  for i, feobj in ipairs(fdat.feobj) do
+    for k, v in pairs(feobj.transforms) do
+      print('feobj[' .. i .. ']', k, v)
+    end
+  end
 
   fusion.generateKernels(x)
 end
@@ -324,16 +345,16 @@ function fusiontests.testApplyConvertSigmoidAddTable()
   end
 
   tester:asserteq(fdat.feobj[1].transforms.input1.src, 'input')
-  tester:asserteq(fdat.feobj[1].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.input1.inputIdx, 1)
   tester:asserteq(fdat.feobj[1].transforms.output1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[1].transforms.output1.idx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.output1.outputIdx, 1)
 
   tester:asserteq(fdat.feobj[2].transforms.input1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[2].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[2].transforms.input1.inputIdx, 1)
   tester:asserteq(fdat.feobj[2].transforms.input2.src, 'input')
   tester:asserteq(fdat.feobj[2].transforms.input2.idx, 2)
   tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
-  tester:asserteq(fdat.feobj[2].transforms.output1.idx, 1)
+  tester:asserteq(fdat.feobj[2].transforms.output1.outputIdx, 1)
 
   fusion.generateKernels(x)
 end
@@ -388,16 +409,16 @@ function fusiontests.testApplyConvertMultiInputAdd()
   end
 
   tester:asserteq(fdat.feobj[1].transforms.input1.src, 'input')
-  tester:asserteq(fdat.feobj[1].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.input1.inputIdx, 1)
   tester:asserteq(fdat.feobj[1].transforms.output1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[1].transforms.output1.idx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.output1.outputIdx, 1)
 
   tester:asserteq(fdat.feobj[2].transforms.input1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[2].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[2].transforms.input1.inputIdx, 1)
   tester:asserteq(fdat.feobj[2].transforms.input2.src, 'input')
   tester:asserteq(fdat.feobj[2].transforms.input2.idx, 2)
   tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
-  tester:asserteq(fdat.feobj[2].transforms.output1.idx, 1)
+  tester:asserteq(fdat.feobj[2].transforms.output1.outputIdx, 1)
 
   tester:asserteq(Fusible.getLinkPos(x1:firstChild().inputs, x1), 1)
   tester:asserteq(Fusible.getLinkPos(x2:firstChild().inputs, x2), 2)
@@ -456,18 +477,18 @@ function fusiontests.testApplyConvertMultiInputAdd3()
   end
 
   tester:asserteq(fdat.feobj[1].transforms.input1.src, 'input')
-  tester:asserteq(fdat.feobj[1].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.input1.inputIdx, 1)
   tester:asserteq(fdat.feobj[1].transforms.input2.src, 'input')
   tester:asserteq(fdat.feobj[1].transforms.input2.idx, 2)
   tester:asserteq(fdat.feobj[1].transforms.output1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[1].transforms.output1.idx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.output1.outputIdx, 1)
 
   tester:asserteq(fdat.feobj[2].transforms.input1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[2].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[2].transforms.input1.inputIdx, 1)
   tester:asserteq(fdat.feobj[2].transforms.input2.src, 'input')
   tester:asserteq(fdat.feobj[2].transforms.input2.idx, 3)
   tester:asserteq(fdat.feobj[2].transforms.output1.src, 'output')
-  tester:asserteq(fdat.feobj[2].transforms.output1.idx, 1)
+  tester:asserteq(fdat.feobj[2].transforms.output1.outputIdx, 1)
 
   tester:asserteq(Fusible.getLinkPos(x1:firstChild().inputs, x1), 1)
   tester:asserteq(Fusible.getLinkPos(x2:firstChild().inputs, x2), 2)
@@ -550,25 +571,25 @@ function fusiontests.testAddTanhMul()
   end
 
   tester:asserteq(fdat.feobj[1].transforms.input1.src, 'input')
-  tester:asserteq(fdat.feobj[1].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.input1.inputIdx, 1)
   tester:asserteq(fdat.feobj[1].transforms.input2.src, 'input')
   tester:asserteq(fdat.feobj[1].transforms.input2.idx, 2)
   tester:asserteq(fdat.feobj[1].transforms.output1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[1].transforms.output1.idx, 1)
+  tester:asserteq(fdat.feobj[1].transforms.output1.outputIdx, 1)
 
   tester:asserteq(fdat.feobj[2].transforms.input1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[2].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[2].transforms.input1.inputIdx, 1)
 --  tester:asserteq(fdat.feobj[2].transforms.input2.src, 'input')
 --  tester:asserteq(fdat.feobj[2].transforms.input2.idx, 3)
   tester:asserteq(fdat.feobj[2].transforms.output1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[2].transforms.output1.idx, 2)
+  tester:asserteq(fdat.feobj[2].transforms.output1.outputIdx, 2)
 
   tester:asserteq(fdat.feobj[3].transforms.input1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[3].transforms.input1.idx, 2)
+  tester:asserteq(fdat.feobj[3].transforms.input1.inputIdx, 2)
   tester:asserteq(fdat.feobj[3].transforms.input2.src, 'input')
   tester:asserteq(fdat.feobj[3].transforms.input2.idx, 3)
   tester:asserteq(fdat.feobj[3].transforms.output1.src, 'output')
-  tester:asserteq(fdat.feobj[3].transforms.output1.idx, 1)
+  tester:asserteq(fdat.feobj[3].transforms.output1.outputIdx, 1)
 
   tester:asserteq(Fusible.getLinkPos(x1:firstChild().inputs, x1), 1)
   tester:asserteq(Fusible.getLinkPos(x2:firstChild().inputs, x2), 2)
@@ -639,23 +660,23 @@ function fusiontests.testSigMulAdd()
   end
 
   tester:asserteq(fdat.feobj[1].transforms.input1.src, 'input')
-  tester:asserteq(fdat.feobj[1].transforms.input1.idx, 2)
+  tester:asserteq(fdat.feobj[1].transforms.input1.inputIdx, 2)
   tester:asserteq(fdat.feobj[1].transforms.output1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[1].transforms.output1.idx, 2)
+  tester:asserteq(fdat.feobj[1].transforms.output1.outputIdx, 2)
 
   tester:asserteq(fdat.feobj[2].transforms.input1.src, 'input')
-  tester:asserteq(fdat.feobj[2].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[2].transforms.input1.inputIdx, 1)
   tester:asserteq(fdat.feobj[2].transforms.input2.src, 'virtualOutput')
   tester:asserteq(fdat.feobj[2].transforms.input2.idx, 2)
   tester:asserteq(fdat.feobj[2].transforms.output1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[2].transforms.output1.idx, 1)
+  tester:asserteq(fdat.feobj[2].transforms.output1.outputIdx, 1)
 
   tester:asserteq(fdat.feobj[3].transforms.input1.src, 'virtualOutput')
-  tester:asserteq(fdat.feobj[3].transforms.input1.idx, 1)
+  tester:asserteq(fdat.feobj[3].transforms.input1.inputIdx, 1)
   tester:asserteq(fdat.feobj[3].transforms.input2.src, 'input')
   tester:asserteq(fdat.feobj[3].transforms.input2.idx, 3)
   tester:asserteq(fdat.feobj[3].transforms.output1.src, 'output')
-  tester:asserteq(fdat.feobj[3].transforms.output1.idx, 1)
+  tester:asserteq(fdat.feobj[3].transforms.output1.outputIdx, 1)
 
   tester:asserteq(Fusible.getLinkPos(x1:firstChild().inputs, x1), 1)
   tester:asserteq(Fusible.getLinkPos(x2:firstChild().inputs, x2), 2)
@@ -848,9 +869,9 @@ function fusiontests.testFusionFromAbove()
   local fused = x:firstChild():firstChild():firstChild()
   tester:asserteq(fused.numOutputs, 2)
   tester:asserteq(fused.feobj[2].output1.src, 'output')
-  tester:asserteq(fused.feobj[2].output1.idx, 1)
+  tester:asserteq(fused.feobj[2].output1.outputIdx, 1)
   tester:asserteq(fused.feobj[3].output1.src, 'output')
-  tester:asserteq(fused.feobj[3].output1.idx, 2)
+  tester:asserteq(fused.feobj[3].output1.outputIdx, 2)
 
   tester:asserteq(torch.type(x.module), 'nn.Identity')
 end
@@ -1277,7 +1298,7 @@ function go()
     targettests = {}
     local filter = os.getenv('TESTS')
     for k, v in pairs(fusiontests) do
-      if k:find(filter) ~= nil then
+      if k == filter or (false and k:find(filter) ~= nil) then
         targettests[k] = v
       end
     end
