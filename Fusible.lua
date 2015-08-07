@@ -28,7 +28,7 @@ function Fusible:__tostring()
   if self.module ~= nil then
     res = res .. ' ' .. tostring(self.module)
   end
-  res = res .. ' ' .. tostring(self.numInputs) .. ' -> ' .. tostring(self.numOutputs)
+  res = res .. ' ' .. tostring(#self.inPoints) .. ' -> ' .. tostring(#self.outPoints)
   if self.nSplitOutputs ~= nil then
     res = res .. ' nSplitOutputs=' .. self.nSplitOutputs
   end
@@ -166,8 +166,11 @@ function Fusible.walkAddDataIds(fusible, dataId)
     dataId = dataId + 1
     fusible.id = dataId
   end
-  for i, output in ipairs(fusible.outputs) do
-    dataId = Fusible.walkAddDataIds(output.child, dataId)
+  for i, outPoint in ipairs(fusible.outPoints) do
+    if outPoint:attached() ~= nil then
+      local child = outPoint:attached():connected():attached():fixture()
+      dataId = Fusible.walkAddDataIds(child, dataId)
+    end
   end
   return dataId
 end

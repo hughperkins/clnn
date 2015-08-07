@@ -20,8 +20,10 @@ function Fusible.printGraph(fusible, prefix, printed)
   end
   printed[fusible] = true
   print(prefix .. tostring(fusible))
-  for i, output in ipairs(fusible.outputs) do
-    Fusible.printGraph(output.child, prefix .. '  ', printed)
+  for i, outPoint in ipairs(fusible.outPoints) do
+    if outPoint:attached() ~= nil then
+      Fusible.printGraph(outPoint:attached():connected():attached():fixture(), prefix .. '  ', printed)
+    end
   end
 end
 
