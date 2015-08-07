@@ -4,13 +4,23 @@ Fusibles = {}
 fusibles = Fusibles
 
 function Fusible:__init(params)
-  self.outputs = {}
-  self.inputs = {}
+--  self.outputs = {}
+--  self.inputs = {}
   params = params or {}
-  self.numInputs = params.numInputs or 1
-  self.numOutputs = params.numOutputs or 1
+  local numInputs = params.numInputs or 1
+  local numOutputs = params.numOutputs or 1
   self.name = params.name or ''
   self.module = params.module
+
+  -- create endpoints for each input and output
+  self.inPoints = {}
+  for i=1, numInputs do
+    table.insert(self.inPoints, nn.Endpoint(self))
+  end
+  self.outPoints = {}
+  for i=1, numOutputs do
+    table.insert(self.outPoints, nn.Endpoint(self))
+  end
 end
 
 function Fusible:__tostring()
@@ -36,26 +46,18 @@ end
 -- assumptions:
 -- all outputs from self go to child
 function Fusible:add(params)
+  local child = nil
   if torch.type(params) == 'nn.Fusible' then
-    local child = params
-    for i=1, self.numOutputs do
-      table.insert(child.inputs, self)
-      local output = {child=child, outputIdx=i, inputIdx=#child.inputs}
-      table.insert(self.outputs, output)
-    end
-    return child
+    child = params
   else
-    local child = nn.Fusible()
-    child.numInputs = params.numInputs or 1
-    child.numOutputs = params.numOutputs or 1
-    child.name = params.name or ''
-    child.module = params.module
-    for i=1, self.numOutputs do
-      table.insert(child.inputs, self)
-      table.insert(self.outputs, {child=child, outputIdx=i, inputIdx=1})
-    end
-    return child
+    child = nn.Fusible(params)
   end
+  for i, outPoint in ipairs(self.outPoints) do
+    local connector = nn.Connector({'input', 'output'})
+    connector:input():attach(outPoint)
+    connector:output():attach(child.inPoints[i])
+  end
+  return child
 end
 
 -- Fusibles basically take just the 'data' bit of the nnGraph nodes, without

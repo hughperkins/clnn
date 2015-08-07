@@ -49,19 +49,19 @@ function fusibletests.testSimpleAdd()
   local n1 = nn.Fusible({name='n1'})
 
   x:add(n1)
-  x:printGraph()
 
-  if os.getenv('TESTS') ~= nil then x:dot('', 'x') end
-  n1 = x.outputs[1].child
+  n1 = x.outPoints[1]:attached():connected():attached():fixture()
 
-  tester:asserteq(#x.inputs, 0)
-  tester:asserteq(#x.outputs, 1)
-  tester:asserteq(#n1.inputs, 1)
-  tester:asserteq(#n1.outputs, 0)
-  tester:asserteq(x.numInputs, 1)
-  tester:asserteq(x.numOutputs, 1)
-  tester:asserteq(n1.numOutputs, 1)
-  tester:asserteq(n1.numInputs, 1)
+  tester:asserteq(#x.inPoints, 1)
+  tester:asserteq(#x.outPoints, 1)
+  tester:asserteq(#n1.inPoints, 1)
+  tester:asserteq(#n1.outPoints, 1)
+
+  tester:asserteq(x.outPoints[1]:attached():connected():attached():fixture().name, 'n1')
+  tester:asserteq(n1.inPoints[1]:attached():connected():attached():fixture().name, 'x')
+
+--  if os.getenv('TESTS') ~= nil then x:dot('', 'x') end
+--  x:printGraph()
 end
 
 function fusibletests.testReduceEdge1()
@@ -329,7 +329,7 @@ function go()
     targettests = {}
     local filter = os.getenv('TESTS')
     for k, v in pairs(fusibletests) do
-      if k:find(filter) ~= nil then
+      if k == filter then
         targettests[k] = v
       end
     end
