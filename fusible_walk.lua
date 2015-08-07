@@ -7,8 +7,11 @@ function Fusible.walkApply(fusible, func, visited)
   end
   visited[fusible] = true
   func(fusible)
-  for i, output in ipairs(fusible.outputs) do
-    Fusible.walkApply(output.child, func, visited)
+  for i, outPoint in ipairs(fusible.outPoints) do
+    if outPoint:attached() ~= nil then
+      local child = outPoint:attached():connected():attached():fixture()
+      Fusible.walkApply(child, func, visited)
+    end
   end
 end
 
@@ -52,7 +55,10 @@ function Fusible.reverseWalkApply(fusible, func)
 end
 
 function Fusible.firstChild(self)
-  return self.outputs[1].child
+  if self.outPoints[1]:attached() == nil then
+    return nil
+  end
+  return self.outPoints[1]:attached():connected():attached():fixture()
 end
 
 function Fusible.reversePrintGraph(fusible, prefix, printed)
