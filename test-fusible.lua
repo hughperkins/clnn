@@ -199,33 +199,28 @@ end
 --  tester:asserteq(n1.numOutputs, 1)
 --end
 
---function fusibletests.testSimpleAddModules()
---  local x = nn.Identity()()
---  local n1 = nn.Tanh()(x)
+function fusibletests.testFromNnGraph()
+  local x = nn.Identity()()
+  local n1 = nn.Tanh()(x)
 
---  x.data.annotations.name = 'x'
---  n1.data.annotations.name = 'n1'
+  x.data.annotations.name = 'x'
+  n1.data.annotations.name = 'n1'
 
---  print('calling gmodule...')
---  local g = nn.gModule({x}, {n1})
---  x = nn.Fusible.fromNnGraph(g)
---  x:printGraph()
---  n1 = x.outputs[1].child
+  print('calling gmodule...')
+  local g = nn.gModule({x}, {n1})
+  x = nn.Fusible.fromNnGraph(g)
+  x:printGraph()
+  n1 = x.outPoints[1]:attached():connected():attached():fixture()
 
---  if os.getenv('TESTS') ~= nil then x:dot('', 'x') end
---  n1 = x.outputs[1].child
+  if os.getenv('TESTS') ~= nil then x:dot('', 'x') end
 
---  tester:asserteq(#x.inputs, 0)
---  tester:asserteq(#x.outputs, 1)
---  tester:asserteq(#n1.inputs, 1)
---  tester:asserteq(#n1.outputs, 1)
---  tester:asserteq(x.numInputs, 1)
---  tester:asserteq(x.numOutputs, 1)
---  tester:asserteq(x.name, 'x')
---  tester:asserteq(n1.numOutputs, 1)
---  tester:asserteq(n1.numInputs, 1)
---  tester:asserteq(n1.name, 'n1')
---end
+  tester:asserteq(#x.inPoints, 1)
+  tester:asserteq(#x.outPoints, 1)
+  tester:asserteq(#n1.inPoints, 1)
+  tester:asserteq(#n1.outPoints, 1)
+  tester:asserteq(x.name, 'x')
+  tester:asserteq(n1.name, 'n1')
+end
 
 --function fusibletests.testReduceEdge1Modules()
 --  local x = nn.Identity()()

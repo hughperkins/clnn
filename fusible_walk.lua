@@ -111,9 +111,12 @@ function Fusible.getBottom(fusible)
 end
 
 function Fusible.getTop(fusible)
-  if #fusible.inputs == 0 then
-    return fusible
+  for i, inPoint in ipairs(fusible.inPoints) do
+    if inPoint:attached() ~= nil then
+      local parent = inPoint:attached():connected():attached():fixture()
+      return Fusible.getTop(parent)
+    end
   end
-  return Fusible.getTop(fusible.inputs[1])
+  return fusible
 end
 

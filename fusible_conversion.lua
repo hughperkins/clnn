@@ -90,15 +90,17 @@ function Fusible.fromNodes(node)
   local fusible_by_node = {}
   for i, node in ipairs(all_nodes) do
     if fusible_by_node[node] == nil then
-      local fusible = nn.Fusible()
-      fusible.module = node.data.module
-      if fusible.module ~= nil then
-        fusible.numInputs = fusible.module.numInputs
-        fusible.numOutputs = fusible.module.numOutputs
+      local params = {}
+      local module = node.data.module
+      if module ~= nil then
+        params.module = module
+        params.numInputs = module.numInputs
+        params.numOutputs = module.numOutputs
       end
       if node.data.annotations.name ~= nil then
-        fusible.name = node.data.annotations.name
+        params.name = node.data.annotations.name
       end
+      local fusible = nn.Fusible(params)
       fusible.selectindex = node.data.selectindex
       fusible.nSplitOutputs = node.data.nSplitOutputs
       fusible_by_node[node] = fusible
@@ -118,19 +120,20 @@ function Fusible.fromNodes(node)
     local fusible = fusible_by_node[node]
     for i, child in ipairs(node.children) do
       local childfusible = fusible_by_node[child]
-      table.insert(childfusible.inputs, fusible)
-      local output = {child=childfusible, outputIdx=#fusible.outputs + 1, inputIdx=#childfusible.inputs}
-      table.insert(fusible.outputs, output)
+      fusible:add(childfusible)
+--      table.insert(childfusible.inputs, fusible)
+--      local output = {child=childfusible, outputIdx=#fusible.outputs + 1, inputIdx=#childfusible.inputs}
+--      table.insert(fusible.outputs, output)
     end
   end
 
-  for i, fusible in ipairs(all_fusibles) do
-    fusible.numOutputs = 1
-    fusible.numInputs = #fusible.inputs
-    if fusible.numInputs == 0 then
-      fusible.numInputs = 1
-    end
-  end
+--  for i, fusible in ipairs(all_fusibles) do
+--    fusible.numOutputs = 1
+--    fusible.numInputs = #fusible.inputs
+--    if fusible.numInputs == 0 then
+--      fusible.numInputs = 1
+--    end
+--  end
 
   node = nngraph.nodeGraphHelper.invert(node)
   nngraph.nodeGraphHelper.removeParents(node)  
