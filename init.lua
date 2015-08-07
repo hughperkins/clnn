@@ -26,6 +26,7 @@ include 'nodeGraphHelper.lua'
 include 'Fusible.lua'
 include 'Apply.lua'
 include 'Endpoint.lua'
+include 'Connector.lua'
 
 include 'Tanh.lua'
 include 'Pointwise.lua'
