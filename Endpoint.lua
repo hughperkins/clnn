@@ -2,7 +2,7 @@ local Endpoint = torch.class('nn.Endpoint')
 
 -- Endpoint is attached permanently to a single fixture, and can be connected to one or more other Connectors
 function Endpoint:__init(fixture)
-  self.fixture = fixture
+  self._fixture = fixture
   self._attached = {}
 end
 
@@ -39,5 +39,9 @@ function Endpoint:attached()
   end
   assert(count <= 1)
   return other
+end
+
+function Endpoint:fixture()
+  return self._fixture
 end
 
