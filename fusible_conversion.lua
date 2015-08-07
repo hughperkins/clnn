@@ -55,9 +55,12 @@ function fusibles.walkFusiblesToNodes(fusible, seen)
   node.data.selectindex = fusible.selectindex
   node.data.nSplitOutputs = fusible.nSplitOutputs
   seen[fusible] = node
-  for i, output in ipairs(fusible.outputs) do
-    childNode = fusibles.walkFusiblesToNodes(output.child, seen)
-    node:add(childNode, false)
+  for i, outPoint in ipairs(fusible.outPoints) do
+    if outPoint:attached() ~= nil then
+      local childFusible = outPoint:attached():connected():attached():fixture()
+      childNode = fusibles.walkFusiblesToNodes(childFusible, seen)
+      node:add(childNode, false)
+    end
   end
   return node
 end
