@@ -9,7 +9,7 @@ function Connector:__init(names)
   self.endpoints = {}
   for i, name in ipairs(names) do
     local endpoint = nn.Endpoint(self)
-    self[name] = endpoint
+    self[name] = function() return endpoint end
     table.insert(self.endpoints, endpoint)
   end
   self.endpoints[1].connected = function() return self.endpoints[2] end
