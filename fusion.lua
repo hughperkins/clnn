@@ -327,7 +327,7 @@ end
 -- we're going to move/fuse/merge all chid things into parent
 -- then throw away the child
 function fusion.doFuseIteration(x)
-  p, c = fusion.getFusiblePair(x)
+  local p, c = fusion.getFusiblePair(x)
   if p == nil then
     return false
   end
@@ -371,6 +371,7 @@ function fusion.doFuseIteration(x)
   
 
 --  -- links from parent to child become virtuals
+  -- first ,create two indexes:
   local ptransByOutputIdx = {}
   for i, pfo in ipairs(p.feobj) do
     for k, ptrans in pairs(pfo.transforms) do
@@ -387,6 +388,7 @@ function fusion.doFuseIteration(x)
       end
     end
   end
+  -- now convert the parent-child links to virtual:
   for i, output in ipairs(p.outputs) do
     if output.child == c then
       local ptrans = ptransByOutputIdx[output.outputIdx]
@@ -395,6 +397,13 @@ function fusion.doFuseIteration(x)
       ctrans.inputIdx = nil
     end
   end
+
+  -- move remaining child inputs into parent
+  -- - the fos will be moved from child to parent
+  -- - the inputidx in each fo that has one, in these from-child fos, will be bumped
+  --   up, so doesnt clobber the parent inputs
+  -- - we will arrange final fused inputs in order as:
+  --   [inputs in child left of input from parent] [inputs in parent] [inputs in child right of input from parent]
 
 --  for i=1,#pfo do
 --    local thispfo = pfo[i]

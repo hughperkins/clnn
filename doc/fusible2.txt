@@ -1,0 +1,38 @@
+goals/concpets:
+- can move the ends of links freely, wihtout having to think about where the other end is
+- a link contins two ends points
+- an end point is just an opaque object, that cn be plugged into various inputs/outputs
+- a link has one input, and one output
+- for a fusible object, there is an array of inputs, each input is one end point of a link
+- for the outputs, there is an array of otuptus, each output is a list of end point objects
+- given an endpoint, we can get:
+    - the other end of the endpoint, via the link object
+    - know where to get/put data, ie which fusible object, which input/output
+
+class Endpoint {
+  Link link
+  LinkPoint linkpoint
+}
+
+class Link {
+  input=Endpoint()
+  output=Endpoint()
+}
+
+class linkpoint {
+  EndPoint endpoint
+}
+
+class Fusible {
+   inputs[] = {linkpoint1, linkpoint2, linkpoint3}
+   outputs[] = {linkpoint1, linkpoint2, linkpoint3}
+   evaluators[] = {evaluator1, evaluator2, ... }
+}
+
+Evaluator {
+  forwardExpression,
+  backwardExpression,
+  numInputs,
+  numOutputs
+}
+
