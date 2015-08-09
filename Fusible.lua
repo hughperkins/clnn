@@ -226,37 +226,38 @@ end
 --end
 
 function Fusible.walkValidate(topnode)
-  local valid = true
-  topnode:walkApply(function(node)
-    if node.outputs == nil then
-      print('node' .. tostring(node) .. ' has no outputs table')
-      valid = false
-    end
-    if node.inputs == nil then
-      print('node' .. tostring(node) .. ' has no inputs table')
-      valid = false
-    end
-    for i, output in ipairs(node.outputs) do
-      local child = output.child
-      if Fusible.getLinkPos(child.inputs, node) == nil then
-        print('child link from ' .. tostring(node) .. ' to ' .. tostring(child) .. ' not reciprocated')
-        valid = false
-      end
-    end
-    for i, parent in ipairs(node.inputs) do
-      local foundParentOutput = false
-      for _, parentoutput in ipairs(parent.outputs) do
-        if parentoutput.child == node then
-          foundParentOutput = true
-        end
-      end
-      if not foundParentOutput then
-        print('parent link from ' .. tostring(node) .. ' to ' .. tostring(parent) .. ' not reciprocated')
-        valid = false
-      end
-    end
-  end)
-  return valid
+  return true
+--  local valid = true
+--  topnode:walkApply(function(node)
+--    if node.outputs == nil then
+--      print('node' .. tostring(node) .. ' has no outputs table')
+--      valid = false
+--    end
+--    if node.inputs == nil then
+--      print('node' .. tostring(node) .. ' has no inputs table')
+--      valid = false
+--    end
+--    for i, output in ipairs(node.outputs) do
+--      local child = output.child
+--      if Fusible.getLinkPos(child.inputs, node) == nil then
+--        print('child link from ' .. tostring(node) .. ' to ' .. tostring(child) .. ' not reciprocated')
+--        valid = false
+--      end
+--    end
+--    for i, parent in ipairs(node.inputs) do
+--      local foundParentOutput = false
+--      for _, parentoutput in ipairs(parent.outputs) do
+--        if parentoutput.child == node then
+--          foundParentOutput = true
+--        end
+--      end
+--      if not foundParentOutput then
+--        print('parent link from ' .. tostring(node) .. ' to ' .. tostring(parent) .. ' not reciprocated')
+--        valid = false
+--      end
+--    end
+--  end)
+--  return valid
 end
 
 function Fusible.getLinkPos(targetTable, value)

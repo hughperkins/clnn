@@ -59,7 +59,11 @@ function fusion._createApply(params)
   local apply = nn.Apply(numInputs, numOutputs, '', '', moduletype)
   local transforms = {}
   for i=1, numInputs do
-    transforms['input' .. i] = {src='input', inputIdx=i}
+    transforms['input' .. i] = {}
+    transforms['input' .. i].endPoint = nn.Endpoint(transform['input' .. i])
+    local connector = nn.Connector({'input', 'output'})
+    connector:input():attach(fusible.inPoints[i])
+    connector:output():attach(transforms['input' .. i])
   end
   for i=1, numOutputs do
     transforms['output' .. i] = {src='output', outputIdx=i, virtualIdx=i}

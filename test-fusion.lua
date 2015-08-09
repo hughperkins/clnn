@@ -121,8 +121,8 @@ function fusiontests.testApplyConvertTanhSigmoid()
 
   tester:asserteq(torch.type(x.module), 'nn.Identity')
 
-  n1 = x.outputs[1].child
-  n2 = n1.outputs[1].child
+  n1 = x:firstChild()
+  n2 = n1:firstChild()
   tester:asserteq(torch.type(n2.module), 'nn.Apply')
   tester:asserteq(n2.numVirtualOutputs, 1)
   tester:asserteq(#n2.feobj, 1)
@@ -145,10 +145,10 @@ function fusiontests.testApplyConvertTanhSigmoid()
   tester:asserteq(n1.feobj[1].transforms.output1.src, 'output')
   tester:asserteq(n1.feobj[1].transforms.output1.outputIdx, 1)
 
-  tester:asserteq(#n1.outputs, 1)
-  tester:asserteq(n1.outputs[1].child, n2)
-  tester:asserteq(n1.outputs[1].outputIdx, 1)
-  tester:asserteq(n1.outputs[1].inputIdx, 1)
+  tester:asserteq(#n1.outPoints, 1)
+  tester:asserteq(n1:firstChild(), n2)
+--  tester:asserteq(n1.outputs[1].outputIdx, 1)
+--  tester:asserteq(n1.outputs[1].inputIdx, 1)
 
 --  fusion.generateKernels(x)
 end
