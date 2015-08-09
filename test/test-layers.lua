@@ -175,10 +175,9 @@ function _test4dLayer(net, inPlanes, inSize, outPlanes, outSize, debug)
 end
 
 function mytests.testSpatialMaxPooling()
-  _test4dLayer(nn.SpatialMaxPooling(3,3,2,2), 1, 6, 1, 2, true)
---  _test4dLayer(nn.SpatialMaxPooling(3,3,2,2), 32, 32, 32, 16)
---  _test4dLayer(nn.SpatialMaxPooling(2,2,2,2), 32, 32, 32, 16)
---  _test4dLayer(nn.SpatialMaxPooling(3,3,3,3), 32, 48, 32, 16)
+  _test4dLayer(nn.SpatialMaxPooling(3,3,2,2), 32, 13, 32, 6, false)  -- 13->6 is in alexnet
+  _test4dLayer(nn.SpatialMaxPooling(2,2,2,2), 32, 32, 32, 16)
+  _test4dLayer(nn.SpatialMaxPooling(3,3,3,3), 32, 48, 32, 16)
 end
 
 function mytests.testSigmoidv2()
