@@ -1,8 +1,8 @@
-luaunit = require('luaunit')
-
 require 'nn'
 require 'cltorch'
 require 'clnn'
+
+local mytests = {}
 
 function assertFloatNear(a, b)
   local diff = math.abs( a - b ) - 0.0001
@@ -82,11 +82,11 @@ function _testLabelCriterionLayer(net)
   local gradInput = net:backward(input, target)
   local gradInputCl = netCl:backward(inputCl, targetCl)
 
-  luaunit.assertEquals(gradInput, gradInputCl:double())
+  tester:asserteq(gradInput, gradInputCl:float())
   collectgarbage()
 end
 
-function test_ClassNLLCriterion()
+function mytests.testClassNLLCriterion()
   _testLabelCriterionLayer(nn.ClassNLLCriterion())
 end
 
@@ -111,7 +111,7 @@ function _testVectorLayer(net, in_size, out_size)
   local outputCl = netCl:forward(inputCl)
 --  print('outputCl\n', outputCl)
 
-  luaunit.assertEquals(output, outputCl:double())
+  tester:asserteq(output, outputCl:float())
 
   local gradOutput = torch.Tensor(N, out_size):uniform() - 0.5
   local gradInput = net:backward(input, gradOutput)
@@ -121,27 +121,27 @@ function _testVectorLayer(net, in_size, out_size)
   local gradInputCl = netCl:backward(inputCl, gradOutputCl)
 --  print('gradInputcl\n', gradInputCl)
 
-  luaunit.assertEquals(gradInput, gradInputCl:double())
+  tester:asserteq(gradInput, gradInputCl:float())
   collectgarbage()
 end
 
-function test_linear()
+function mytests.test_linear()
   _testVectorLayer(nn.Linear(4,3))
 end
 
-function test_tanh()
+function mytests.test_tanh()
   _testVectorLayer(nn.Tanh(), 4, 4)
 end
 
-function test_sigmoid()
+function mytests.test_sigmoid()
   _testVectorLayer(nn.Sigmoid(), 4, 4)
 end
 
-function test_relu()
+function mytests.test_relu()
   _testVectorLayer(nn.ReLU(), 4, 4)
 end
 
-function test_LogSoftMax()
+function mytests.test_LogSoftMax()
   _testVectorLayer(nn.LogSoftMax(), 4 , 4)
 end
 
@@ -163,31 +163,32 @@ function _test4dLayer(net, inPlanes, inSize, outPlanes, outSize, debug)
   local inputCl = input:clone():cl()
   local outputCl = netCl:forward(inputCl)
 
-  luaunit.assertEquals(output, outputCl:double())
+  tester:asserteq(output, outputCl:float())
 
   local gradInput = net:backward(input, gradOutput)
 
   local gradOutputCl = gradOutput:clone():cl()
   local gradInputCl = netCl:backward(inputCl, gradOutputCl)
 
-  luaunit.assertEquals(gradInput, gradInputCl:double())
+  tester:asserteq(gradInput, gradInputCl:float())
   collectgarbage()
 end
 
-function test_SpatialMaxPooling()
+function mytests.test_SpatialMaxPooling()
+  _test4dLayer(nn.SpatialMaxPooling(3,3,2,2), 32, 32, 32, 16)
   _test4dLayer(nn.SpatialMaxPooling(2,2,2,2), 32, 32, 32, 16)
   _test4dLayer(nn.SpatialMaxPooling(3,3,3,3), 32, 48, 32, 16)
 end
 
-function testSigmoidv2()
+function mytests.testSigmoidv2()
   _test4dLayer(nn.Sigmoid(), 32, 32, 32, 32)
 end
 
-function testIdentity()
+function mytests.testIdentity()
   _test4dLayer(nn.Identity(), 32, 32, 32, 32)
 end
 
-function testTanhv2()
+function mytests.testTanhv2()
   _test4dLayer(nn.Tanh(), 32, 32, 32, 32)
 end
 
@@ -219,7 +220,7 @@ function _testTableLayer(net)
   local outputCl = netCl:forward(inputCl)
 --  print('outputCl\n', outputCl)
 
-  luaunit.assertEquals(output, outputCl:double())
+  tester:asserteq(output, outputCl:float())
 
   local gradOutput = torch.Tensor(N, out_size):uniform() * 2 - 0.5
   local gradInput = net:backward(input, gradOutput)
@@ -230,16 +231,16 @@ function _testTableLayer(net)
 --  print('gradInputcl\n', gradInputCl[1], gradInputCl[2])
 
   for i=1,num_tables do
-    luaunit.assertEquals(gradInput[i], gradInputCl[i]:double())
+    tester:asserteq(gradInput[i], gradInputCl[i]:float())
   end
   collectgarbage()
 end
 
-function testCMulTable()
+function mytests.testCMulTable()
   _testTableLayer(nn.CMulTable())
 end
 
-function testCAddTable()
+function mytests.testCAddTable()
   _testTableLayer(nn.CAddTable())
 end
 
@@ -249,7 +250,7 @@ function _testNarrow(net)
   print('net', net)
   in_size = 12
 
-  local input =torch.Tensor(N, in_size):uniform() * 2 - 1.0
+  local input = torch.Tensor(N, in_size):uniform() * 2 - 1.0
   local inputCl = input:clone():cl()
   local netCl = net:clone():cl()
 
@@ -260,7 +261,7 @@ function _testNarrow(net)
 
 --  print('outputCl\n', outputCl)
 
-  luaunit.assertEquals(output, outputCl:double())
+  tester:asserteq(output, outputCl:float())
 
   -- local gradOutput = torch.Tensor(N, out_size):uniform() * 2 - 0.5
   local gradOutput = output:clone() * 3 + 0.1
@@ -272,16 +273,50 @@ function _testNarrow(net)
 --  print('gradInput\n', gradInput)
 --  print('gradInputCl\n', gradInputCl)
 
-  luaunit.assertEquals(gradInput, gradInputCl:double())
+  tester:asserteq(gradInput, gradInputCl:float())
   collectgarbage()
 end
 
-function testNarrow()
+function mytests.testNarrow()
   _testNarrow(nn.Narrow(2, 2, 5))
 end
 
-luaunit.LuaUnit.run()
---os.exit( luaunit.LuaUnit.run() )
---test_LogSoftMax()
--- testNarrow()
+function go()
+  nloop = n_loop or nloop
+  local oldtype = torch.getdefaulttensortype()
+  torch.setdefaulttensortype('torch.FloatTensor')
+  -- initSeed(seed)
+  tester = torch.Tester()
+  local targettests = mytests
+  if os.getenv('LIST') ~= nil then
+    print('tests', tests)
+    os.exit(0)
+  end
+  if os.getenv('TESTS') ~= nil then
+    targettests = {}
+    local filter = os.getenv('TESTS')
+    for k, v in pairs(mytests) do
+      if k == filter then
+        targettests[k] = v
+      end
+    end
+  end
+  print('targettests', targettests)
+  tester:add(targettests)
+  tester:run(tests)
+  torch.setdefaulttensortype(oldtype)
+  if print_timing then
+    print ''
+    print ' ------------------------------------------------------------------------------------------------'
+    print '|  Module                                                                          |  Speedup    |'
+    print ' ------------------------------------------------------------------------------------------------'
+    for module,tm in pairs(times) do
+      local str = string.format('| %-80s | %4.2f        |', module, (tm.cpu / (tm.gpu or 1e6)))
+      print(str)
+    end
+    print ' ------------------------------------------------------------------------------------------------'
+  end
+end
+
+go()
 

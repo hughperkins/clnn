@@ -13,6 +13,9 @@
 #include <string>
 using namespace std;
 
+// groupsize: kW x kH
+// stride: dW, dH
+
 std::string SpatialMaxPooling_getKernelTemplate();
 
 static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
@@ -27,10 +30,6 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
   THClTensor *output = (THClTensor *)luaT_getfieldcheckudata(L, 1, "output", "torch.ClTensor");
   THClTensor *indices = (THClTensor *)luaT_getfieldcheckudata(L, 1, "indices", "torch.ClTensor");
 
-//  float *indices_data;
-//  float *output_data;
-//  float *input_data;
-
   THAssert(THClTensor_checkGPU(state, 3, input, output, indices));
   luaL_argcheck(L, input->nDimension == 3 || input->nDimension == 4, 2, "3D or 4D (batch) tensor expected");
 
@@ -44,15 +43,10 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
     luaL_argcheck(L, nInputCols >= kW && nInputRows >= kH, 2, "input image smaller than kernel size");
 
     input = THClTensor_newContiguous(state, input);
-//    input_data = THClTensor_data(state, input);
 
     THClTensor_resize3d(state, output, nInputPlane, nOutputRows, nOutputCols);
     THClTensor_resize4d(state, indices, 2, nInputPlane, nOutputRows, nOutputCols);
 
-//    indices_data = THClTensor_data(state, indices);
-//    output_data = THClTensor_data(state, output);
-
-    // cuda blocks & threads:
     int yblocks = (int)(16L / nInputPlane);
     yblocks = yblocks < 1 ? 1 : yblocks;
     dim3 blocks(nInputPlane,yblocks);
@@ -100,15 +94,10 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
     luaL_argcheck(L, nInputCols >= kW && nInputRows >= kH, 2, "input image smaller than kernel size");
 
     input = THClTensor_newContiguous(state, input);
-//    input_data = THClTensor_data(state, input);
 
     THClTensor_resize4d(state, output, nbatch, nInputPlane, nOutputRows, nOutputCols);
     THClTensor_resize5d(state, indices, 2, nbatch, nInputPlane, nOutputRows, nOutputCols);
 
-//    indices_data = THClTensor_data(state, indices);
-//    output_data = THClTensor_data(state, output);
-
-    // cuda blocks & threads:
     int yblocks = (int)(16L / nInputPlane);
     yblocks = yblocks < 1 ? 1 : yblocks;
     dim3 blocks(nInputPlane*nbatch,yblocks);
@@ -165,15 +154,9 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
   int dW = luaT_getfieldcheckint(L, 1, "dW");
   int dH = luaT_getfieldcheckint(L, 1, "dH");
   bool atomic = (dW != kW) || (dH != kH);
-//  cout << "atomic=" << atomic << " kW=" << kW << " dW=" << dW << " kH=" << kH << " dH=" << dH << endl;
-//  cout << "input->nDimension=" << input->nDimension << endl;
 
   THClTensor *gradInput = (THClTensor *)luaT_getfieldcheckudata(L, 1, "gradInput", "torch.ClTensor");
   THClTensor *indices = (THClTensor *)luaT_getfieldcheckudata(L, 1, "indices", "torch.ClTensor");
-
-//  float *indices_data;
-//  float *gradInput_data;
-//  float *gradOutput_data;
 
   THAssert(THClTensor_checkGPU(state, 4, input, gradOutput, indices, gradInput));
 
@@ -181,37 +164,25 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
   gradOutput = THClTensor_newContiguous(state, gradOutput);
 
   if (input->nDimension == 3) {
-//    long nInputCols = input->size[2];
-//    long nInputRows = input->size[1];
     long nInputPlane = input->size[0];
-//    long nOutputCols = gradOutput->size[2];
-//    long nOutputRows = gradOutput->size[1];
 
     THClTensor_resizeAs(state, gradInput, input);
     THClTensor_zero(state, gradInput);
 
-//    indices_data = THClTensor_data(state, indices);
-//    gradOutput_data = THClTensor_data(state, gradOutput);
-//    gradInput_data = THClTensor_data(state, gradInput);
-
-    // cuda blocks & threads:
     int yblocks = (int)(16L / nInputPlane);
     yblocks = yblocks < 1 ? 1 : yblocks;
     dim3 blocks(nInputPlane,yblocks);
     dim3 threads(32,8);
 
-    if(atomic)
-    {
-      // run updateGradInput kernel, accumulate gradients atomically
+    if(dW == kW && dH == kH) {
+      // run updateGradInput kernel
 //      atomicmaxgradinput <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (
 //        gradInput_data, gradOutput_data,
 //        indices_data+nInputPlane*nOutputCols*nOutputRows, indices_data,
 //        nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
       THError("not implemented");
-    }
-    else
-    {
-      // run updateGradInput kernel
+    } else {
+      // run updateGradInput kernel, accumulate gradients atomically
 //      atomicmaxgradinput <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (
 //        gradInput_data, gradOutput_data,
 //        indices_data+nInputPlane*nOutputCols*nOutputRows, indices_data,
@@ -229,28 +200,14 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
     THClTensor_resizeAs(state, gradInput, input);
     THClTensor_zero(state, gradInput);
 
-//    indices_data = THClTensor_data(state, indices);
-//    gradOutput_data = THClTensor_data(state, gradOutput);
-//    gradInput_data = THClTensor_data(state, gradInput);
+    if(dW == kW && dH == kH) {
+      // simplest case
+      // run updateGradInput kernel
 
-    // cuda blocks & threads:
-    int yblocks = (int)(16L / nInputPlane);
-    yblocks = yblocks < 1 ? 1 : yblocks;
-    dim3 blocks(nInputPlane*nbatch,yblocks);
-    dim3 threads(32,8);
-
-    if(atomic)
-    {
-      // run updateGradInput kernel, accumulate gradients atomically
-//      atomicmaxgradinput <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (
-//        gradInput_data, gradOutput_data,
-//        indices_data+nbatch*nInputPlane*nOutputCols*nOutputRows, indices_data,
-//        nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
-      THError("not implemented");
-    }
-    else
-    {
-      // run updateGradInput kernel, accumulate gradients atomically
+      int yblocks = (int)(16L / nInputPlane);
+      yblocks = yblocks < 1 ? 1 : yblocks;
+      dim3 blocks(nInputPlane*nbatch,yblocks);
+      dim3 threads(32,8);
 
       EasyCL *cl = input->storage->cl;
       std::string uniqueName = __FILE__ "maxgradinput";
@@ -280,12 +237,51 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
       k.in((int)dW);
 
       k.run(blocks, threads);
+    } else if((kW>>1) <= dW && (kH>>1) <= dH) {  // eg typical case: groupsize == kW == kH == 3, stride == dW == dH == 2
+      // do two updates, staggered
+      int yblocks = (int)(16L / nInputPlane);
+      yblocks = yblocks < 1 ? 1 : yblocks;
+      dim3 blocks(nInputPlane*nbatch,yblocks);
+      dim3 threads(32,8);
 
-//      maxgradinput <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (
-//        gradInput_data, gradOutput_data,
-//        indices_data+nbatch*nInputPlane*nOutputCols*nOutputRows, indices_data,
-//        nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
-//      THError("not implemented");
+      EasyCL *cl = input->storage->cl;
+      std::string uniqueName = __FILE__ "maxgradinput_staggered";
+      CLKernel *kernel = 0;
+      if(cl->kernelExists(uniqueName)) {
+        kernel = cl->getKernel(uniqueName);
+      } else {
+        TemplatedKernel kernelBuilder(cl);
+        kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
+          SpatialMaxPooling_getKernelTemplate(), "maxgradinput_staggered");
+      }
+
+      // we will run it twice, with different skipNum each time
+      for(int it = 0; it < 2; it++ ) {
+        THClKernels k(state, kernel);
+        k.inout(gradInput);
+        k.in(gradOutput);
+        k.in(indices);
+        k.in((int)(nbatch*nInputPlane*nOutputCols*nOutputRows));
+        k.in((int)0);
+
+        k.in((int)nInputPlane);
+        k.in((int)nInputRows);
+        k.in((int)nInputCols);
+
+        k.in((int)kH);
+        k.in((int)kW);
+        k.in((int)dH);
+        k.in((int)dW);
+        
+        k.in((int)2);
+        k.in((int)it);
+
+        k.run(blocks, threads);
+      }
+    } else {
+      // actually can do this with staggered updates too, but no user requirement for htis yet (eg AlexNet etc only use
+      // (3, 3, 2, 2)  groupsize/stride
+      THError("Not implemented");
     }
   }
 
