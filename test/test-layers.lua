@@ -125,15 +125,15 @@ function _testVectorLayer(net, in_size, out_size)
   collectgarbage()
 end
 
-function mytests.test_linear()
+function mytests.testLinear()
   _testVectorLayer(nn.Linear(4,3))
 end
 
-function mytests.test_tanh()
+function mytests.testTanh()
   _testVectorLayer(nn.Tanh(), 4, 4)
 end
 
-function mytests.test_sigmoid()
+function mytests.testSigmoid()
   _testVectorLayer(nn.Sigmoid(), 4, 4)
 end
 
@@ -174,10 +174,11 @@ function _test4dLayer(net, inPlanes, inSize, outPlanes, outSize, debug)
   collectgarbage()
 end
 
-function mytests.test_SpatialMaxPooling()
-  _test4dLayer(nn.SpatialMaxPooling(3,3,2,2), 32, 32, 32, 16)
-  _test4dLayer(nn.SpatialMaxPooling(2,2,2,2), 32, 32, 32, 16)
-  _test4dLayer(nn.SpatialMaxPooling(3,3,3,3), 32, 48, 32, 16)
+function mytests.testSpatialMaxPooling()
+  _test4dLayer(nn.SpatialMaxPooling(3,3,2,2), 1, 6, 1, 2, true)
+--  _test4dLayer(nn.SpatialMaxPooling(3,3,2,2), 32, 32, 32, 16)
+--  _test4dLayer(nn.SpatialMaxPooling(2,2,2,2), 32, 32, 32, 16)
+--  _test4dLayer(nn.SpatialMaxPooling(3,3,3,3), 32, 48, 32, 16)
 end
 
 function mytests.testSigmoidv2()

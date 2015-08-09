@@ -153,7 +153,6 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
   int kH = luaT_getfieldcheckint(L, 1, "kH");
   int dW = luaT_getfieldcheckint(L, 1, "dW");
   int dH = luaT_getfieldcheckint(L, 1, "dH");
-  bool atomic = (dW != kW) || (dH != kH);
 
   THClTensor *gradInput = (THClTensor *)luaT_getfieldcheckudata(L, 1, "gradInput", "torch.ClTensor");
   THClTensor *indices = (THClTensor *)luaT_getfieldcheckudata(L, 1, "indices", "torch.ClTensor");
@@ -255,8 +254,9 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
           SpatialMaxPooling_getKernelTemplate(), "maxgradinput_staggered");
       }
 
-      // we will run it twice, with different skipNum each time
-      for(int it = 0; it < 2; it++ ) {
+      // we will run it four time, with different skipNum each time
+      // staggerCombo is essentially (skipW << 1) | skipH
+      for(int staggerCombo = 0; staggerCombo < 4; staggerCombo++ ) {
         THClKernels k(state, kernel);
         k.inout(gradInput);
         k.in(gradOutput);
@@ -274,7 +274,7 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
         k.in((int)dW);
         
         k.in((int)2);
-        k.in((int)it);
+        k.in((int)staggerCombo);
 
         k.run(blocks, threads);
       }
@@ -336,8 +336,8 @@ std::string SpatialMaxPooling_getKernelTemplate() {
   "  int xx, yy;\n" 
   "\n" 
   "  // output size\n" 
-  "  const int output_w = (input_w - kW) / dW + 1;\n" 
-  "  const int output_h = (input_h - kH) / dH + 1;\n" 
+  "  const int output_w = floor((float)(input_w - kW) / dW + 1);\n" 
+  "  const int output_h = floor((float)(input_h - kH) / dH + 1);\n" 
   "\n" 
   "  // compute offsets based on thread/block ID\n" 
   "  int o = get_group_id(0);\n" 
@@ -409,8 +409,8 @@ std::string SpatialMaxPooling_getKernelTemplate() {
   "  int xx, yy;\n" 
   "\n" 
   "  // output size\n" 
-  "  int output_w = (input_w - kW) / dW + 1;\n" 
-  "  int output_h = (input_h - kH) / dH + 1;\n" 
+  "  const int output_w = floor((float)(input_w - kW) / dW + 1);\n" 
+  "  const int output_h = floor((float)(input_h - kH) / dH + 1);\n" 
   "\n" 
   "  // compute offsets based on thread/block ID\n" 
   "  int o = get_group_id(0);\n" 
@@ -424,6 +424,71 @@ std::string SpatialMaxPooling_getKernelTemplate() {
   "  int yy_start = get_local_size(1)*get_group_id(1) + get_local_id(1);\n" 
   "  int yy_end = output_h;\n" 
   "  int yy_step = get_local_size(1)*get_num_groups(1);\n" 
+  "\n" 
+  "  // select input/output plane\n" 
+  "  gradOutput = gradOutput + o*output_w*output_h;\n" 
+  "  gradInput = gradInput + i*input_w*input_h;\n" 
+  "  indices_x = indices_x + o*output_w*output_h;\n" 
+  "  indices_y = indices_y + o*output_w*output_h;\n" 
+  "\n" 
+  "  // compute gradInput\n" 
+  "  for(yy = yy_start; yy < yy_end; yy+=yy_step) {\n" 
+  "    for(xx = xx_start; xx < xx_end; xx+=xx_step) {\n" 
+  "      global float *ptr_gradInput = gradInput + yy*dH*input_w + xx*dW;\n" 
+  "      global const float *ptr_gradOutput = gradOutput + yy*output_w + xx;\n" 
+  "      global const float *ptr_ind_x = indices_x + yy*output_w + xx;\n" 
+  "      global const float *ptr_ind_y = indices_y + yy*output_w + xx;\n" 
+  "      float z = *ptr_gradOutput;\n" 
+  "\n" 
+  "      int argmax_x = (*ptr_ind_x)-1;\n" 
+  "      int argmax_y = (*ptr_ind_y)-1;\n" 
+  "\n" 
+  "      ptr_gradInput[argmax_x + argmax_y*input_w] += z;\n" 
+  "    }\n" 
+  "  }\n" 
+  "}\n" 
+  "\n" 
+  "/*\n" 
+  " * Description:\n" 
+  " *    this function computes the gradInput from weight and gradOutput\n" 
+  " * This can probably be folded into the earlier method, or replace it,\n" 
+  " * but keeping it separate for now, to avoid breaking the earlier method,\n" 
+  " * and mean dont have to think about how to merge them yet\n" 
+  " */\n" 
+  "kernel void maxgradinput_staggered(\n" 
+  "    global float *gradInput_data, int gradInput_offset,\n" 
+  "    global const float *gradOutput_data, int gradOutput_offset,\n" 
+  "    global const float *indices_data, int indices_offset,\n" 
+  "    int indices_x_offset, int indices_y_offset,\n" 
+  "   int input_n, int input_h, int input_w,\n" 
+  "   int kH, int kW, int dH, int dW,\n" 
+  "   int staggerRatio,\n" 
+  "   int staggerCombo)\n" 
+  "{\n" 
+  "  global float *gradInput = gradInput_data + gradInput_offset;\n" 
+  "  global const float *gradOutput = gradOutput_data + gradOutput_offset;\n" 
+  "  global const float *indices_x = indices_data + indices_offset + indices_x_offset;\n" 
+  "  global const float *indices_y = indices_data + indices_offset + indices_y_offset;\n" 
+  "\n" 
+  "  // iterators\n" 
+  "  int xx, yy;\n" 
+  "\n" 
+  "  // output size\n" 
+  "  const int output_w = floor((float)(input_w - kW) / dW + 1);\n" 
+  "  const int output_h = floor((float)(input_h - kH) / dH + 1);\n" 
+  "\n" 
+  "  // compute offsets based on thread/block ID\n" 
+  "  int o = get_group_id(0);\n" 
+  "  int i = o;\n" 
+  "  //int k = get_group_id(0) % input_n;\n" 
+  "\n" 
+  "  int xx_start = get_local_id(0) * staggerRatio + (staggerCombo & 1);\n" 
+  "  int xx_end = output_w;\n" 
+  "  int xx_step = get_local_size(0) * staggerRatio;\n" 
+  "\n" 
+  "  int yy_start = (get_local_size(1)*get_group_id(1) + get_local_id(1)) * staggerRatio + (staggerCombo >> 1);\n" 
+  "  int yy_end = output_h;\n" 
+  "  int yy_step = get_local_size(1)*get_num_groups(1) * staggerRatio;\n" 
   "\n" 
   "  // select input/output plane\n" 
   "  gradOutput = gradOutput + o*output_w*output_h;\n" 

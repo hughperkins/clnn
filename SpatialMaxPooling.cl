@@ -149,7 +149,7 @@ kernel void maxgradinput_staggered(
    int input_n, int input_h, int input_w,
    int kH, int kW, int dH, int dW,
    int staggerRatio,
-   int skipFirstNum)
+   int staggerCombo)
 {
   global float *gradInput = gradInput_data + gradInput_offset;
   global const float *gradOutput = gradOutput_data + gradOutput_offset;
@@ -168,11 +168,11 @@ kernel void maxgradinput_staggered(
   int i = o;
   //int k = get_group_id(0) % input_n;
 
-  int xx_start = get_local_id(0) * staggerRatio + skipFirstNum;
+  int xx_start = get_local_id(0) * staggerRatio + (staggerCombo & 1);
   int xx_end = output_w;
   int xx_step = get_local_size(0) * staggerRatio;
 
-  int yy_start = (get_local_size(1)*get_group_id(1) + get_local_id(1)) * staggerRatio + skipFirstNum;
+  int yy_start = (get_local_size(1)*get_group_id(1) + get_local_id(1)) * staggerRatio + (staggerCombo >> 1);
   int yy_end = output_h;
   int yy_step = get_local_size(1)*get_num_groups(1) * staggerRatio;
 
