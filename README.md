@@ -22,6 +22,7 @@ These mostly 'just work', since based on underlying tensor methods, already impl
 
 * nn.SpatialConvolutionMM
 * nn.SpatialMaxPooling (note: half the pooling size should be no greater than stride currently, though easy to fix this, so please log an issue if you need)
+* nn.SpatialAveragePooling (either filter size must equal input size, or filter size must equal stride size)
 
 ### Transfer function layers
 
@@ -143,6 +144,7 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 * 10th August:
   * Improve error message when out of memory, ie will say it ran out of memory, rather than say 'c++ exception' now, in many common cases
   * SpatialMaxPooling can now handle pooling size and stride are different, as long as half the pooling size is no more than stride
+  * Added SpatialAveragePooling for case where input size equals filter size, or filter size equals stride size
 * 22nd July:
   * Performance improvements in underlying [cltorch](https://github.com/hughperkins/cltorch) mean that times for [char-rnn](http://github.com/karpathy/char-rnn) are now around 2-3 times faster on NVIDIA and AMD GPUs
 * 6th July:
