@@ -5,10 +5,15 @@
  *    this function avg-pools an input 3D tensor along dimensions 1 and 2
  *    3D input, 3D output
  */
-kernel void subsample(float *input, float *output,
-                          int input_n, int input_h, int input_w,
-                          int kH, int kW, int dH, int dW)
+kernel void subsample(
+  const global float *input_data, int input_offset,
+  global float *output_data, int output_offset,
+  int input_n, int input_h, int input_w,
+  int kH, int kW, int dH, int dW)
 {
+  global const float *input = input_data + input_offset;
+  global float *output = output_data + output_offset;
+
   // iterators
   int xx, yy;
 
@@ -36,8 +41,8 @@ kernel void subsample(float *input, float *output,
   for(yy = yy_start; yy < yy_end; yy+=yy_step) {
     for(xx = xx_start; xx < xx_end; xx+=xx_step) {
       // Compute the mean of the input image...
-      float *ptr_input = input + yy*dH*input_w + xx*dW;
-      float *ptr_output = output + yy*output_w + xx;
+      const global float *ptr_input = input + yy*dH*input_w + xx*dW;
+      global float *ptr_output = output + yy*output_w + xx;
       float sum = 0;
       int kx, ky;
       for(ky = 0; ky < kH; ky++) {
@@ -46,7 +51,7 @@ kernel void subsample(float *input, float *output,
         ptr_input += input_w; // next input line
       }
       // Update output
-      *ptr_output = sum/float(kW*kH);
+      *ptr_output = sum/(float)(kW*kH);
     }
   }
 }
@@ -55,10 +60,15 @@ kernel void subsample(float *input, float *output,
  * Description:
  *    this function computes the gradInput from gradOutput
  */
-kernel void subgradinput(float *gradInput, float *gradOutput,
-                             int input_n, int input_h, int input_w,
-                             int kH, int kW, int dH, int dW)
+kernel void subgradinput(
+  global float *gradInput_data, int gradInput_offset,
+  const global float *gradOutput_data, int gradOutput_offset,
+  int input_n, int input_h, int input_w,
+  int kH, int kW, int dH, int dW)
 {
+  global float *gradInput = gradInput_data + gradInput_offset;
+  const global float *gradOutput = gradOutput_data + gradOutput_offset;
+
   // iterators
   int xx, yy;
 
@@ -85,13 +95,13 @@ kernel void subgradinput(float *gradInput, float *gradOutput,
   // compute gradInput
   for(yy = yy_start; yy < yy_end; yy+=yy_step) {
     for(xx = xx_start; xx < xx_end; xx+=xx_step) {
-      float *ptr_gradInput = gradInput + yy*dH*input_w + xx*dW;
-      float *ptr_gradOutput = gradOutput + yy*output_w + xx;
+      global float *ptr_gradInput = gradInput + yy*dH*input_w + xx*dW;
+      const global float *ptr_gradOutput = gradOutput + yy*output_w + xx;
       float z = *ptr_gradOutput;
       int kx, ky;
       for(ky = 0; ky < kH; ky++) {
         for(kx = 0; kx < kW; kx++)
-          ptr_gradInput[kx] += z / float(kW*kH);
+          ptr_gradInput[kx] += z / (float)(kW*kH);
         ptr_gradInput += input_w;
       }
     }

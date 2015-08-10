@@ -66,7 +66,7 @@ function _testLabelCriterionLayer(net)
   print('testlabelcrtierionlayer')
   N = 8
   in_size = 10
-  
+
   local input = torch.Tensor(N, in_size):uniform() - 0.5
   local target = torch.multinomial(torch.range(1,in_size), N, true)
 
@@ -172,6 +172,10 @@ function _test4dLayer(net, inPlanes, inSize, outPlanes, outSize, debug)
 
   tester:asserteq(gradInput, gradInputCl:float())
   collectgarbage()
+end
+
+function mytests.testSpatialAveragePooling()
+  _test4dLayer(nn.SpatialAveragePooling(5,5,1,1), 1024, 5, 1024, 1, false)  -- as per googlenet
 end
 
 function mytests.testSpatialMaxPooling()
