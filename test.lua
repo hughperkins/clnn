@@ -915,48 +915,6 @@ function clnntest.LogSoftMax_backward_batch()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-function clnntest.SpatialMaxPooling_forward()
-   local from = math.random(1,64)
-   local to = from
-   local ki = math.random(2,4)
-   local kj = math.random(2,4)
-   local si = math.random(1,4)
-   local sj = math.random(1,4)
-   local outi = math.random(32,256)
-   local outj = math.random(32,256)
-   local ini = (outi-1)*si+ki
-   local inj = (outj-1)*sj+kj
-   
-   local tm = {}
-   local title = string.format('SpatialMaxPooling.forward %dx%dx%d o %dx%d -> %dx%dx%d',
-      from, inj, ini, kj, ki, to, outj, outi)
-   times[title] = tm
-   
-   local input = torch.randn(from,inj,ini)
-   local sconv = nn.SpatialMaxPooling(ki,kj,si,sj)
-   local groundtruth = sconv:forward(input)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundtruth = sconv:forward(input)
-   end
-   tm.cpu = a:time().real
-   
-   input = input:cl()
-   local gconv = nn.SpatialMaxPooling(ki,kj,si,sj):cl()
-   local rescl = gconv:forward(input)
-   a:reset()
-   for i = 1,nloop do
-      rescl = gconv:forward(input)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-   
-   local error = rescl:float() - groundtruth
-   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
-   local error_ind = gconv.indices:float() - sconv.indices
-   mytester:asserteq(error_ind:max(), 0, 'error on indices (forward) ')
-end
-
 function clnntest.SpatialMaxPooling_forward_batch()
    local bs = math.random(4,10)
    local from = math.random(1,64)
@@ -996,6 +954,97 @@ function clnntest.SpatialMaxPooling_forward_batch()
    
    local error = rescl:float() - groundtruth
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
+end
+
+function clnntest.SpatialAveragePooling_forward_batch()
+   local bs = 10
+   local from = 32
+   local to = from
+   local ki = 5
+   local kj = 5
+   local si = 1
+   local sj = 1
+   local outi = 1
+   local outj = 1
+   local ini = (outi-1)*si+ki
+   local inj = (outj-1)*sj+kj
+   
+   local tm = {}
+   local title = string.format('SpatialAveragePooling.forward %dx%dx%dx%d o %dx%d -> %dx%dx%dx%d',
+      bs, from, inj, ini, kj, ki, bs, to, outj, outi)
+   times[title] = tm
+   
+   local input = torch.randn(bs,from,inj,ini)
+   local sconv = nn.SpatialAveragePooling(ki,kj,si,sj)
+   local groundtruth = sconv:forward(input)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundtruth = sconv:forward(input)
+   end
+   tm.cpu = a:time().real
+   
+   input = input:cl()
+   local gconv = nn.SpatialAveragePooling(ki,kj,si,sj):cl()
+   local rescl = gconv:forward(input)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:forward(input)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+   
+   local error = rescl:float() - groundtruth
+   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
+end
+
+function clnntest.SpatialAveragePooling_backward_batch()
+   local bs = 32
+   local from = 32
+   local to = from
+   local ki = 5
+   local kj = 5
+   local si = 1
+   local sj = 1
+   local outi = 1
+   local outj = 1
+   local ini = (outi-1)*si+ki
+   local inj = (outj-1)*sj+kj
+   
+   local tm = {}
+   local title = string.format('SpatialAveragePooling.backward %dx%dx%dx%d o %dx%d -> %dx%dx%dx%d',
+      bs, from, inj, ini, kj, ki, bs, to, outj, outi)
+   times[title] = tm
+   
+   local input = torch.randn(bs,from,inj,ini)
+   local gradOutput = torch.randn(bs,to,outj,outi)
+   local sconv = nn.SpatialAveragePooling(ki,kj,si,sj)
+   sconv:forward(input)
+   sconv:zeroGradParameters()
+   local groundgrad = sconv:backward(input, gradOutput)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      sconv:zeroGradParameters()
+      groundgrad = sconv:backward(input, gradOutput)
+   end
+   tm.cpu = a:time().real
+   
+   input = input:cl()
+   gradOutput = gradOutput:cl()
+   local gconv = nn.SpatialAveragePooling(ki,kj,si,sj):cl()
+   gconv:forward(input)
+   gconv:zeroGradParameters()
+   local rescl = gconv:backward(input, gradOutput)
+   a:reset()
+   for i = 1,nloop do
+      gconv:zeroGradParameters()
+      rescl = gconv:backward(input, gradOutput)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+   
+   local error = rescl:float() - groundgrad
+   
+   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
 function clnntest.ClassNLLCriterionMultipleTarget()
@@ -1521,6 +1570,50 @@ function x_clnntest.SpatialSubSampling_forward()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
+function x_clnntest.SpatialMaxPooling_forward()
+   local from = math.random(1,64)
+   local to = from
+   local ki = math.random(2,4)
+   local kj = math.random(2,4)
+   local si = math.random(1,4)
+   local sj = math.random(1,4)
+   local outi = math.random(32,256)
+   local outj = math.random(32,256)
+   local ini = (outi-1)*si+ki
+   local inj = (outj-1)*sj+kj
+   
+   local tm = {}
+   local title = string.format('SpatialMaxPooling.forward %dx%dx%d o %dx%d -> %dx%dx%d',
+      from, inj, ini, kj, ki, to, outj, outi)
+   times[title] = tm
+   
+   local input = torch.randn(from,inj,ini)
+   local sconv = nn.SpatialMaxPooling(ki,kj,si,sj)
+   local groundtruth = sconv:forward(input)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundtruth = sconv:forward(input)
+   end
+   tm.cpu = a:time().real
+   
+   input = input:cl()
+   local gconv = nn.SpatialMaxPooling(ki,kj,si,sj):cl()
+   local rescl = gconv:forward(input)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:forward(input)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+   
+   local error = rescl:float() - groundtruth
+   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
+   print('gconv.indices:size()', gconv.indices:size())
+   print('sconv.indices:size()', sconv.indices:size())
+   local error_ind = gconv.indices:float() - sconv.indices
+   mytester:asserteq(error_ind:max(), 0, 'error on indices (forward) ')
+end
+
 function x_clnntest.SpatialSubSampling_forward_batch()
    local bs = math.random(4,10)
    local from = math.random(1,64)
@@ -1835,14 +1928,14 @@ function x_clnntest.SpatialMaxPooling_backward_batch_atomic()
 end
 
 function x_clnntest.SpatialAveragePooling_forward()
-   local from = math.random(1,64)
+   local from = 32
    local to = from
-   local ki = math.random(2,4)
-   local kj = math.random(2,4)
-   local si = math.random(1,ki)
-   local sj = math.random(1,kj)
-   local outi = math.random(32,256)
-   local outj = math.random(32,256)
+   local ki = 5
+   local kj = 5
+   local si = 1
+   local sj = 1
+   local outi = 1
+   local outj = 1
    local ini = (outi-1)*si+ki
    local inj = (outj-1)*sj+kj
    
@@ -1874,56 +1967,15 @@ function x_clnntest.SpatialAveragePooling_forward()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function x_clnntest.SpatialAveragePooling_forward_batch()
-   local bs = math.random(4,10)
-   local from = math.random(1,64)
-   local to = from
-   local ki = math.random(2,4)
-   local kj = math.random(2,4)
-   local si = math.random(1,ki)
-   local sj = math.random(1,kj)
-   local outi = math.random(32,256)
-   local outj = math.random(32,256)
-   local ini = (outi-1)*si+ki
-   local inj = (outj-1)*sj+kj
-   
-   local tm = {}
-   local title = string.format('SpatialAveragePooling.forward %dx%dx%dx%d o %dx%d -> %dx%dx%dx%d',
-      bs, from, inj, ini, kj, ki, bs, to, outj, outi)
-   times[title] = tm
-   
-   local input = torch.randn(bs,from,inj,ini)
-   local sconv = nn.SpatialAveragePooling(ki,kj,si,sj)
-   local groundtruth = sconv:forward(input)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundtruth = sconv:forward(input)
-   end
-   tm.cpu = a:time().real
-   
-   input = input:cl()
-   local gconv = nn.SpatialAveragePooling(ki,kj,si,sj):cl()
-   local rescl = gconv:forward(input)
-   a:reset()
-   for i = 1,nloop do
-      rescl = gconv:forward(input)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-   
-   local error = rescl:float() - groundtruth
-   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
-end
-
 function x_clnntest.SpatialAveragePooling_backward()
-   local from = math.random(1,64)
+   local from = 32
    local to = from
-   local ki = math.random(2,4)
-   local kj = math.random(2,4)
-   local si = math.random(1,ki)
-   local sj = math.random(1,kj)
-   local outi = math.random(32,64)
-   local outj = math.random(32,64)
+   local ki = 5
+   local kj = 5
+   local si = 1
+   local sj = 1
+   local outi = 1
+   local outj = 1
    local ini = (outi-1)*si+ki
    local inj = (outj-1)*sj+kj
    
@@ -1934,56 +1986,6 @@ function x_clnntest.SpatialAveragePooling_backward()
    
    local input = torch.randn(from,inj,ini)
    local gradOutput = torch.randn(to,outj,outi)
-   local sconv = nn.SpatialAveragePooling(ki,kj,si,sj)
-   sconv:forward(input)
-   sconv:zeroGradParameters()
-   local groundgrad = sconv:backward(input, gradOutput)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      sconv:zeroGradParameters()
-      groundgrad = sconv:backward(input, gradOutput)
-   end
-   tm.cpu = a:time().real
-   
-   input = input:cl()
-   gradOutput = gradOutput:cl()
-   local gconv = nn.SpatialAveragePooling(ki,kj,si,sj):cl()
-   gconv:forward(input)
-   gconv:zeroGradParameters()
-   local rescl = gconv:backward(input, gradOutput)
-   a:reset()
-   for i = 1,nloop do
-      gconv:zeroGradParameters()
-      rescl = gconv:backward(input, gradOutput)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-   
-   local error = rescl:float() - groundgrad
-   
-   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
-end
-
-function x_clnntest.SpatialAveragePooling_backward_batch()
-   local bs = math.random(4,10)
-   local from = math.random(1,64)
-   local to = from
-   local ki = math.random(2,4)
-   local kj = math.random(2,4)
-   local si = math.random(1,ki)
-   local sj = math.random(1,kj)
-   local outi = math.random(32,64)
-   local outj = math.random(32,64)
-   local ini = (outi-1)*si+ki
-   local inj = (outj-1)*sj+kj
-   
-   local tm = {}
-   local title = string.format('SpatialAveragePooling.backward %dx%dx%dx%d o %dx%d -> %dx%dx%dx%d',
-      bs, from, inj, ini, kj, ki, bs, to, outj, outi)
-   times[title] = tm
-   
-   local input = torch.randn(bs,from,inj,ini)
-   local gradOutput = torch.randn(bs,to,outj,outi)
    local sconv = nn.SpatialAveragePooling(ki,kj,si,sj)
    sconv:forward(input)
    sconv:zeroGradParameters()
@@ -3402,7 +3404,21 @@ function nn.testcl(tests, print_timing, n_loop, seed)
    torch.setdefaulttensortype('torch.FloatTensor')
    -- initSeed(seed)
    mytester = torch.Tester()
-   mytester:add(clnntest)
+   local mytests = clnntest
+   if os.getenv('TESTS') ~= nil then
+      mytests = {}
+      for name, test in pairs(clnntest) do
+         if name == os.getenv('TESTS') then
+            table.insert(mytests, test)
+         end
+      end
+   elseif os.getenv('LIST') ~= nil then
+      for name, test in pairs(clnntest) do
+         print(name)
+      end
+      os.exit(0)
+   end
+   mytester:add(mytests)
    mytester:run(tests)
    torch.setdefaulttensortype(oldtype)
    if print_timing then
