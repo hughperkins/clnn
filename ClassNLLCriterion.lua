@@ -13,39 +13,39 @@ nn.ClassNLLCriterion.baseUpdateGradInput = nn.ClassNLLCriterion.updateGradInput
 -- sample.  ie, the loss for that sample is minus the input value
 -- for whichever neuron matches the ground truth class
 function nn.ClassNLLCriterion:updateOutput(input, target)
-  if torch.type(input) ~= 'torch.ClTensor' then
-    return self:baseUpdateOutput(input, target)
-  end
-  if self.weights then
-    error('weights not supported (yet!) in clnn.ClassNLLCriterion.  Please an issue on github, to request this functionality')
-  end
-  if input:dim() ~= 2 then
-    error('Input to clnn.ClassNLLCriterion should be 2-d tensor')
-  end
-  num_samples = input:size(1)
-  num_categories = input:size(2)
-  if self.buffer == nil then
-    self.buffer = input:clone():resize(num_samples,1)
-  end
-  self.buffer:gather(input, 2, target:unfold(1,1,1))
-  self.output = - self.buffer:sum() / num_samples
-  return self.output
+   if torch.type(input) ~= 'torch.ClTensor' then
+      return self:baseUpdateOutput(input, target)
+   end
+   if self.weights then
+      error('weights not supported (yet!) in clnn.ClassNLLCriterion.  Please an issue on github, to request this functionality')
+   end
+   if input:dim() ~= 2 then
+      error('Input to clnn.ClassNLLCriterion should be 2-d tensor')
+   end
+   num_samples = input:size(1)
+   num_categories = input:size(2)
+   if self.buffer == nil then
+      self.buffer = input:clone():resize(num_samples,1)
+   end
+   self.buffer:gather(input, 2, target:unfold(1,1,1))
+   self.output = - self.buffer:sum() / num_samples
+   return self.output
 end
 
 
 function nn.ClassNLLCriterion:updateGradInput(input, target)
-  if torch.type(input) ~= 'torch.ClTensor' then
-    return self:baseUpdateGradInput(input, target)
-  end
-  self.gradInput:resizeAs(input)
-  self.gradInput:zero()
-
-  local z = -1
-  if self.sizeAverage then
-     z = z / target:size(1)
-  end
-  self.gradInput:scatter(2, target:unfold(1,1,1), z)
-
-  return self.gradInput
+   if torch.type(input) ~= 'torch.ClTensor' then
+      return self:baseUpdateGradInput(input, target)
+   end
+   self.gradInput:resizeAs(input)
+   self.gradInput:zero()
+   
+   local z = -1
+   if self.sizeAverage then
+      z = z / target:size(1)
+   end
+   self.gradInput:scatter(2, target:unfold(1,1,1), z)
+   
+   return self.gradInput
 end
 
