@@ -163,6 +163,7 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
   gradOutput = THClTensor_newContiguous(state, gradOutput);
 
   if (input->nDimension == 3) {
+    THError("Not implemented");
     long nInputPlane = input->size[0];
 
     THClTensor_resizeAs(state, gradInput, input);
