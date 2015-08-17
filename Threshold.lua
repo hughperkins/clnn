@@ -2,7 +2,7 @@ require 'nn'
 require 'cltorch'
 
 local function floatToString(val)
-   valstring = tostring(val)
+   local valstring = tostring(val)
    if valstring:find('%.') or valstring:find('e') then
       valstring = valstring .. 'f'
    end

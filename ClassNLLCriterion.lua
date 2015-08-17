@@ -22,8 +22,8 @@ function nn.ClassNLLCriterion:updateOutput(input, target)
    if input:dim() ~= 2 then
       error('Input to clnn.ClassNLLCriterion should be 2-d tensor')
    end
-   num_samples = input:size(1)
-   num_categories = input:size(2)
+   local num_samples = input:size(1)
+   local num_categories = input:size(2)
    if self.buffer == nil then
       self.buffer = input:clone():resize(num_samples,1)
    end
