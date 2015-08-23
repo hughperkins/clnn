@@ -42,9 +42,9 @@ table.insert(scenarios, {name='l5', inplanes=384, insize=13, outplanes=384, filt
 --   end
 --end
 
-function run_scenario(scenario)
+function run_scenario(scenario, numIts)
    collectgarbage()
-   print('scenario', scenario)
+   print('scenario ' .. scenario.name .. ' inplanes=' .. scenario.inplanes .. ' insize=' ..scenario.insize .. ' filtersize=' .. scenario.filtersize)
    input = torch.Tensor(batchSize, scenario.inplanes, scenario.insize, scenario.insize):uniform()
    layer = nn.SpatialConvolutionMM(scenario.inplanes, scenario.outplanes,
       scenario.filtersize, scenario.filtersize)
@@ -63,49 +63,62 @@ function run_scenario(scenario)
    output = layer.output
    if api == 'cl' then cltorch.finish() end
    if api == 'cuda' then cutorch.synchronize() end
-   for i=1,3 do
+   local sumForward = 0
+   for i=1,numIts do
       sys.tic()
       layer:updateOutput(input)
       if api == 'cl' then cltorch.finish() end
       if api == 'cuda' then cutorch.synchronize() end
-      print('    updateOutput sys.toc()', sys.toc())
+      local thisTime = sys.toc() * 1000
+      print('    updateOutput ' .. thisTime .. 'ms')
+      sumForward = sumForward + thisTime
    end
+   local averageForward = sumForward / numIts
 
-   -- and now back again, I suppose?
-   local backwards_timings = {}
+   -- and now back again
    layer:updateGradInput(input, output)
    if api == 'cl' then cltorch.finish() end
    if api == 'cuda' then cutorch.synchronize() end
-   for i=1,3 do
+   local sumGradInput = 0
+   for i=1,numIts do
       sys.tic()
       layer:updateGradInput(input, output)
       if api == 'cl' then cltorch.finish() end
       if api == 'cuda' then cutorch.synchronize() end
-      local time = sys.toc()
-      print('    updateGradInput sys.toc()', time)
-      backwards_timings[i] = time
+      local thisTime = sys.toc() * 1000
+      print('    updateGradInput ' .. thisTime .. 'ms')
+      sumGradInput = sumGradInput + thisTime
    end
+   local averageGradInput = sumGradInput / numIts
 
    layer:accGradParameters(input, output)
    if api == 'cl' then cltorch.finish() end
    if api == 'cuda' then cutorch.synchronize() end
-   for i=1,3 do
+   local sumUpdateWeights = 0
+   for i=1,numIts do
       sys.tic()
       layer:accGradParameters(input, output)
       if api == 'cl' then cltorch.finish() end
       if api == 'cuda' then cutorch.synchronize() end
-      time = sys.toc()
-      print('    accGradParameters sys.toc()', time)
-      backwards_timings[i] = backwards_timings[i] + time
+      thisTime = sys.toc() * 1000
+      print('    accGradParameters ' .. thisTime .. 'ms')
+      sumUpdateWeights = sumUpdateWeights + thisTime
    end
-   for i=1,3 do
-      print('    backwards', backwards_timings[i])
-   end
+   local averageUpdateWeights = sumUpdateWeights / numIts
+   print('Average forward:', averageForward .. 'ms')
+   print('Average updateGradInput:', averageGradInput .. 'ms')
+   print('Average updateWeights:', averageUpdateWeights .. 'ms')
+   print('Average backward:', (averageGradInput + averageUpdateWeights) .. 'ms')
 end
 
+local numIts = 10
+if os.getenv('NUMITS') then
+   numIts = tonumber(os.getenv('NUMITS'))
+end
+print('Number iterations: ' .. numIts)
 for i, scenario in ipairs(scenarios) do
-   print(i, scenario.name)
-   run_scenario(scenario)
+   if os.getenv('NET') == nil or scenario.name == os.getenv('NET') then
+      run_scenario(scenario, numIts)
+   end
 end
-
 
