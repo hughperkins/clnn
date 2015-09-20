@@ -72,7 +72,7 @@ Please see https://github.com/soumith/convnet-benchmarks#imagenet-winners-benchm
 
 ## Example networks
 
-* Karpathy's [char-rnn](https://github.com/karpathy/char-rnn) is OpenCL-enabled, simple add option `-opencl 1`
+* Andrej's [char-rnn](https://github.com/karpathy/char-rnn) is OpenCL-enabled, simple add option `-opencl 1`
 * Justin's [neural-style](https://github.com/jcjohnson/neural-style) has an OpenCL port in progress by Shubhanshu [napsternxg/neural-style](https://github.com/napsternxg/neural-style)
 
 ## Installation
