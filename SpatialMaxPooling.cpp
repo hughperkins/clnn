@@ -33,6 +33,7 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
   THAssert(THClTensor_checkGPU(state, 3, input, output, indices));
   luaL_argcheck(L, input->nDimension == 3 || input->nDimension == 4, 2, "3D or 4D (batch) tensor expected");
 
+  // FIXME: resync this from SpatialMaxPooling.cu, which looks much simpler/more factorized now
   if (input->nDimension == 3) {
     long nInputCols = input->size[2];
     long nInputRows = input->size[1];
@@ -45,7 +46,9 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
     input = THClTensor_newContiguous(state, input);
 
     THClTensor_resize3d(state, output, nInputPlane, nOutputRows, nOutputCols);
+    // FIXME: figure out why this was using resize4d, with an extra dimension of 2 before
     THClTensor_resize4d(state, indices, 2, nInputPlane, nOutputRows, nOutputCols);
+    //THClTensor_resizeAs(state, indices, output);
 
     int yblocks = (int)(16L / nInputPlane);
     yblocks = yblocks < 1 ? 1 : yblocks;
@@ -96,6 +99,7 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
     input = THClTensor_newContiguous(state, input);
 
     THClTensor_resize4d(state, output, nbatch, nInputPlane, nOutputRows, nOutputCols);
+    // FIXME: figure out why this is using resize5d, with an extra dimension of 2???
     THClTensor_resize5d(state, indices, 2, nbatch, nInputPlane, nOutputRows, nOutputCols);
 
     int yblocks = (int)(16L / nInputPlane);
@@ -163,8 +167,13 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
   gradOutput = THClTensor_newContiguous(state, gradOutput);
 
   if (input->nDimension == 3) {
-    THError("Not implemented");
+//    THError("Not implemented");
     long nInputPlane = input->size[0];
+    long nInputRows = input->size[1];
+    long nInputCols = input->size[2];
+    long nBatch = 1;
+    long nOutputRows = gradOutput->size[1];
+    long nOutputCols = gradOutput->size[2];
 
     THClTensor_resizeAs(state, gradInput, input);
     THClTensor_zero(state, gradInput);
@@ -175,38 +184,15 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
     dim3 threads(32,8);
 
     if(dW == kW && dH == kH) {
-      // run updateGradInput kernel
-//      atomicmaxgradinput <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (
-//        gradInput_data, gradOutput_data,
-//        indices_data+nInputPlane*nOutputCols*nOutputRows, indices_data,
-//        nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
-      THError("not implemented");
-    } else {
-      // run updateGradInput kernel, accumulate gradients atomically
-//      atomicmaxgradinput <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (
-//        gradInput_data, gradOutput_data,
-//        indices_data+nInputPlane*nOutputCols*nOutputRows, indices_data,
-//        nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
-      THError("not implemented");
-    }
-  } else {
-    long nInputCols = input->size[3];
-    long nInputRows = input->size[2];
-    long nInputPlane = input->size[1];
-    long nbatch = input->size[0];
-    long nOutputCols = gradOutput->size[3];
-    long nOutputRows = gradOutput->size[2];
-
-    THClTensor_resizeAs(state, gradInput, input);
-    THClTensor_zero(state, gradInput);
-
-    if(dW == kW && dH == kH) {
-      // simplest case
-      // run updateGradInput kernel
+      // FIXME: this is just copy and pasted for now, to get it working
+      // probably can just re-use the same code, literally, without copy/paste
+      // ie, just set the value of the variables nInputPlan, nInputRows, nInputCols,
+      // and nBatch, hmmm, and nOutputRows, and nOutputCols
+      // and then move everything else outside of the `if (input->nDimension == 3)` block
 
       int yblocks = (int)(16L / nInputPlane);
       yblocks = yblocks < 1 ? 1 : yblocks;
-      dim3 blocks(nInputPlane*nbatch,yblocks);
+      dim3 blocks(nInputPlane*nBatch,yblocks);
       dim3 threads(32,8);
 
       EasyCL *cl = input->storage->cl;
@@ -224,7 +210,70 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
       k.out(gradInput);
       k.in(gradOutput);
       k.in(indices);
-      k.in((int)(nbatch*nInputPlane*nOutputCols*nOutputRows));
+      k.in((int)(nBatch*nInputPlane*nOutputCols*nOutputRows));
+      k.in((int)0);
+
+      k.in((int)nInputPlane);
+      k.in((int)nInputRows);
+      k.in((int)nInputCols);
+
+      k.in((int)kH);
+      k.in((int)kW);
+      k.in((int)dH);
+      k.in((int)dW);
+
+      k.run(blocks, threads);
+
+      // run updateGradInput kernel
+//      atomicmaxgradinput <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (
+//        gradInput_data, gradOutput_data,
+//        indices_data+nInputPlane*nOutputCols*nOutputRows, indices_data,
+//        nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
+//      THError("not implemented");
+    } else {
+      // run updateGradInput kernel, accumulate gradients atomically
+//      atomicmaxgradinput <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (
+//        gradInput_data, gradOutput_data,
+//        indices_data+nInputPlane*nOutputCols*nOutputRows, indices_data,
+//        nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
+      THError("not implemented");
+    }
+  } else {
+    long nInputCols = input->size[3];
+    long nInputRows = input->size[2];
+    long nInputPlane = input->size[1];
+    long nBatch = input->size[0];
+    long nOutputCols = gradOutput->size[3];
+    long nOutputRows = gradOutput->size[2];
+
+    THClTensor_resizeAs(state, gradInput, input);
+    THClTensor_zero(state, gradInput);
+
+    if(dW == kW && dH == kH) {
+      // simplest case
+      // run updateGradInput kernel
+
+      int yblocks = (int)(16L / nInputPlane);
+      yblocks = yblocks < 1 ? 1 : yblocks;
+      dim3 blocks(nInputPlane*nBatch,yblocks);
+      dim3 threads(32,8);
+
+      EasyCL *cl = input->storage->cl;
+      std::string uniqueName = __FILE__ "maxgradinput";
+      CLKernel *kernel = 0;
+      if(cl->kernelExists(uniqueName)) {
+        kernel = cl->getKernel(uniqueName);
+      } else {
+        TemplatedKernel kernelBuilder(cl);
+        kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
+          SpatialMaxPooling_getKernelTemplate(), "maxgradinput");
+      }
+
+      THClKernels k(state, kernel);
+      k.out(gradInput);
+      k.in(gradOutput);
+      k.in(indices);
+      k.in((int)(nBatch*nInputPlane*nOutputCols*nOutputRows));
       k.in((int)0);
 
       k.in((int)nInputPlane);
@@ -241,7 +290,7 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
       // do two updates, staggered
       int yblocks = (int)(16L / nInputPlane);
       yblocks = yblocks < 1 ? 1 : yblocks;
-      dim3 blocks(nInputPlane*nbatch,yblocks);
+      dim3 blocks(nInputPlane*nBatch,yblocks);
       dim3 threads(32,8);
 
       EasyCL *cl = input->storage->cl;
@@ -262,7 +311,7 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
         k.inout(gradInput);
         k.in(gradOutput);
         k.in(indices);
-        k.in((int)(nbatch*nInputPlane*nOutputCols*nOutputRows));
+        k.in((int)(nBatch*nInputPlane*nOutputCols*nOutputRows));
         k.in((int)0);
 
         k.in((int)nInputPlane);

@@ -141,6 +141,8 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 ## Recent changes
 
+* 20th September:
+  * added non-batch implementation for SpatialMaxPooling (previously only handled batched input), for contiguous pools
 * 10th August:
   * Improve error message when out of memory, ie will say it ran out of memory, rather than say 'c++ exception' now, in many common cases
   * SpatialMaxPooling can now handle pooling size and stride are different, as long as half the pooling size is no more than stride
