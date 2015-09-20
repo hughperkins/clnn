@@ -67,7 +67,8 @@ In theory, trainers 'just work', since they just call standard torch methods on 
 ### Soumith benchmark layers
 
 Please see https://github.com/soumith/convnet-benchmarks#imagenet-winners-benchmarking
-* On a Titan X, OpenCL torch is about 3 times slower than CUDA torch, eg for VGG, cutorch takes 1100ms, and cltorch takes 3400ms
+* On a Titan X, OpenCL torch is about 3 times slower than CUDA torch
+* eg for VGG, cutorch takes 1100ms, and cltorch takes 3400ms
 
 ## Example networks
 
