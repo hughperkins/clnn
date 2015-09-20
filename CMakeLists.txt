@@ -13,6 +13,8 @@ SET(CMAKE_CXX_FLAGS "-std=c++0x -Wall")
 #Find_package(Lua51 REQUIRED)
 #include_directories(${LUA_INCLUDE_DIR})
 
+add_definitions(-DUSE_CLEW)
+
 INCLUDE_DIRECTORIES("${Torch_INSTALL_INCLUDE}/THCl")
 INCLUDE_DIRECTORIES("${Torch_INSTALL_INCLUDE}/easycl")
 LINK_DIRECTORIES("${Torch_INSTALL_LIB}")
