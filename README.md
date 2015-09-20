@@ -5,6 +5,7 @@ OpenCL backend for Torch nn neural networks library.
 ## What works
 
 ### Parameterized Modules
+
 * nn.Linear
 
 ### Basic Tensor methods
@@ -56,50 +57,22 @@ Containers 'just work', since they just call standard operations on the containe
 
 ### Trainers
 
-Trainers 'just work', since they just call standard methods on the network to be trained.  Tested with:
+In theory, trainers 'just work', since they just call standard torch methods on the network.  The following are good first choices:
 * nn.StochasticGradient
-* optim
+* optim.lbfgs
+* optim.adam
 
 ## Timings
 
-### Mnist
-
-Using the network in [test/test-mnist2.lua](test/test-mnist2.lua), and `MODEL=conv1`, following timings using an NVidia 940M, per epoch:
-* `API=cuda`: 3.2 seconds
-* `API=cl`: 13.6 seconds
-
-Note that this network is a bit unfair on clnn, since these are really tiny layers and inputs, for which clnn does less well currently, see the table in 'Soumith benchmark layers', below.
-
-(hmmm, interestingly, on this tiny network, [DeepCL](https://github.com/hughperkins/DeepCL) is actually faster than both.  2.3 seconds per epoch, using `./train numtrain=5120 numtest=-1 netdef=32c5-tanh-mp3-64c5-tanh-mp2-200n-tanh-10n`.)
-
 ### Soumith benchmark layers
 
-On an NVidia 940M, using [test/test-perf.lua](test/test-perf.lua):
+Please see https://github.com/soumith/convnet-benchmarks#imagenet-winners-benchmarking
+* On a Titan X, OpenCL torch is about 3 times slower than CUDA torch, eg for VGG, cutorch takes 1100ms, and cltorch takes 3400ms
 
-| layer | direction | cuda time (seconds) | cl time (seconds) |
-|-------|-----------|---------------------|----------------|
-| l1    | forward   | 1.02               | 1.14    |
-| l2    | forward   | out of mem          | out of mem     |
-| l3    | forward   | 0.85                | 1.19 |
-| l4    | forward   | 0.15                | 0.42 |
-| l5    | forward   | 0.22                | 0.37 |
+## Example networks
 
-| layer | direction | cuda time (seconds) | cl time (seconds) |
-|-------|-----------|---------------------|----------------|
-| l1    | backward  | 0.93+1.47 =2.4              | 1.25+1.43 = 2.68    |
-| l2    | backward   | didnt try          | didnt try    |
-| l3    | backward   | 0.84+0.64 =1.48                | 0.93+2.28=3.21 |
-| l4    | backward   | 0.11+0.11 =0.22               | 0.17+0.20=0.37 |
-| l5    | backward   | 0.13+0.16=0.29                | 0.23+0.91=1.14 |
-
-## Example network
-
-* Here is an OpenCL-enabled version of Karpathy's LSTM network: [https://github.com/hughperkins/char-rnn](https://github.com/hughperkins/char-rnn)
-* Simply add option `-opencl 1` to enable OpenCL :-)
-* Current comparison, using an NVidia 940M graphics card, and an Intel i5-5200U processor.  These are timings per-batch
-  * cpu: 3.4s
-  * clnn: 0.27s
-  * cunn: 0.13s
+* Karpathy's [char-rnn](https://github.com/karpathy/char-rnn) is OpenCL-enabled, simple add option `-opencl 1`
+* Justin's [neural-style](https://github.com/jcjohnson/neural-style) has an OpenCL port in progress by Shubhanshu [napsternxg/neural-style](https://github.com/napsternxg/neural-style)
 
 ## Installation
 
@@ -116,12 +89,15 @@ On an NVidia 940M, using [test/test-perf.lua](test/test-perf.lua):
 ### Procedure
 
 ```
-git clone https://github.com/hughperkins/clnn.git
-cd clnn
-luarocks make rocks/clnn-scm-1.rockspec
+luarocks install clnn
 ```
 
 You should now be able to use `require 'clnn'` from your lua scripts :-)
+
+Please check that all is working by running the unit-tests:
+```
+luajit -l clnn -e 'clnn.test()'
+```
 
 ## Updating
 
@@ -130,6 +106,12 @@ You should now be able to use `require 'clnn'` from your lua scripts :-)
 
 ## Unit-tests
 
+To run, do:
+```
+luajit -l clnn -e 'clnn.test()'
+```
+
+The source-code for the tests:
 * For all layers except SpatialConvolutionMM, please see:
   * [test/test-layers.lua](test/test-layers.lua)
 * For SpatialConvolutionMM, please see:
