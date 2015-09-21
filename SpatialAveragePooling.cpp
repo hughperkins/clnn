@@ -122,90 +122,70 @@ static int clnn_SpatialAveragePooling_updateGradInput(lua_State *L)
   THClTensor *gradInput = (THClTensor *)luaT_getfieldcheckudata(L, 1, "gradInput", "torch.ClTensor");
   THAssert(THClTensor_checkGPU(state, 3, input, gradInput, gradOutput));
 
+  long nInputCols = 0;
+  long nInputRows = 0;
+  long nInputPlane = 0;
+  long nbatch = 0;
   if (input->nDimension == 3) {
-    long nInputCols = input->size[2];
-    long nInputRows = input->size[1];
-    long nInputPlane = input->size[0];
-
-    // float *gradOutput_data = THClTensor_data(state, gradOutput);
-    // float *gradInput_data;
-
-    THClTensor_resizeAs(state, gradInput, input);
-    THClTensor_zero(state, gradInput);
-    // gradInput_data = THClTensor_data(state, gradInput);
-
-    int yblocks = (int)(16L / nInputPlane);
-    yblocks = yblocks < 1 ? 1 : yblocks;
-    dim3 blocks(nInputPlane,yblocks);
-    dim3 threads(32,8);
-
-    // run updateGradInput kernel
-    if (kH == dH && kW == dW) {
-      THError("Not implemented");
-//      subgradinput <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (gradInput_data, gradOutput_data,
-//                                          nInputPlane, nInputRows, nInputCols,
-//                                          kH, kW, dH, dW);
-    } else {
-      THError("Not implemented");
-//      subgradinputAtomic <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (gradInput_data, gradOutput_data,
-//                                                nInputPlane, nInputRows, nInputCols,
-//                                                kH, kW, dH, dW);
-    }
+    nInputCols = input->size[2];
+    nInputRows = input->size[1];
+    nInputPlane = input->size[0];
+    nbatch = 1;
   } else {
-    long nInputCols = input->size[3];
-    long nInputRows = input->size[2];
-    long nInputPlane = input->size[1];
-    long nbatch = input->size[0];
+    nInputCols = input->size[3];
+    nInputRows = input->size[2];
+    nInputPlane = input->size[1];
+    nbatch = input->size[0];
+  }
 
-    // float *gradOutput_data = THClTensor_data(state, gradOutput);
-    // float *gradInput_data;
+  // float *gradOutput_data = THClTensor_data(state, gradOutput);
+  // float *gradInput_data;
 
-    THClTensor_resizeAs(state, gradInput, input);
-    THClTensor_zero(state, gradInput);
-    // gradInput_data = THClTensor_data(state, gradInput);
+  THClTensor_resizeAs(state, gradInput, input);
+  THClTensor_zero(state, gradInput);
+  // gradInput_data = THClTensor_data(state, gradInput);
 
-    int yblocks = (int)(16L / nInputPlane);
-    yblocks = yblocks < 1 ? 1 : yblocks;
-    dim3 blocks(nInputPlane*nbatch,yblocks);
-    dim3 threads(32,8);
+  int yblocks = (int)(16L / nInputPlane);
+  yblocks = yblocks < 1 ? 1 : yblocks;
+  dim3 blocks(nInputPlane*nbatch,yblocks);
+  dim3 threads(32,8);
 
-    // run updateGradInput kernel
-    if ((kH == dH && kW == dW) || (kH == nInputRows && kW == nInputCols)) {
-      EasyCL *cl = input->storage->cl;
-      std::string uniqueName = __FILE__ "subgradinput";
-      CLKernel *kernel = 0;
-      if(cl->kernelExists(uniqueName)) {
-        kernel = cl->getKernel(uniqueName);
-      } else {
-        TemplatedKernel kernelBuilder(cl);
-        kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-          getKernelTemplate(), "subgradinput");
-      }
+  // run updateGradInput kernel
+  if ((kH == dH && kW == dW) || (kH == nInputRows && kW == nInputCols)) {
+    EasyCL *cl = input->storage->cl;
+    std::string uniqueName = __FILE__ "subgradinput";
+    CLKernel *kernel = 0;
+    if(cl->kernelExists(uniqueName)) {
+      kernel = cl->getKernel(uniqueName);
+    } else {
+      TemplatedKernel kernelBuilder(cl);
+      kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
+        getKernelTemplate(), "subgradinput");
+    }
 
-      THClKernels k(state, kernel);
-      k.out(gradInput);
-      k.in(gradOutput);
+    THClKernels k(state, kernel);
+    k.out(gradInput);
+    k.in(gradOutput);
 
-      k.in((int)nInputPlane);
-      k.in((int)nInputRows);
-      k.in((int)nInputCols);
+    k.in((int)nInputPlane);
+    k.in((int)nInputRows);
+    k.in((int)nInputCols);
 
-      k.in((int)kH);
-      k.in((int)kW);
-      k.in((int)dH);
-      k.in((int)dW);
+    k.in((int)kH);
+    k.in((int)kW);
+    k.in((int)dH);
+    k.in((int)dW);
 
-      k.run(blocks, threads);
+    k.run(blocks, threads);
 
 //      subgradinput <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (gradInput_data, gradOutput_data,
 //                                          nInputPlane, nInputRows, nInputCols,
 //                                          kH, kW, dH, dW);
-    } else {
-      THError("Not implemented");
+  } else {
+    THError("Not implemented");
 //      subgradinputAtomic <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (gradInput_data, gradOutput_data,
 //                                                nInputPlane, nInputRows, nInputCols,
 //                                                kH, kW, dH, dW);
-    }
   }
 
   return 1;
