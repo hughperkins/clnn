@@ -35,78 +35,71 @@ static int clnn_SpatialAveragePooling_updateOutput(lua_State *L)
 
   luaL_argcheck(L, input->nDimension == 3 || input->nDimension == 4, 2, "3D or 4D (batch) tensor expected");
 
+  long nInputCols = 0;
+  long nInputRows = 0;
+  long nbatch = 0;
+  long nOutputCols = 0;
+  long nOutputRows = 0;
+  long nInputPlane = 0;
+
   if (input->nDimension == 3) {
-    long nInputCols = input->size[2];
-    long nInputRows = input->size[1];
-    long nOutputCols = (nInputCols - kW) / dW + 1;
-    long nOutputRows = (nInputRows - kH) / dH + 1;
-    long nInputPlane = input->size[0];
-
-    luaL_argcheck(L, nInputCols >= kW && nInputRows >= kH, 2, "input image smaller than kernel size");
-
-    input = THClTensor_newContiguous(state, input);
-    // input_data = THClTensor_data(state, input);
+    nInputCols = input->size[2];
+    nInputRows = input->size[1];
+    nOutputCols = (nInputCols - kW) / dW + 1;
+    nOutputRows = (nInputRows - kH) / dH + 1;
+    nInputPlane = input->size[0];
+    nbatch = 1;
 
     THClTensor_resize3d(state, output, nInputPlane, nOutputRows, nOutputCols);
     // output_data = THClTensor_data(state, output);
-
-    int yblocks = (int)(16L / nInputPlane);
-    yblocks = yblocks < 1 ? 1 : yblocks;
-    dim3 blocks(nInputPlane,yblocks);
-    dim3 threads(32,8);
-
-    // run subsample kernel
-    THError("Not implemented");
-    //    subsample <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (input_data, output_data,
-//                                     nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
   } else {
-    long nInputCols = input->size[3];
-    long nInputRows = input->size[2];
-    long nbatch = input->size[0];
-    long nOutputCols = (nInputCols - kW) / dW + 1;
-    long nOutputRows = (nInputRows - kH) / dH + 1;
-    long nInputPlane = input->size[1];
-
-    luaL_argcheck(L, nInputCols >= kW && nInputRows >= kH, 2, "input image smaller than kernel size");
-
-    input = THClTensor_newContiguous(state, input);
-    // input_data = THClTensor_data(state, input);
+    nInputCols = input->size[3];
+    nInputRows = input->size[2];
+    nbatch = input->size[0];
+    nOutputCols = (nInputCols - kW) / dW + 1;
+    nOutputRows = (nInputRows - kH) / dH + 1;
+    nInputPlane = input->size[1];
 
     THClTensor_resize4d(state, output, nbatch, nInputPlane, nOutputRows, nOutputCols);
     // output_data = THClTensor_data(state, output);
+  }
 
-    int yblocks = (int)(16L / nInputPlane);
-    yblocks = yblocks < 1 ? 1 : yblocks;
-    dim3 blocks(nInputPlane*nbatch,yblocks);
-    dim3 threads(32,8);
+  luaL_argcheck(L, nInputCols >= kW && nInputRows >= kH, 2, "input image smaller than kernel size");
 
-    // run subsample kernel
-    EasyCL *cl = input->storage->cl;
-    std::string uniqueName = __FILE__ "subsample";
-    CLKernel *kernel = 0;
-    if(cl->kernelExists(uniqueName)) {
-      kernel = cl->getKernel(uniqueName);
-    } else {
-      TemplatedKernel kernelBuilder(cl);
-      kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-        getKernelTemplate(), "subsample");
-    }
+  input = THClTensor_newContiguous(state, input);
+  // input_data = THClTensor_data(state, input);
 
-    THClKernels k(state, kernel);
-    k.in(input);
-    k.out(output);
-    k.in((int)nInputPlane);
-    k.in((int)nInputRows);
-    k.in((int)nInputCols);
-    k.in((int)kH);
-    k.in((int)kW);
-    k.in((int)dH);
-    k.in((int)dW);
-    k.run(blocks, threads);
+  int yblocks = (int)(16L / nInputPlane);
+  yblocks = yblocks < 1 ? 1 : yblocks;
+  dim3 blocks(nInputPlane*nbatch,yblocks);
+  dim3 threads(32,8);
+
+  // run subsample kernel
+  EasyCL *cl = input->storage->cl;
+  std::string uniqueName = __FILE__ "subsample";
+  CLKernel *kernel = 0;
+  if(cl->kernelExists(uniqueName)) {
+    kernel = cl->getKernel(uniqueName);
+  } else {
+    TemplatedKernel kernelBuilder(cl);
+    kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
+      getKernelTemplate(), "subsample");
+  }
+
+  THClKernels k(state, kernel);
+  k.in(input);
+  k.out(output);
+  k.in((int)nInputPlane);
+  k.in((int)nInputRows);
+  k.in((int)nInputCols);
+  k.in((int)kH);
+  k.in((int)kW);
+  k.in((int)dH);
+  k.in((int)dW);
+  k.run(blocks, threads);
 
 //    subsample <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (input_data, output_data,
 //                                     nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
-  }
 
   // clean
   THClTensor_free(state, input);

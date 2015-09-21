@@ -958,12 +958,12 @@ end
 
 function clnntest.SpatialAveragePooling_forward_batch()
    local bs = 10
-   local from = 32
+   local from = 35
    local to = from
    local ki = 5
-   local kj = 5
-   local si = 1
-   local sj = 1
+   local kj = 6
+   local si = 3
+   local sj = 2
    local outi = 1
    local outj = 1
    local ini = (outi-1)*si+ki
@@ -998,13 +998,13 @@ function clnntest.SpatialAveragePooling_forward_batch()
 end
 
 function clnntest.SpatialAveragePooling_backward_batch()
-   local bs = 32
-   local from = 32
+   local bs = 35
+   local from = 37
    local to = from
    local ki = 5
-   local kj = 5
-   local si = 1
-   local sj = 1
+   local kj = 6
+   local si = 3
+   local sj = 2
    local outi = 1
    local outj = 1
    local ini = (outi-1)*si+ki
@@ -1943,13 +1943,13 @@ function x_clnntest.SpatialMaxPooling_backward_batch_atomic()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
-function x_clnntest.SpatialAveragePooling_forward()
-   local from = 32
+function clnntest.SpatialAveragePooling_forward()
+   local from = 37
    local to = from
    local ki = 5
-   local kj = 5
-   local si = 1
-   local sj = 1
+   local kj = 4
+   local si = 2
+   local sj = 3
    local outi = 1
    local outj = 1
    local ini = (outi-1)*si+ki
@@ -1983,13 +1983,13 @@ function x_clnntest.SpatialAveragePooling_forward()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function x_clnntest.SpatialAveragePooling_backward()
-   local from = 32
+function clnntest.SpatialAveragePooling_backward()
+   local from = 31
    local to = from
    local ki = 5
-   local kj = 5
-   local si = 1
-   local sj = 1
+   local kj = 4
+   local si = 2
+   local sj = 3
    local outi = 1
    local outj = 1
    local ini = (outi-1)*si+ki
