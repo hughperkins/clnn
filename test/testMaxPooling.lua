@@ -3,19 +3,20 @@ local times = _test.times
 local clnntest = _test.clnntest
 local x_clnntest = _test.x_clnntest
 local nloop = _test.nloop
-local precision_forward = _test.precision_forward
-local precision_backward = _test.precision_backward
+local precision_forward = 1e-6
+local precision_backward = 1e-6
 
 function clnntest.SpatialMaxPooling_forward_batch()
-   local bs = math.random(4,10)
-   local from = math.random(1,64)
+   torch.manualSeed(123)
+   local bs = 7
+   local from = 37
    local to = from
-   local ki = math.random(2,4)
-   local kj = math.random(2,4)
-   local si = math.random(2,4)
-   local sj = math.random(2,4)
-   local outi = math.random(32,256)
-   local outj = math.random(32,256)
+   local ki = 4
+   local kj = 3
+   local si = 3
+   local sj = 2
+   local outi = 129
+   local outj = 43
    local ini = (outi-1)*si+ki
    local inj = (outj-1)*sj+kj
    
@@ -50,6 +51,7 @@ end
 function clnntest.SpatialMaxPooling_forward()
    -- FIXME test for different configs (and not just have non-deterministic tests :-P or
    -- incomplete tests)
+   torch.manualSeed(123)
    local from = 37 -- math.random(1,64)
    local to = from
    local ki = 3 -- math.random(2,4)
@@ -106,14 +108,15 @@ end
 function clnntest.SpatialMaxPooling_backward()
    -- FIXME test for different configs (and not just have non-deterministic tests :-P or
    -- incomplete tests)
+   torch.manualSeed(123)
    local from = 32 -- math.random(1,64)
    local to = from
-   local ki = 2 -- math.random(2,4)
-   local kj = 2 -- math.random(2,4)
-   local si = 2 -- math.random(1,4)
+   local ki = 4 -- math.random(2,4)
+   local kj = 3 -- math.random(2,4)
+   local si = 3 -- math.random(1,4)
    local sj = 2 --math.random(1,4)
    local outi = 27 -- math.random(32,64)
-   local outj = 27 -- math.random(32,64)
+   local outj = 31 -- math.random(32,64)
    local ini = (outi-1)*si+ki
    local inj = (outj-1)*sj+kj
    
@@ -155,6 +158,7 @@ function clnntest.SpatialMaxPooling_backward()
 end
 
 function clnntest.SpatialMaxPooling_backward_batch()
+   torch.manualSeed(123)
    local bs = math.random(4,10)
    local from = math.random(1,64)
    local to = from
@@ -206,6 +210,7 @@ function clnntest.SpatialMaxPooling_backward_batch()
 end
 
 function x_clnntest.SpatialMaxPooling_backward_batch_atomic()
+   torch.manualSeed(123)
    local bs = math.random(4,10)
    local from = math.random(1,64)
    local to = from

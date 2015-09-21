@@ -166,48 +166,91 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
   input = THClTensor_newContiguous(state, input);
   gradOutput = THClTensor_newContiguous(state, gradOutput);
 
+  long nInputCols = 0;
+  long nInputRows = 0;
+  long nInputPlane = 0;
+  long nBatch = 0;
+  long nOutputCols = 0;
+  long nOutputRows = 0;
   if (input->nDimension == 3) {
 //    THError("Not implemented");
-    long nInputPlane = input->size[0];
-    long nInputRows = input->size[1];
-    long nInputCols = input->size[2];
-    long nBatch = 1;
-    long nOutputRows = gradOutput->size[1];
-    long nOutputCols = gradOutput->size[2];
+    nInputPlane = input->size[0];
+    nInputRows = input->size[1];
+    nInputCols = input->size[2];
+    nBatch = 1;
+    nOutputRows = gradOutput->size[1];
+    nOutputCols = gradOutput->size[2];
+  } else {
+    nInputCols = input->size[3];
+    nInputRows = input->size[2];
+    nInputPlane = input->size[1];
+    nBatch = input->size[0];
+    nOutputCols = gradOutput->size[3];
+    nOutputRows = gradOutput->size[2];
+  }
+  THClTensor_resizeAs(state, gradInput, input);
+  THClTensor_zero(state, gradInput);
 
-    THClTensor_resizeAs(state, gradInput, input);
-    THClTensor_zero(state, gradInput);
+  if(dW == kW && dH == kH) {
+    // simplest case
+    // run updateGradInput kernel
 
     int yblocks = (int)(16L / nInputPlane);
     yblocks = yblocks < 1 ? 1 : yblocks;
-    dim3 blocks(nInputPlane,yblocks);
+    dim3 blocks(nInputPlane*nBatch,yblocks);
     dim3 threads(32,8);
 
-    if(dW == kW && dH == kH) {
-      // FIXME: this is just copy and pasted for now, to get it working
-      // probably can just re-use the same code, literally, without copy/paste
-      // ie, just set the value of the variables nInputPlan, nInputRows, nInputCols,
-      // and nBatch, hmmm, and nOutputRows, and nOutputCols
-      // and then move everything else outside of the `if (input->nDimension == 3)` block
+    EasyCL *cl = input->storage->cl;
+    std::string uniqueName = __FILE__ "maxgradinput";
+    CLKernel *kernel = 0;
+    if(cl->kernelExists(uniqueName)) {
+      kernel = cl->getKernel(uniqueName);
+    } else {
+      TemplatedKernel kernelBuilder(cl);
+      kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
+        SpatialMaxPooling_getKernelTemplate(), "maxgradinput");
+    }
 
-      int yblocks = (int)(16L / nInputPlane);
-      yblocks = yblocks < 1 ? 1 : yblocks;
-      dim3 blocks(nInputPlane*nBatch,yblocks);
-      dim3 threads(32,8);
+    THClKernels k(state, kernel);
+    k.out(gradInput);
+    k.in(gradOutput);
+    k.in(indices);
+    k.in((int)(nBatch*nInputPlane*nOutputCols*nOutputRows));
+    k.in((int)0);
 
-      EasyCL *cl = input->storage->cl;
-      std::string uniqueName = __FILE__ "maxgradinput";
-      CLKernel *kernel = 0;
-      if(cl->kernelExists(uniqueName)) {
-        kernel = cl->getKernel(uniqueName);
-      } else {
-        TemplatedKernel kernelBuilder(cl);
-        kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-          SpatialMaxPooling_getKernelTemplate(), "maxgradinput");
-      }
+    k.in((int)nInputPlane);
+    k.in((int)nInputRows);
+    k.in((int)nInputCols);
 
+    k.in((int)kH);
+    k.in((int)kW);
+    k.in((int)dH);
+    k.in((int)dW);
+
+    k.run(blocks, threads);
+  } else if((kW>>1) <= dW && (kH>>1) <= dH) {  // eg typical case: groupsize == kW == kH == 3, stride == dW == dH == 2
+    // do two updates, staggered
+    int yblocks = (int)(16L / nInputPlane);
+    yblocks = yblocks < 1 ? 1 : yblocks;
+    dim3 blocks(nInputPlane*nBatch,yblocks);
+    dim3 threads(32,8);
+
+    EasyCL *cl = input->storage->cl;
+    std::string uniqueName = __FILE__ "maxgradinput_staggered";
+    CLKernel *kernel = 0;
+    if(cl->kernelExists(uniqueName)) {
+      kernel = cl->getKernel(uniqueName);
+    } else {
+      TemplatedKernel kernelBuilder(cl);
+      kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
+        SpatialMaxPooling_getKernelTemplate(), "maxgradinput_staggered");
+    }
+
+    // we will run it four time, with different skipNum each time
+    // staggerCombo is essentially (skipW << 1) | skipH
+    for(int staggerCombo = 0; staggerCombo < 4; staggerCombo++ ) {
       THClKernels k(state, kernel);
-      k.out(gradInput);
+      k.inout(gradInput);
       k.in(gradOutput);
       k.in(indices);
       k.in((int)(nBatch*nInputPlane*nOutputCols*nOutputRows));
@@ -221,118 +264,16 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
       k.in((int)kW);
       k.in((int)dH);
       k.in((int)dW);
+      
+      k.in((int)2);
+      k.in((int)staggerCombo);
 
       k.run(blocks, threads);
-
-      // run updateGradInput kernel
-//      atomicmaxgradinput <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (
-//        gradInput_data, gradOutput_data,
-//        indices_data+nInputPlane*nOutputCols*nOutputRows, indices_data,
-//        nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
-//      THError("not implemented");
-    } else {
-      // run updateGradInput kernel, accumulate gradients atomically
-//      atomicmaxgradinput <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (
-//        gradInput_data, gradOutput_data,
-//        indices_data+nInputPlane*nOutputCols*nOutputRows, indices_data,
-//        nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
-      THError("not implemented");
     }
   } else {
-    long nInputCols = input->size[3];
-    long nInputRows = input->size[2];
-    long nInputPlane = input->size[1];
-    long nBatch = input->size[0];
-    long nOutputCols = gradOutput->size[3];
-    long nOutputRows = gradOutput->size[2];
-
-    THClTensor_resizeAs(state, gradInput, input);
-    THClTensor_zero(state, gradInput);
-
-    if(dW == kW && dH == kH) {
-      // simplest case
-      // run updateGradInput kernel
-
-      int yblocks = (int)(16L / nInputPlane);
-      yblocks = yblocks < 1 ? 1 : yblocks;
-      dim3 blocks(nInputPlane*nBatch,yblocks);
-      dim3 threads(32,8);
-
-      EasyCL *cl = input->storage->cl;
-      std::string uniqueName = __FILE__ "maxgradinput";
-      CLKernel *kernel = 0;
-      if(cl->kernelExists(uniqueName)) {
-        kernel = cl->getKernel(uniqueName);
-      } else {
-        TemplatedKernel kernelBuilder(cl);
-        kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-          SpatialMaxPooling_getKernelTemplate(), "maxgradinput");
-      }
-
-      THClKernels k(state, kernel);
-      k.out(gradInput);
-      k.in(gradOutput);
-      k.in(indices);
-      k.in((int)(nBatch*nInputPlane*nOutputCols*nOutputRows));
-      k.in((int)0);
-
-      k.in((int)nInputPlane);
-      k.in((int)nInputRows);
-      k.in((int)nInputCols);
-
-      k.in((int)kH);
-      k.in((int)kW);
-      k.in((int)dH);
-      k.in((int)dW);
-
-      k.run(blocks, threads);
-    } else if((kW>>1) <= dW && (kH>>1) <= dH) {  // eg typical case: groupsize == kW == kH == 3, stride == dW == dH == 2
-      // do two updates, staggered
-      int yblocks = (int)(16L / nInputPlane);
-      yblocks = yblocks < 1 ? 1 : yblocks;
-      dim3 blocks(nInputPlane*nBatch,yblocks);
-      dim3 threads(32,8);
-
-      EasyCL *cl = input->storage->cl;
-      std::string uniqueName = __FILE__ "maxgradinput_staggered";
-      CLKernel *kernel = 0;
-      if(cl->kernelExists(uniqueName)) {
-        kernel = cl->getKernel(uniqueName);
-      } else {
-        TemplatedKernel kernelBuilder(cl);
-        kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-          SpatialMaxPooling_getKernelTemplate(), "maxgradinput_staggered");
-      }
-
-      // we will run it four time, with different skipNum each time
-      // staggerCombo is essentially (skipW << 1) | skipH
-      for(int staggerCombo = 0; staggerCombo < 4; staggerCombo++ ) {
-        THClKernels k(state, kernel);
-        k.inout(gradInput);
-        k.in(gradOutput);
-        k.in(indices);
-        k.in((int)(nBatch*nInputPlane*nOutputCols*nOutputRows));
-        k.in((int)0);
-
-        k.in((int)nInputPlane);
-        k.in((int)nInputRows);
-        k.in((int)nInputCols);
-
-        k.in((int)kH);
-        k.in((int)kW);
-        k.in((int)dH);
-        k.in((int)dW);
-        
-        k.in((int)2);
-        k.in((int)staggerCombo);
-
-        k.run(blocks, threads);
-      }
-    } else {
-      // actually can do this with staggered updates too, but no user requirement for htis yet (eg AlexNet etc only use
-      // (3, 3, 2, 2)  groupsize/stride
-      THError("Not implemented");
-    }
+    // actually can do this with staggered updates too, but no user requirement for htis yet (eg AlexNet etc only use
+    // (3, 3, 2, 2)  groupsize/stride
+    THError("Not implemented");
   }
 
   // clean
