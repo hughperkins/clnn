@@ -6,7 +6,9 @@ local nloop = _test.nloop
 local precision_forward = 1e-4
 local precision_backward = 1e-2
 
-function x_clnntest.SoftMax_forward()
+function clnntest.SoftMax_forward()
+   torch.manualSeed(123)
+
    local size = math.random(1,100)
    
    local tm = {}
@@ -36,7 +38,9 @@ function x_clnntest.SoftMax_forward()
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
 end
 
-function x_clnntest.SoftMax_backward()
+function clnntest.SoftMax_backward()
+   torch.manualSeed(123)
+
    local size = math.random(1,100)
    
    local tm = {}
