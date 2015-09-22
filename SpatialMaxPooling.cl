@@ -1,265 +1,96 @@
 // from SpatialMaxPooling.cu:
 
-/*
- * Description:
- *    this function maxpools an input 4D tensor along dimensions 2 and 3
- *    4D input, 4D output, 4D argmax x and y
- */
-kernel void maxpool(const global float *input_data, int input_offset,
-    global float *output_data, int output_offset, 
-    global float *indices_data, int indices_offset,
-    int indices_x_offset,
-    int indices_y_offset,
-    int input_n, int input_h, int input_w,
-    int kH, int kW, int dH, int dW)
-{
-  global const float *input = input_data + input_offset;
-  global float *output = output_data + output_offset;
-  global float *indices_x = indices_data + indices_offset + indices_x_offset;
-  global float *indices_y = indices_data + indices_offset + indices_y_offset;
+// kernels borrowed from Caffe
 
-  // iterators
-  int xx, yy;
+#define CL_KERNEL_LOOP(i, n)                        \
+  for (int i = get_group_id(0) * get_local_size(0) + get_local_id(0); \
+      i < (n);                                       \
+      i += get_local_size(0) * get_num_groups(0))
 
-  // output size
-  const int output_w = floor((float)(input_w - kW) / dW + 1);
-  const int output_h = floor((float)(input_h - kH) / dH + 1);
+#define Dtype {{Dtype}}
 
-  // compute offsets based on thread/block ID
-  int o = get_group_id(0);
-  int i = o;
-  //int k = get_group_id(0) % input_n;
 
-  int xx_start = get_local_id(0);
-  int xx_end = output_w;
-  const int xx_step = get_local_size(0);
+{% if forward %}
+kernel void MaxPoolForward(const int nthreads, const Dtype* bottom_data_data,
+    int bottom_data_offset,
+    const int num, const int channels, const int height,
+    const int width, const int pooled_height, const int pooled_width,
+    const int kernel_h, const int kernel_w, const int stride_h,
+    const int stride_w, const int pad_h, const int pad_w, Dtype* top_data_data,
+    int top_data_offset,
+    Dtype* top_mask_data, int top_mask_offset) {
 
-  int yy_start = get_local_size(1)*get_group_id(1) + get_local_id(1);
-  int yy_end = output_h;
-  const int yy_step = get_local_size(1)*get_num_groups(1);
+  global Dtype *bottom_data = bottom_data_data + bottom_data_offset;
+  global Dtype *top_data = top_data_data + top_data_offset;
+  global Dtype *top_mask = top_mask_data + top_mask_offset;
 
-  // select input/output plane
-  output = output + o*output_w*output_h;
-  input = input + i*input_w*input_h;
-  indices_x = indices_x + o*output_w*output_h;
-  indices_y = indices_y + o*output_w*output_h;
-
-  // For all output pixels...
-  for(yy = yy_start; yy < yy_end; yy+=yy_step) {
-    for(xx = xx_start; xx < xx_end; xx+=xx_step) {
-      // Compute the mean of the input image...
-      global const float *ptr_input = input + yy*dH*input_w + xx*dW;
-      global float *ptr_output = output + yy*output_w + xx;
-      global float *ptr_ind_x = indices_x + yy*output_w + xx;
-      global float *ptr_ind_y = indices_y + yy*output_w + xx;
-      int argmax_x = -1;
-      int argmax_y = -1;
-      float max = -FLT_MAX;
-      int kx, ky;
-      for(ky = 0; ky < kH; ky++) {
-        for(kx = 0; kx < kW; kx++) {
-          float val = ptr_input[kx];
-          if (val > max) {
-            max = val;
-            argmax_x = kx;
-            argmax_y = ky;
-          }
+  CL_KERNEL_LOOP(index, nthreads) {
+    int pw = index % pooled_width;
+    int ph = (index / pooled_width) % pooled_height;
+    int c = (index / pooled_width / pooled_height) % channels;
+    int n = index / pooled_width / pooled_height / channels;
+    int hstart = ph * stride_h - pad_h;
+    int wstart = pw * stride_w - pad_w;
+    int hend = min(hstart + kernel_h, height);
+    int wend = min(wstart + kernel_w, width);
+    hstart = max(hstart, 0);
+    wstart = max(wstart, 0);
+    Dtype maxval = -FLT_MAX;
+    int maxidx = -1;
+    bottom_data += (n * channels + c) * height * width;
+    for (int h = hstart; h < hend; ++h) {
+      for (int w = wstart; w < wend; ++w) {
+        if (bottom_data[h * width + w] > maxval) {
+          maxidx = h * width + w;
+          maxval = bottom_data[maxidx];
         }
-        ptr_input += input_w; // next input line
       }
-      // Update output and argmax
-      *ptr_output = max;
-      *ptr_ind_x = argmax_x + 1;
-      *ptr_ind_y = argmax_y + 1;
     }
+    top_data[index] = maxval;
+    top_mask[index] = maxidx + 1;
   }
 }
+{% end %}
 
-/*
- * Description:
- *    this function computes the gradInput from weight and gradOutput
- */
-kernel void maxgradinput(global float *gradInput_data, int gradInput_offset,
-    global const float *gradOutput_data, int gradOutput_offset,
-    global const float *indices_data, int indices_offset,
-    int indices_x_offset, int indices_y_offset,
-   int input_n, int input_h, int input_w,
-   int kH, int kW, int dH, int dW)
-{
-  global float *gradInput = gradInput_data + gradInput_offset;
-  global const float *gradOutput = gradOutput_data + gradOutput_offset;
-  global const float *indices_x = indices_data + indices_offset + indices_x_offset;
-  global const float *indices_y = indices_data + indices_offset + indices_y_offset;
+{% if backward %}
+kernel void MaxPoolBackward(const int nthreads, const Dtype* top_diff_data,
+    int top_diff_offset,
+    const Dtype* top_mask_data, const int top_mask_offset, const int num, const int channels,
+    const int height, const int width, const int pooled_height,
+    const int pooled_width, const int kernel_h, const int kernel_w,
+    const int stride_h, const int stride_w, const int pad_h, const int pad_w,
+    Dtype* bottom_diff_data, int bottom_diff_offset) {
 
-  // iterators
-  int xx, yy;
+  global Dtype *top_diff = top_diff_data + top_diff_offset;
+  global Dtype *top_mask = top_mask_data + top_mask_offset;
+  global Dtype *bottom_diff = bottom_diff_data + bottom_diff_offset;
 
-  // output size
-  const int output_w = floor((float)(input_w - kW) / dW + 1);
-  const int output_h = floor((float)(input_h - kH) / dH + 1);
-
-  // compute offsets based on thread/block ID
-  int o = get_group_id(0);
-  int i = o;
-  //int k = get_group_id(0) % input_n;
-
-  int xx_start = get_local_id(0);
-  int xx_end = output_w;
-  int xx_step = get_local_size(0);
-
-  int yy_start = get_local_size(1)*get_group_id(1) + get_local_id(1);
-  int yy_end = output_h;
-  int yy_step = get_local_size(1)*get_num_groups(1);
-
-  // select input/output plane
-  gradOutput = gradOutput + o*output_w*output_h;
-  gradInput = gradInput + i*input_w*input_h;
-  indices_x = indices_x + o*output_w*output_h;
-  indices_y = indices_y + o*output_w*output_h;
-
-  // compute gradInput
-  for(yy = yy_start; yy < yy_end; yy+=yy_step) {
-    for(xx = xx_start; xx < xx_end; xx+=xx_step) {
-      global float *ptr_gradInput = gradInput + yy*dH*input_w + xx*dW;
-      global const float *ptr_gradOutput = gradOutput + yy*output_w + xx;
-      global const float *ptr_ind_x = indices_x + yy*output_w + xx;
-      global const float *ptr_ind_y = indices_y + yy*output_w + xx;
-      float z = *ptr_gradOutput;
-
-      int argmax_x = (*ptr_ind_x)-1;
-      int argmax_y = (*ptr_ind_y)-1;
-
-      ptr_gradInput[argmax_x + argmax_y*input_w] += z;
+  // looks like this could probably be baked, anyway, we can do that later...
+  CL_KERNEL_LOOP(index, nthreads) {
+    // find out the local index
+    // find out the local offset
+    int w = index % width;
+    int h = (index / width) % height;
+    int c = (index / width / height) % channels;
+    int n = index / width / height / channels;
+    int phstart =
+        (h + pad_h < kernel_h) ? 0 : (h + pad_h - kernel_h) / stride_h + 1;
+    int phend = min((h + pad_h) / stride_h + 1, pooled_height);
+    int pwstart =
+        (w + pad_w < kernel_w) ? 0 : (w + pad_w - kernel_w) / stride_w + 1;
+    int pwend = min((w + pad_w) / stride_w + 1, pooled_width);
+    Dtype gradient = 0;
+    int offset = (n * channels + c) * pooled_height * pooled_width;
+    top_diff += offset;
+    top_mask += offset;
+    for (int ph = phstart; ph < phend; ++ph) {
+      for (int pw = pwstart; pw < pwend; ++pw) {
+	if (top_mask[ph * pooled_width + pw] - 1 == h * width + w) {
+	  gradient += top_diff[ph * pooled_width + pw];
+	}
+      }
     }
+    bottom_diff[index] = gradient;
   }
 }
-
-/*
- * Description:
- *    this function computes the gradInput from weight and gradOutput
- * This can probably be folded into the earlier method, or replace it,
- * but keeping it separate for now, to avoid breaking the earlier method,
- * and mean dont have to think about how to merge them yet
- */
-kernel void maxgradinput_staggered(
-    global float *gradInput_data, int gradInput_offset,
-    global const float *gradOutput_data, int gradOutput_offset,
-    global const float *indices_data, int indices_offset,
-    int indices_x_offset, int indices_y_offset,
-   int input_n, int input_h, int input_w,
-   int kH, int kW, int dH, int dW,
-   int staggerRatio,
-   int staggerCombo)
-{
-  global float *gradInput = gradInput_data + gradInput_offset;
-  global const float *gradOutput = gradOutput_data + gradOutput_offset;
-  global const float *indices_x = indices_data + indices_offset + indices_x_offset;
-  global const float *indices_y = indices_data + indices_offset + indices_y_offset;
-
-  // iterators
-  int xx, yy;
-
-  // output size
-  const int output_w = floor((float)(input_w - kW) / dW + 1);
-  const int output_h = floor((float)(input_h - kH) / dH + 1);
-
-  // compute offsets based on thread/block ID
-  int o = get_group_id(0);
-  int i = o;
-  //int k = get_group_id(0) % input_n;
-
-  int xx_start = get_local_id(0) * staggerRatio + (staggerCombo & 1);
-  int xx_end = output_w;
-  int xx_step = get_local_size(0) * staggerRatio;
-
-  int yy_start = (get_local_size(1)*get_group_id(1) + get_local_id(1)) * staggerRatio + (staggerCombo >> 1);
-  int yy_end = output_h;
-  int yy_step = get_local_size(1)*get_num_groups(1) * staggerRatio;
-
-  // select input/output plane
-  gradOutput = gradOutput + o*output_w*output_h;
-  gradInput = gradInput + i*input_w*input_h;
-  indices_x = indices_x + o*output_w*output_h;
-  indices_y = indices_y + o*output_w*output_h;
-
-  // compute gradInput
-  for(yy = yy_start; yy < yy_end; yy+=yy_step) {
-    for(xx = xx_start; xx < xx_end; xx+=xx_step) {
-      global float *ptr_gradInput = gradInput + yy*dH*input_w + xx*dW;
-      global const float *ptr_gradOutput = gradOutput + yy*output_w + xx;
-      global const float *ptr_ind_x = indices_x + yy*output_w + xx;
-      global const float *ptr_ind_y = indices_y + yy*output_w + xx;
-      float z = *ptr_gradOutput;
-
-      int argmax_x = (*ptr_ind_x)-1;
-      int argmax_y = (*ptr_ind_y)-1;
-
-      ptr_gradInput[argmax_x + argmax_y*input_w] += z;
-    }
-  }
-}
-
-/*
- * Description:
- *    this function computes the gradInput from weight and gradOutput
- *    when kH != dH or kW != dW (uses atomic add)
- */
-//kernel void atomicmaxgradinput(
-//  global float *gradInput_data, int gradInput_offset,
-//  global float *gradOutput_data, int gradOutput_offset,
-//  global float *indices_data, int indices_offset,
-//  int indices_x_offset, int indices_y_offset,
-//  int input_n, int input_h, int input_w, int kH, int kW, int dH, int dW
-//)
-//{
-//  global float *gradInput = gradInput_data + gradInput_offset;
-//  global float *gradOutput = gradOutput_data + gradOutput_offset;
-//  global float *indices_x = indices_data + indices_offset + indices_x_offset;
-//  global float *indices_y = indices_data + indices_offset + indices_y_offset;
-
-//  // iterators
-//  int xx, yy;
-
-//  // output size
-//  int output_w = (input_w - kW) / dW + 1;
-//  int output_h = (input_h - kH) / dH + 1;
-
-//  // compute offsets based on thread/block ID
-//  int o = get_group_id(0);
-//  int i = o;
-//  //int k = get_group_id(0) % input_n;
-
-//  int xx_start = get_local_id(0);
-//  int xx_end = output_w;
-//  int xx_step = get_local_size(0);
-
-//  int yy_start = get_local_size(1)*get_group_id(1) + get_local_id(1);
-//  int yy_end = output_h;
-//  int yy_step = get_local_size(1)*get_num_groups(1);
-
-//  // select input/output plane
-//  gradOutput = gradOutput + o*output_w*output_h;
-//  gradInput = gradInput + i*input_w*input_h;
-//  indices_x = indices_x + o*output_w*output_h;
-//  indices_y = indices_y + o*output_w*output_h;
-
-//  // compute gradInput
-//  for(yy = yy_start; yy < yy_end; yy+=yy_step) {
-//    for(xx = xx_start; xx < xx_end; xx+=xx_step) {
-//      global float *ptr_gradInput = gradInput + yy*dH*input_w + xx*dW;
-//      global float *ptr_gradOutput = gradOutput + yy*output_w + xx;
-//      global float *ptr_ind_x = indices_x + yy*output_w + xx;
-//      global float *ptr_ind_y = indices_y + yy*output_w + xx;
-//      float z = *ptr_gradOutput;
-
-//      int argmax_x = (*ptr_ind_x)-1;
-//      int argmax_y = (*ptr_ind_y)-1;
-
-//      // atomic add since different threads could update same variable
-////      atomicAdd(&(ptr_gradInput[argmax_x + argmax_y*input_w]), z);
-//      // hmmm, this doesnt work with float :-(  need another way...
-//      atomic_add(&(ptr_gradInput[argmax_x + argmax_y*input_w]), z);
-//    }
-//  }
-//}
-
+{% end %}

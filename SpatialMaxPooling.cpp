@@ -26,6 +26,9 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
   int kH = luaT_getfieldcheckint(L, 1, "kH");
   int dW = luaT_getfieldcheckint(L, 1, "dW");
   int dH = luaT_getfieldcheckint(L, 1, "dH");
+  int padW = luaT_getfieldcheckint(L, 1, "padW");
+  int padH = luaT_getfieldcheckint(L, 1, "padH");
+  bool ceil_mode = luaT_getfieldcheckboolean(L, 1, "ceil_mode");
 
   THClTensor *output = (THClTensor *)luaT_getfieldcheckudata(L, 1, "output", "torch.ClTensor");
   THClTensor *indices = (THClTensor *)luaT_getfieldcheckudata(L, 1, "indices", "torch.ClTensor");
@@ -33,81 +36,45 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
   THAssert(THClTensor_checkGPU(state, 3, input, output, indices));
   luaL_argcheck(L, input->nDimension == 3 || input->nDimension == 4, 2, "3D or 4D (batch) tensor expected");
 
-  // FIXME: resync this from SpatialMaxPooling.cu, which looks much simpler/more factorized now
+  long nInputCols, nInputRows, nInputPlane, batchSize;
+  long nOutputCols, nOutputRows;
+
   if (input->nDimension == 3) {
-    long nInputCols = input->size[2];
-    long nInputRows = input->size[1];
-    long nInputPlane = input->size[0];
-    long nOutputCols = floor(float(nInputCols - kW) / float(dW) + 1);
-    long nOutputRows = floor(float(nInputRows - kH) / float(dH) + 1);
+    nInputCols = input->size[2];
+    nInputRows = input->size[1];
+    nInputPlane = input->size[0];
+    batchSize = 1;
+  }
+  else
+  {
+    nInputCols = input->size[3];
+    nInputRows = input->size[2];
+    nInputPlane = input->size[1];
+    batchSize = input->size[0];
+  }
 
-    luaL_argcheck(L, nInputCols >= kW && nInputRows >= kH, 2, "input image smaller than kernel size");
+  luaL_argcheck(L, nInputCols >= kW - padW && nInputRows >= kH - padH, 2, "input image smaller than kernel size");
+  luaL_argcheck(L, kW/2 >= padW && kH/2 >= padH, 2, "pad should be smaller than half of kernel size");
 
-    input = THClTensor_newContiguous(state, input);
+  if(ceil_mode) {
+    nOutputCols = ceil(float(nInputCols - kW + 2*padW) / float(dW)) + 1;
+    nOutputRows = ceil(float(nInputRows - kH + 2*padH) / float(dH)) + 1;
+  }
+  else {
+    nOutputCols = floor(float(nInputCols - kW + 2*padW) / float(dW)) + 1;
+    nOutputRows = floor(float(nInputRows - kH + 2*padH) / float(dH)) + 1;
+  }
 
-    THClTensor_resize3d(state, output, nInputPlane, nOutputRows, nOutputCols);
-    // FIXME: figure out why this was using resize4d, with an extra dimension of 2 before
-    THClTensor_resize4d(state, indices, 2, nInputPlane, nOutputRows, nOutputCols);
-    //THClTensor_resizeAs(state, indices, output);
+  input = THClTensor_newContiguous(state, input);
+  float* input_data = THClTensor_data(state, input);
 
-    int yblocks = (int)(16L / nInputPlane);
-    yblocks = yblocks < 1 ? 1 : yblocks;
-    dim3 blocks(nInputPlane,yblocks);
-    dim3 threads(32,8);
+  THClTensor_resize4d(state, output, batchSize, nInputPlane, nOutputRows, nOutputCols);
+  THClTensor_resizeAs(state, indices, output);
+  
+  //float* indices_data = THClTensor_data(state, indices);
+ // float* output_data = THClTensor_data(state, output);
 
-    // run maxpool kernel
-//    maxpool <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (
-//      input_data, output_data,
-//      indices_data+nInputPlane*nOutputCols*nOutputRows, indices_data,
-//      nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
-    //THError("not implemented");
-    EasyCL *cl = input->storage->cl;
-    std::string uniqueName = __FILE__ "maxpool";
-    CLKernel *kernel = 0;
-    if(cl->kernelExists(uniqueName)) {
-      kernel = cl->getKernel(uniqueName);
-    } else {
-      TemplatedKernel kernelBuilder(cl);
-      kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-        SpatialMaxPooling_getKernelTemplate(), "maxpool");
-    }
 
-    THClKernels k(state, kernel);
-    k.in(input);
-    k.out(output);
-    k.out(indices);
-    k.in((int)(nInputPlane*nOutputCols*nOutputRows));
-    k.in((int)0);
-    k.in((int)nInputPlane);
-    k.in((int)nInputRows);
-    k.in((int)nInputCols);
-    k.in((int)kH);
-    k.in((int)kW);
-    k.in((int)dH);
-    k.in((int)dW);
-    k.run(blocks, threads);
-  } else {
-    long nInputCols = input->size[3];
-    long nInputRows = input->size[2];
-    long nInputPlane = input->size[1];
-    long nbatch = input->size[0];
-    long nOutputCols = floor(float(nInputCols - kW) / float(dW) + 1);
-    long nOutputRows = floor(float(nInputRows - kH) / float(dH) + 1);
-
-    luaL_argcheck(L, nInputCols >= kW && nInputRows >= kH, 2, "input image smaller than kernel size");
-
-    input = THClTensor_newContiguous(state, input);
-
-    THClTensor_resize4d(state, output, nbatch, nInputPlane, nOutputRows, nOutputCols);
-    // FIXME: figure out why this is using resize5d, with an extra dimension of 2???
-    THClTensor_resize5d(state, indices, 2, nbatch, nInputPlane, nOutputRows, nOutputCols);
-
-    int yblocks = (int)(16L / nInputPlane);
-    yblocks = yblocks < 1 ? 1 : yblocks;
-    dim3 blocks(nInputPlane*nbatch,yblocks);
-    dim3 threads(32,8);
-
-    // run maxpool kernel
 
     EasyCL *cl = input->storage->cl;
     std::string uniqueName = __FILE__ "maxpool";
@@ -142,7 +109,9 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
 //    THError("not implemented");
   }
 
-  // clean
+  if(input->nDimension == 3)
+    THClTensor_resize3d(state, output, nInputPlane, nOutputRows, nOutputCols);
+
   THClTensor_free(state, input);
 
   return 1;
@@ -157,6 +126,9 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
   int kH = luaT_getfieldcheckint(L, 1, "kH");
   int dW = luaT_getfieldcheckint(L, 1, "dW");
   int dH = luaT_getfieldcheckint(L, 1, "dH");
+  int padW = luaT_getfieldcheckint(L, 1, "padW");
+  int padH = luaT_getfieldcheckint(L, 1, "padH");
+  bool ceil_mode = luaT_getfieldcheckboolean(L, 1, "ceil_mode");
 
   THClTensor *gradInput = (THClTensor *)luaT_getfieldcheckudata(L, 1, "gradInput", "torch.ClTensor");
   THClTensor *indices = (THClTensor *)luaT_getfieldcheckudata(L, 1, "indices", "torch.ClTensor");
@@ -166,74 +138,31 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
   input = THClTensor_newContiguous(state, input);
   gradOutput = THClTensor_newContiguous(state, gradOutput);
 
-  long nInputCols = 0;
-  long nInputRows = 0;
-  long nInputPlane = 0;
-  long nBatch = 0;
-  long nOutputCols = 0;
-  long nOutputRows = 0;
+  long nInputCols, nInputRows, nInputPlane, batchSize;
+  long nOutputCols, nOutputRows;
+
   if (input->nDimension == 3) {
-//    THError("Not implemented");
-    nInputPlane = input->size[0];
-    nInputRows = input->size[1];
     nInputCols = input->size[2];
-    nBatch = 1;
-    nOutputRows = gradOutput->size[1];
-    nOutputCols = gradOutput->size[2];
-  } else {
+    nInputRows = input->size[1];
+    nInputPlane = input->size[0];
+    batchSize = 1;
+  }
+  else
+  {
     nInputCols = input->size[3];
     nInputRows = input->size[2];
     nInputPlane = input->size[1];
-    nBatch = input->size[0];
-    nOutputCols = gradOutput->size[3];
-    nOutputRows = gradOutput->size[2];
+    batchSize = input->size[0];
   }
-  THClTensor_resizeAs(state, gradInput, input);
-  THClTensor_zero(state, gradInput);
 
-  if(dW == kW && dH == kH) {
-    // simplest case
-    // run updateGradInput kernel
-
-    int yblocks = (int)(16L / nInputPlane);
-    yblocks = yblocks < 1 ? 1 : yblocks;
-    dim3 blocks(nInputPlane*nBatch,yblocks);
-    dim3 threads(32,8);
-
-    EasyCL *cl = input->storage->cl;
-    std::string uniqueName = __FILE__ "maxgradinput";
-    CLKernel *kernel = 0;
-    if(cl->kernelExists(uniqueName)) {
-      kernel = cl->getKernel(uniqueName);
-    } else {
-      TemplatedKernel kernelBuilder(cl);
-      kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-        SpatialMaxPooling_getKernelTemplate(), "maxgradinput");
-    }
-
-    THClKernels k(state, kernel);
-    k.out(gradInput);
-    k.in(gradOutput);
-    k.in(indices);
-    k.in((int)(nBatch*nInputPlane*nOutputCols*nOutputRows));
-    k.in((int)0);
-
-    k.in((int)nInputPlane);
-    k.in((int)nInputRows);
-    k.in((int)nInputCols);
-
-    k.in((int)kH);
-    k.in((int)kW);
-    k.in((int)dH);
-    k.in((int)dW);
-
-    k.run(blocks, threads);
-  } else if((kW>>1) <= dW && (kH>>1) <= dH) {  // eg typical case: groupsize == kW == kH == 3, stride == dW == dH == 2
-    // do two updates, staggered
-    int yblocks = (int)(16L / nInputPlane);
-    yblocks = yblocks < 1 ? 1 : yblocks;
-    dim3 blocks(nInputPlane*nBatch,yblocks);
-    dim3 threads(32,8);
+  if(ceil_mode) {
+    nOutputCols = ceil(float(nInputCols - kW + 2*padW) / float(dW)) + 1;
+    nOutputRows = ceil(float(nInputRows - kH + 2*padH) / float(dH)) + 1;
+  }
+  else {
+    nOutputCols = floor(float(nInputCols - kW + 2*padW) / float(dW)) + 1;
+    nOutputRows = floor(float(nInputRows - kH + 2*padH) / float(dH)) + 1;
+  }
 
     EasyCL *cl = input->storage->cl;
     std::string uniqueName = __FILE__ "maxgradinput_staggered";
@@ -246,36 +175,23 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
         SpatialMaxPooling_getKernelTemplate(), "maxgradinput_staggered");
     }
 
-    // we will run it four time, with different skipNum each time
-    // staggerCombo is essentially (skipW << 1) | skipH
-    for(int staggerCombo = 0; staggerCombo < 4; staggerCombo++ ) {
-      THClKernels k(state, kernel);
-      k.inout(gradInput);
-      k.in(gradOutput);
-      k.in(indices);
-      k.in((int)(nBatch*nInputPlane*nOutputCols*nOutputRows));
-      k.in((int)0);
+  THClKernels k(state, kernel);
+  k.inout(gradInput);
+  k.in(gradOutput);
+  k.in(indices);
+  k.in((int)(nBatch*nInputPlane*nOutputCols*nOutputRows));
+  k.in((int)0);
 
-      k.in((int)nInputPlane);
-      k.in((int)nInputRows);
-      k.in((int)nInputCols);
+  k.in((int)nInputPlane);
+  k.in((int)nInputRows);
+  k.in((int)nInputCols);
 
-      k.in((int)kH);
-      k.in((int)kW);
-      k.in((int)dH);
-      k.in((int)dW);
-      
-      k.in((int)2);
-      k.in((int)staggerCombo);
+  k.in((int)kH);
+  k.in((int)kW);
+  k.in((int)dH);
+  k.in((int)dW);
 
-      k.run(blocks, threads);
-    }
-  } else {
-    // actually can do this with staggered updates too, but no user requirement for htis yet (eg AlexNet etc only use
-    // (3, 3, 2, 2)  groupsize/stride
-    THError("Not implemented");
-  }
-
+  k.run(blocks, threads);
   // clean
   THClTensor_free(state, input);
   THClTensor_free(state, gradOutput);
@@ -305,269 +221,100 @@ std::string SpatialMaxPooling_getKernelTemplate() {
   const char * kernelSource =  
   "// from SpatialMaxPooling.cu:\n" 
   "\n" 
-  "/*\n" 
-  " * Description:\n" 
-  " *    this function maxpools an input 4D tensor along dimensions 2 and 3\n" 
-  " *    4D input, 4D output, 4D argmax x and y\n" 
-  " */\n" 
-  "kernel void maxpool(const global float *input_data, int input_offset,\n" 
-  "    global float *output_data, int output_offset,\n" 
-  "    global float *indices_data, int indices_offset,\n" 
-  "    int indices_x_offset,\n" 
-  "    int indices_y_offset,\n" 
-  "    int input_n, int input_h, int input_w,\n" 
-  "    int kH, int kW, int dH, int dW)\n" 
-  "{\n" 
-  "  global const float *input = input_data + input_offset;\n" 
-  "  global float *output = output_data + output_offset;\n" 
-  "  global float *indices_x = indices_data + indices_offset + indices_x_offset;\n" 
-  "  global float *indices_y = indices_data + indices_offset + indices_y_offset;\n" 
+  "// kernels borrowed from Caffe\n" 
   "\n" 
-  "  // iterators\n" 
-  "  int xx, yy;\n" 
+  "#define CL_KERNEL_LOOP(i, n)                        \\\n" 
+  "  for (int i = get_group_id(0) * get_local_size(0) + get_local_id(0); \\\n" 
+  "      i < (n);                                       \\\n" 
+  "      i += get_local_size(0) * get_num_groups(0))\n" 
   "\n" 
-  "  // output size\n" 
-  "  const int output_w = floor((float)(input_w - kW) / dW + 1);\n" 
-  "  const int output_h = floor((float)(input_h - kH) / dH + 1);\n" 
+  "#define Dtype {{Dtype}}\n" 
   "\n" 
-  "  // compute offsets based on thread/block ID\n" 
-  "  int o = get_group_id(0);\n" 
-  "  int i = o;\n" 
-  "  //int k = get_group_id(0) % input_n;\n" 
   "\n" 
-  "  int xx_start = get_local_id(0);\n" 
-  "  int xx_end = output_w;\n" 
-  "  const int xx_step = get_local_size(0);\n" 
+  "{% if forward %}\n" 
+  "kernel void MaxPoolForward(const int nthreads, const Dtype* bottom_data_data,\n" 
+  "    int bottom_data_offset,\n" 
+  "    const int num, const int channels, const int height,\n" 
+  "    const int width, const int pooled_height, const int pooled_width,\n" 
+  "    const int kernel_h, const int kernel_w, const int stride_h,\n" 
+  "    const int stride_w, const int pad_h, const int pad_w, Dtype* top_data_data,\n" 
+  "    int top_data_offset,\n" 
+  "    Dtype* top_mask_data, int top_mask_offset) {\n" 
   "\n" 
-  "  int yy_start = get_local_size(1)*get_group_id(1) + get_local_id(1);\n" 
-  "  int yy_end = output_h;\n" 
-  "  const int yy_step = get_local_size(1)*get_num_groups(1);\n" 
+  "  global Dtype *bottom_data = bottom_data_data + bottom_data_offset;\n" 
+  "  global Dtype *top_data = top_data_data + top_data_offset;\n" 
+  "  global Dtype *top_mask = top_mask_data + top_mask_offset;\n" 
   "\n" 
-  "  // select input/output plane\n" 
-  "  output = output + o*output_w*output_h;\n" 
-  "  input = input + i*input_w*input_h;\n" 
-  "  indices_x = indices_x + o*output_w*output_h;\n" 
-  "  indices_y = indices_y + o*output_w*output_h;\n" 
-  "\n" 
-  "  // For all output pixels...\n" 
-  "  for(yy = yy_start; yy < yy_end; yy+=yy_step) {\n" 
-  "    for(xx = xx_start; xx < xx_end; xx+=xx_step) {\n" 
-  "      // Compute the mean of the input image...\n" 
-  "      global const float *ptr_input = input + yy*dH*input_w + xx*dW;\n" 
-  "      global float *ptr_output = output + yy*output_w + xx;\n" 
-  "      global float *ptr_ind_x = indices_x + yy*output_w + xx;\n" 
-  "      global float *ptr_ind_y = indices_y + yy*output_w + xx;\n" 
-  "      int argmax_x = -1;\n" 
-  "      int argmax_y = -1;\n" 
-  "      float max = -FLT_MAX;\n" 
-  "      int kx, ky;\n" 
-  "      for(ky = 0; ky < kH; ky++) {\n" 
-  "        for(kx = 0; kx < kW; kx++) {\n" 
-  "          float val = ptr_input[kx];\n" 
-  "          if (val > max) {\n" 
-  "            max = val;\n" 
-  "            argmax_x = kx;\n" 
-  "            argmax_y = ky;\n" 
-  "          }\n" 
+  "  CL_KERNEL_LOOP(index, nthreads) {\n" 
+  "    int pw = index % pooled_width;\n" 
+  "    int ph = (index / pooled_width) % pooled_height;\n" 
+  "    int c = (index / pooled_width / pooled_height) % channels;\n" 
+  "    int n = index / pooled_width / pooled_height / channels;\n" 
+  "    int hstart = ph * stride_h - pad_h;\n" 
+  "    int wstart = pw * stride_w - pad_w;\n" 
+  "    int hend = min(hstart + kernel_h, height);\n" 
+  "    int wend = min(wstart + kernel_w, width);\n" 
+  "    hstart = max(hstart, 0);\n" 
+  "    wstart = max(wstart, 0);\n" 
+  "    Dtype maxval = -FLT_MAX;\n" 
+  "    int maxidx = -1;\n" 
+  "    bottom_data += (n * channels + c) * height * width;\n" 
+  "    for (int h = hstart; h < hend; ++h) {\n" 
+  "      for (int w = wstart; w < wend; ++w) {\n" 
+  "        if (bottom_data[h * width + w] > maxval) {\n" 
+  "          maxidx = h * width + w;\n" 
+  "          maxval = bottom_data[maxidx];\n" 
   "        }\n" 
-  "        ptr_input += input_w; // next input line\n" 
   "      }\n" 
-  "      // Update output and argmax\n" 
-  "      *ptr_output = max;\n" 
-  "      *ptr_ind_x = argmax_x + 1;\n" 
-  "      *ptr_ind_y = argmax_y + 1;\n" 
   "    }\n" 
+  "    top_data[index] = maxval;\n" 
+  "    top_mask[index] = maxidx + 1;\n" 
   "  }\n" 
   "}\n" 
+  "{% end %}\n" 
   "\n" 
-  "/*\n" 
-  " * Description:\n" 
-  " *    this function computes the gradInput from weight and gradOutput\n" 
-  " */\n" 
-  "kernel void maxgradinput(global float *gradInput_data, int gradInput_offset,\n" 
-  "    global const float *gradOutput_data, int gradOutput_offset,\n" 
-  "    global const float *indices_data, int indices_offset,\n" 
-  "    int indices_x_offset, int indices_y_offset,\n" 
-  "   int input_n, int input_h, int input_w,\n" 
-  "   int kH, int kW, int dH, int dW)\n" 
-  "{\n" 
-  "  global float *gradInput = gradInput_data + gradInput_offset;\n" 
-  "  global const float *gradOutput = gradOutput_data + gradOutput_offset;\n" 
-  "  global const float *indices_x = indices_data + indices_offset + indices_x_offset;\n" 
-  "  global const float *indices_y = indices_data + indices_offset + indices_y_offset;\n" 
+  "{% if backward %}\n" 
+  "kernel void MaxPoolBackward(const int nthreads, const Dtype* top_diff_data,\n" 
+  "    int top_diff_offset,\n" 
+  "    const Dtype* top_mask_data, const int top_mask_offset, const int num, const int channels,\n" 
+  "    const int height, const int width, const int pooled_height,\n" 
+  "    const int pooled_width, const int kernel_h, const int kernel_w,\n" 
+  "    const int stride_h, const int stride_w, const int pad_h, const int pad_w,\n" 
+  "    Dtype* bottom_diff_data, int bottom_diff_offset) {\n" 
   "\n" 
-  "  // iterators\n" 
-  "  int xx, yy;\n" 
+  "  global Dtype *top_diff = top_diff_data + top_diff_offset;\n" 
+  "  global Dtype *top_mask = top_mask_data + top_mask_offset;\n" 
+  "  global Dtype *bottom_diff = bottom_diff_data + bottom_diff_offset;\n" 
   "\n" 
-  "  // output size\n" 
-  "  const int output_w = floor((float)(input_w - kW) / dW + 1);\n" 
-  "  const int output_h = floor((float)(input_h - kH) / dH + 1);\n" 
-  "\n" 
-  "  // compute offsets based on thread/block ID\n" 
-  "  int o = get_group_id(0);\n" 
-  "  int i = o;\n" 
-  "  //int k = get_group_id(0) % input_n;\n" 
-  "\n" 
-  "  int xx_start = get_local_id(0);\n" 
-  "  int xx_end = output_w;\n" 
-  "  int xx_step = get_local_size(0);\n" 
-  "\n" 
-  "  int yy_start = get_local_size(1)*get_group_id(1) + get_local_id(1);\n" 
-  "  int yy_end = output_h;\n" 
-  "  int yy_step = get_local_size(1)*get_num_groups(1);\n" 
-  "\n" 
-  "  // select input/output plane\n" 
-  "  gradOutput = gradOutput + o*output_w*output_h;\n" 
-  "  gradInput = gradInput + i*input_w*input_h;\n" 
-  "  indices_x = indices_x + o*output_w*output_h;\n" 
-  "  indices_y = indices_y + o*output_w*output_h;\n" 
-  "\n" 
-  "  // compute gradInput\n" 
-  "  for(yy = yy_start; yy < yy_end; yy+=yy_step) {\n" 
-  "    for(xx = xx_start; xx < xx_end; xx+=xx_step) {\n" 
-  "      global float *ptr_gradInput = gradInput + yy*dH*input_w + xx*dW;\n" 
-  "      global const float *ptr_gradOutput = gradOutput + yy*output_w + xx;\n" 
-  "      global const float *ptr_ind_x = indices_x + yy*output_w + xx;\n" 
-  "      global const float *ptr_ind_y = indices_y + yy*output_w + xx;\n" 
-  "      float z = *ptr_gradOutput;\n" 
-  "\n" 
-  "      int argmax_x = (*ptr_ind_x)-1;\n" 
-  "      int argmax_y = (*ptr_ind_y)-1;\n" 
-  "\n" 
-  "      ptr_gradInput[argmax_x + argmax_y*input_w] += z;\n" 
+  "  // looks like this could probably be baked, anyway, we can do that later...\n" 
+  "  CL_KERNEL_LOOP(index, nthreads) {\n" 
+  "    // find out the local index\n" 
+  "    // find out the local offset\n" 
+  "    int w = index % width;\n" 
+  "    int h = (index / width) % height;\n" 
+  "    int c = (index / width / height) % channels;\n" 
+  "    int n = index / width / height / channels;\n" 
+  "    int phstart =\n" 
+  "        (h + pad_h < kernel_h) ? 0 : (h + pad_h - kernel_h) / stride_h + 1;\n" 
+  "    int phend = min((h + pad_h) / stride_h + 1, pooled_height);\n" 
+  "    int pwstart =\n" 
+  "        (w + pad_w < kernel_w) ? 0 : (w + pad_w - kernel_w) / stride_w + 1;\n" 
+  "    int pwend = min((w + pad_w) / stride_w + 1, pooled_width);\n" 
+  "    Dtype gradient = 0;\n" 
+  "    int offset = (n * channels + c) * pooled_height * pooled_width;\n" 
+  "    top_diff += offset;\n" 
+  "    top_mask += offset;\n" 
+  "    for (int ph = phstart; ph < phend; ++ph) {\n" 
+  "      for (int pw = pwstart; pw < pwend; ++pw) {\n" 
+  "	if (top_mask[ph * pooled_width + pw] - 1 == h * width + w) {\n" 
+  "	  gradient += top_diff[ph * pooled_width + pw];\n" 
+  "	}\n" 
+  "      }\n" 
   "    }\n" 
+  "    bottom_diff[index] = gradient;\n" 
   "  }\n" 
   "}\n" 
-  "\n" 
-  "/*\n" 
-  " * Description:\n" 
-  " *    this function computes the gradInput from weight and gradOutput\n" 
-  " * This can probably be folded into the earlier method, or replace it,\n" 
-  " * but keeping it separate for now, to avoid breaking the earlier method,\n" 
-  " * and mean dont have to think about how to merge them yet\n" 
-  " */\n" 
-  "kernel void maxgradinput_staggered(\n" 
-  "    global float *gradInput_data, int gradInput_offset,\n" 
-  "    global const float *gradOutput_data, int gradOutput_offset,\n" 
-  "    global const float *indices_data, int indices_offset,\n" 
-  "    int indices_x_offset, int indices_y_offset,\n" 
-  "   int input_n, int input_h, int input_w,\n" 
-  "   int kH, int kW, int dH, int dW,\n" 
-  "   int staggerRatio,\n" 
-  "   int staggerCombo)\n" 
-  "{\n" 
-  "  global float *gradInput = gradInput_data + gradInput_offset;\n" 
-  "  global const float *gradOutput = gradOutput_data + gradOutput_offset;\n" 
-  "  global const float *indices_x = indices_data + indices_offset + indices_x_offset;\n" 
-  "  global const float *indices_y = indices_data + indices_offset + indices_y_offset;\n" 
-  "\n" 
-  "  // iterators\n" 
-  "  int xx, yy;\n" 
-  "\n" 
-  "  // output size\n" 
-  "  const int output_w = floor((float)(input_w - kW) / dW + 1);\n" 
-  "  const int output_h = floor((float)(input_h - kH) / dH + 1);\n" 
-  "\n" 
-  "  // compute offsets based on thread/block ID\n" 
-  "  int o = get_group_id(0);\n" 
-  "  int i = o;\n" 
-  "  //int k = get_group_id(0) % input_n;\n" 
-  "\n" 
-  "  int xx_start = get_local_id(0) * staggerRatio + (staggerCombo & 1);\n" 
-  "  int xx_end = output_w;\n" 
-  "  int xx_step = get_local_size(0) * staggerRatio;\n" 
-  "\n" 
-  "  int yy_start = (get_local_size(1)*get_group_id(1) + get_local_id(1)) * staggerRatio + (staggerCombo >> 1);\n" 
-  "  int yy_end = output_h;\n" 
-  "  int yy_step = get_local_size(1)*get_num_groups(1) * staggerRatio;\n" 
-  "\n" 
-  "  // select input/output plane\n" 
-  "  gradOutput = gradOutput + o*output_w*output_h;\n" 
-  "  gradInput = gradInput + i*input_w*input_h;\n" 
-  "  indices_x = indices_x + o*output_w*output_h;\n" 
-  "  indices_y = indices_y + o*output_w*output_h;\n" 
-  "\n" 
-  "  // compute gradInput\n" 
-  "  for(yy = yy_start; yy < yy_end; yy+=yy_step) {\n" 
-  "    for(xx = xx_start; xx < xx_end; xx+=xx_step) {\n" 
-  "      global float *ptr_gradInput = gradInput + yy*dH*input_w + xx*dW;\n" 
-  "      global const float *ptr_gradOutput = gradOutput + yy*output_w + xx;\n" 
-  "      global const float *ptr_ind_x = indices_x + yy*output_w + xx;\n" 
-  "      global const float *ptr_ind_y = indices_y + yy*output_w + xx;\n" 
-  "      float z = *ptr_gradOutput;\n" 
-  "\n" 
-  "      int argmax_x = (*ptr_ind_x)-1;\n" 
-  "      int argmax_y = (*ptr_ind_y)-1;\n" 
-  "\n" 
-  "      ptr_gradInput[argmax_x + argmax_y*input_w] += z;\n" 
-  "    }\n" 
-  "  }\n" 
-  "}\n" 
-  "\n" 
-  "/*\n" 
-  " * Description:\n" 
-  " *    this function computes the gradInput from weight and gradOutput\n" 
-  " *    when kH != dH or kW != dW (uses atomic add)\n" 
-  " */\n" 
-  "//kernel void atomicmaxgradinput(\n" 
-  "//  global float *gradInput_data, int gradInput_offset,\n" 
-  "//  global float *gradOutput_data, int gradOutput_offset,\n" 
-  "//  global float *indices_data, int indices_offset,\n" 
-  "//  int indices_x_offset, int indices_y_offset,\n" 
-  "//  int input_n, int input_h, int input_w, int kH, int kW, int dH, int dW\n" 
-  "//)\n" 
-  "//{\n" 
-  "//  global float *gradInput = gradInput_data + gradInput_offset;\n" 
-  "//  global float *gradOutput = gradOutput_data + gradOutput_offset;\n" 
-  "//  global float *indices_x = indices_data + indices_offset + indices_x_offset;\n" 
-  "//  global float *indices_y = indices_data + indices_offset + indices_y_offset;\n" 
-  "\n" 
-  "//  // iterators\n" 
-  "//  int xx, yy;\n" 
-  "\n" 
-  "//  // output size\n" 
-  "//  int output_w = (input_w - kW) / dW + 1;\n" 
-  "//  int output_h = (input_h - kH) / dH + 1;\n" 
-  "\n" 
-  "//  // compute offsets based on thread/block ID\n" 
-  "//  int o = get_group_id(0);\n" 
-  "//  int i = o;\n" 
-  "//  //int k = get_group_id(0) % input_n;\n" 
-  "\n" 
-  "//  int xx_start = get_local_id(0);\n" 
-  "//  int xx_end = output_w;\n" 
-  "//  int xx_step = get_local_size(0);\n" 
-  "\n" 
-  "//  int yy_start = get_local_size(1)*get_group_id(1) + get_local_id(1);\n" 
-  "//  int yy_end = output_h;\n" 
-  "//  int yy_step = get_local_size(1)*get_num_groups(1);\n" 
-  "\n" 
-  "//  // select input/output plane\n" 
-  "//  gradOutput = gradOutput + o*output_w*output_h;\n" 
-  "//  gradInput = gradInput + i*input_w*input_h;\n" 
-  "//  indices_x = indices_x + o*output_w*output_h;\n" 
-  "//  indices_y = indices_y + o*output_w*output_h;\n" 
-  "\n" 
-  "//  // compute gradInput\n" 
-  "//  for(yy = yy_start; yy < yy_end; yy+=yy_step) {\n" 
-  "//    for(xx = xx_start; xx < xx_end; xx+=xx_step) {\n" 
-  "//      global float *ptr_gradInput = gradInput + yy*dH*input_w + xx*dW;\n" 
-  "//      global float *ptr_gradOutput = gradOutput + yy*output_w + xx;\n" 
-  "//      global float *ptr_ind_x = indices_x + yy*output_w + xx;\n" 
-  "//      global float *ptr_ind_y = indices_y + yy*output_w + xx;\n" 
-  "//      float z = *ptr_gradOutput;\n" 
-  "\n" 
-  "//      int argmax_x = (*ptr_ind_x)-1;\n" 
-  "//      int argmax_y = (*ptr_ind_y)-1;\n" 
-  "\n" 
-  "//      // atomic add since different threads could update same variable\n" 
-  "////      atomicAdd(&(ptr_gradInput[argmax_x + argmax_y*input_w]), z);\n" 
-  "//      // hmmm, this doesnt work with float :-(  need another way...\n" 
-  "//      atomic_add(&(ptr_gradInput[argmax_x + argmax_y*input_w]), z);\n" 
-  "//    }\n" 
-  "//  }\n" 
-  "//}\n" 
-  "\n" 
+  "{% end %}\n" 
   "";
   // [[[end]]]
   return kernelSource;
