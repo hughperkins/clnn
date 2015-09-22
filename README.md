@@ -36,7 +36,8 @@ These mostly 'just work', since based on underlying tensor methods, already impl
 * nn.Abs
 * nn.LogSigmoid
 * nn.HardTanh
-* nn.LogSoftMax (mini-batches only, ie expects to receive a 2d ClTensor)
+* nn.LogSoftMax
+* nn.SoftMax
 
 ### Table layers
 
@@ -124,6 +125,9 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 ## Recent changes
 
+* 22nd September:
+  * added non-batch implementation of LogSoftMax (previously only handled batched input)
+  * added SoftMax, for both batched and non-batched
 * 20th September:
   * added non-batch implementation for SpatialMaxPooling (previously only handled batched input), for contiguous pools
 * 10th August:

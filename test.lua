@@ -24,7 +24,7 @@ clnn._test.precision_forward = precision_forward
 clnn._test.precision_backward = precision_backward
 
 include 'testLogSoftMax.lua'
--- include 'testSoftMax.lua'
+include 'testSoftMax.lua'
 include 'testMSECriterion.lua'
 include 'testMaxPooling.lua'
 include 'testSpatialConvolutionMM.lua'
