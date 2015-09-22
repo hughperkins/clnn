@@ -1,6 +1,6 @@
 function torch.ClTensor.nn.MSECriterion_updateOutput(self, input, target)
    -- assume 2 dim for now, why would anyone use 1 dim really?
-   assert (input:dim() == 2)
+--   assert (input:dim() == 2)
    local nframe = input:size(1)
    --    self.output:resize(nframe, self.bias:size(1))
    --    if not self.addBuffer or self.addBuffer:nElement() ~= nframe then
