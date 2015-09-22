@@ -1,4 +1,6 @@
 function torch.ClTensor.nn.SoftMax_updateOutput(self, input)
+   error("Not implemented")
+
    --  cltorch.setTrace(1)
    if input:dim() ~= 2 then
       error('SoftMax expects 2-d tensor currently')
@@ -28,6 +30,8 @@ function torch.ClTensor.nn.SoftMax_updateOutput(self, input)
 end
 
 function torch.ClTensor.nn.SoftMax_updateGradInput(self, input, gradOutput)
+   error("Not implemented")
+
    local nElement = self.gradInput:nElement()
    self.gradInput:resizeAs(input)
    if self.gradInput:nElement() ~= nElement then
