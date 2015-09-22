@@ -1,6 +1,6 @@
 function torch.ClTensor.nn.LogSoftMax_updateOutput(self, input)
    --  cltorch.setTrace(1)
-   if   input:dim() ~= 2 then
+   if input:dim() ~= 2 then
       error('LogSoftMax expects 2-d tensor currently')
    end
    if self.maxbuffer == nil then
