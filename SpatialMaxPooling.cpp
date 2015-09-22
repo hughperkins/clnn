@@ -66,7 +66,7 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
   }
 
   input = THClTensor_newContiguous(state, input);
-  float* input_data = THClTensor_data(state, input);
+  //float* input_data = THClTensor_data(state, input);
 
   THClTensor_resize4d(state, output, batchSize, nInputPlane, nOutputRows, nOutputCols);
   THClTensor_resizeAs(state, indices, output);
@@ -74,32 +74,39 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
   //float* indices_data = THClTensor_data(state, indices);
  // float* output_data = THClTensor_data(state, output);
 
+  int count = THClTensor_nElement(state, output);
 
 
     EasyCL *cl = input->storage->cl;
-    std::string uniqueName = __FILE__ "maxpool";
+    std::string uniqueName = __FILE__ "MaxPoolForward";
     CLKernel *kernel = 0;
     if(cl->kernelExists(uniqueName)) {
       kernel = cl->getKernel(uniqueName);
     } else {
       TemplatedKernel kernelBuilder(cl);
+      cl.set("forward", 1);
       kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-        SpatialMaxPooling_getKernelTemplate(), "maxpool");
+        SpatialMaxPooling_getKernelTemplate(), "MaxPoolForward");
     }
 
     THClKernels k(state, kernel);
+    k.in(count);
     k.in(input);
+    k.in(batchSize);
+    k.in(nInputPlane);
+    k.in(nInputRows);
+    k.in(nInputCols);
+    k.in(nOutputRows);
+    k.in(nOutputCols);
+    k.in(kH);
+    k.in(kW);
+    k.in(dH);
+    k.in(dW);
+    k.in(padH);
+    k.in(padW);
     k.out(output);
     k.out(indices);
-    k.in((int)(nbatch*nInputPlane*nOutputCols*nOutputRows));
-    k.in((int)0);
-    k.in((int)nInputPlane);
-    k.in((int)nInputRows);
-    k.in((int)nInputCols);
-    k.in((int)kH);
-    k.in((int)kW);
-    k.in((int)dH);
-    k.in((int)dW);
+
     k.run(blocks, threads);
 
 //    maxpool <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (
@@ -164,18 +171,28 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
     nOutputRows = floor(float(nInputRows - kH + 2*padH) / float(dH)) + 1;
   }
 
-    EasyCL *cl = input->storage->cl;
-    std::string uniqueName = __FILE__ "maxgradinput_staggered";
-    CLKernel *kernel = 0;
-    if(cl->kernelExists(uniqueName)) {
-      kernel = cl->getKernel(uniqueName);
-    } else {
-      TemplatedKernel kernelBuilder(cl);
-      kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-        SpatialMaxPooling_getKernelTemplate(), "maxgradinput_staggered");
-    }
+
+  gradOutput = THClTensor_newContiguous(state, gradOutput);
+  THClTensor_resizeAs(state, gradInput, input);
+  
+  int count = THClTensor_nElement(state, input);
+
+  EasyCL *cl = input->storage->cl;
+  std::string uniqueName = __FILE__ "MaxPoolBackward";
+  CLKernel *kernel = 0;
+  if(cl->kernelExists(uniqueName)) {
+    kernel = cl->getKernel(uniqueName);
+  } else {
+    TemplatedKernel kernelBuilder(cl);
+    cl.set("backward", 1);
+    kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
+      SpatialMaxPooling_getKernelTemplate(), "MaxPoolBackward");
+  }
 
   THClKernels k(state, kernel);
+  k.in(count);
+
+
   k.inout(gradInput);
   k.in(gradOutput);
   k.in(indices);
@@ -190,8 +207,12 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
   k.in((int)kW);
   k.in((int)dH);
   k.in((int)dW);
+  
+  k.in((int)2);
+  k.in((int)staggerCombo);
 
   k.run(blocks, threads);
+
   // clean
   THClTensor_free(state, input);
   THClTensor_free(state, gradOutput);
