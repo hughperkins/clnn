@@ -26,7 +26,7 @@ clnn._test.precision_backward = precision_backward
 include 'testLogSoftMax.lua'
 include 'testSoftMax.lua'
 include 'testMSECriterion.lua'
-include 'testMaxPooling.lua'
+include 'testSpatialMaxPooling.lua'
 include 'testSpatialConvolutionMM.lua'
 
 local function pointwise_transposed(proto_module, name, max_error)
@@ -1489,7 +1489,7 @@ function clnntest.SpatialAveragePooling_backward()
    local inj = (outj-1)*sj+kj
    
    local tm = {}
-   local title = string.format('SpatialMaxPooling.backward %dx%dx%d o %dx%d -> %dx%dx%d',
+   local title = string.format('SpatialAveragePooling.backward %dx%dx%d o %dx%d -> %dx%dx%d',
       from, inj, ini, kj, ki, to, outj, outi)
    times[title] = tm
    

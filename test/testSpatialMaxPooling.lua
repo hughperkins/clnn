@@ -105,6 +105,69 @@ function clnntest.SpatialMaxPooling_forward()
    mytester:asserteq(error_ind:max(), 0, 'error on indices (forward) ')
 end
 
+function clnntest.SpatialMaxPooling_forward_ceil()
+   torch.manualSeed(123)
+   -- vgg in neural-scaling geometry:
+   local from = 256
+   local to = from
+   local ki = 2
+   local kj = 2
+   local si = 2
+   local sj = 2
+   local outi = 2
+   local outj = 2
+   local ini = 4
+   local inj = 3
+   local ceil_mode = 1
+   
+   local tm = {}
+   local title = string.format('SpatialMaxPooling.forward %dx%dx%d o %dx%d -> %dx%dx%d',
+      from, inj, ini, kj, ki, to, outj, outi)
+   times[title] = tm
+   
+   local input = torch.randn(from,inj,ini)
+   local sconv = nn.SpatialMaxPooling(ki,kj,si,sj)
+   if ceil_mode then sconv:ceil() end
+   local groundtruth = sconv:forward(input)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundtruth = sconv:forward(input)
+   end
+   tm.cpu = a:time().real
+   
+   input = input:cl()
+   local gconv = nn.SpatialMaxPooling(ki,kj,si,sj):cl()
+   if ceil_mode then gconv:ceil() end
+   local rescl = gconv:forward(input)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:forward(input)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+   
+   mytester:asserteq(groundtruth:size(1), rescl:size(1))
+   mytester:asserteq(groundtruth:size(2), rescl:size(2))
+   mytester:asserteq(groundtruth:size(3), rescl:size(3))
+
+   local error = rescl:float() - groundtruth
+   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
+--   print('gconv.indices:size()', gconv.indices:size())
+--   print('sconv.indices:size()', sconv.indices:size())
+   -- we have to mess around with the indices a bit, to combine the x and y indices, and
+   -- then compare
+   gindices = gconv.indices:float()
+--   print('gindices', gindices)
+--   print('sconv.indices', sconv.indices)
+   gindices[1] = gindices[1]:add(-1):mul(kj) -- might be ki, not sure...
+   gindices[2]:add(gindices[1])
+--   print('gindices[2]', gindices[2])
+   -- local error_ind = gconv.indices:float() - sconv.indices
+   local error_ind = gindices[2] - sconv.indices
+--   print('error_ind', error_ind)
+   mytester:asserteq(error_ind:max(), 0, 'error on indices (forward) ')
+end
+
 function clnntest.SpatialMaxPooling_backward()
    -- FIXME test for different configs (and not just have non-deterministic tests :-P or
    -- incomplete tests)
