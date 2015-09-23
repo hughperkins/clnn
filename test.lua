@@ -23,6 +23,7 @@ clnn._test.nloop = nloop
 clnn._test.precision_forward = precision_forward
 clnn._test.precision_backward = precision_backward
 
+include 'testSpatialAveragePooling.lua'
 include 'testLogSoftMax.lua'
 include 'testSoftMax.lua'
 include 'testMSECriterion.lua'
@@ -648,97 +649,6 @@ function clnntest.Sum_backward()
    local rescl = gconv:backward(input, gradOutput)
    a:reset()
    for i = 1,nloop do
-      rescl = gconv:backward(input, gradOutput)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-   
-   local error = rescl:float() - groundgrad
-   
-   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
-end
-
-function clnntest.SpatialAveragePooling_forward_batch()
-   local bs = 10
-   local from = 35
-   local to = from
-   local ki = 5
-   local kj = 6
-   local si = 3
-   local sj = 2
-   local outi = 1
-   local outj = 1
-   local ini = (outi-1)*si+ki
-   local inj = (outj-1)*sj+kj
-   
-   local tm = {}
-   local title = string.format('SpatialAveragePooling.forward %dx%dx%dx%d o %dx%d -> %dx%dx%dx%d',
-      bs, from, inj, ini, kj, ki, bs, to, outj, outi)
-   times[title] = tm
-   
-   local input = torch.randn(bs,from,inj,ini)
-   local sconv = nn.SpatialAveragePooling(ki,kj,si,sj)
-   local groundtruth = sconv:forward(input)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundtruth = sconv:forward(input)
-   end
-   tm.cpu = a:time().real
-   
-   input = input:cl()
-   local gconv = nn.SpatialAveragePooling(ki,kj,si,sj):cl()
-   local rescl = gconv:forward(input)
-   a:reset()
-   for i = 1,nloop do
-      rescl = gconv:forward(input)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-   
-   local error = rescl:float() - groundtruth
-   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
-end
-
-function clnntest.SpatialAveragePooling_backward_batch()
-   local bs = 35
-   local from = 37
-   local to = from
-   local ki = 5
-   local kj = 6
-   local si = 3
-   local sj = 2
-   local outi = 1
-   local outj = 1
-   local ini = (outi-1)*si+ki
-   local inj = (outj-1)*sj+kj
-   
-   local tm = {}
-   local title = string.format('SpatialAveragePooling.backward %dx%dx%dx%d o %dx%d -> %dx%dx%dx%d',
-      bs, from, inj, ini, kj, ki, bs, to, outj, outi)
-   times[title] = tm
-   
-   local input = torch.randn(bs,from,inj,ini)
-   local gradOutput = torch.randn(bs,to,outj,outi)
-   local sconv = nn.SpatialAveragePooling(ki,kj,si,sj)
-   sconv:forward(input)
-   sconv:zeroGradParameters()
-   local groundgrad = sconv:backward(input, gradOutput)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      sconv:zeroGradParameters()
-      groundgrad = sconv:backward(input, gradOutput)
-   end
-   tm.cpu = a:time().real
-   
-   input = input:cl()
-   gradOutput = gradOutput:cl()
-   local gconv = nn.SpatialAveragePooling(ki,kj,si,sj):cl()
-   gconv:forward(input)
-   gconv:zeroGradParameters()
-   local rescl = gconv:backward(input, gradOutput)
-   a:reset()
-   for i = 1,nloop do
-      gconv:zeroGradParameters()
       rescl = gconv:backward(input, gradOutput)
    end
    cltorch.synchronize()
@@ -1434,95 +1344,6 @@ function x_clnntest.SpatialSubSampling_backward_batch()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
    mytester:assertlt(werror:abs():max(), precision_backward, 'error on weight (backward) ')
    mytester:assertlt(berror:abs():max(), precision_backward, 'error on bias (backward) ')
-end
-
-function clnntest.SpatialAveragePooling_forward()
-   local from = 37
-   local to = from
-   local ki = 5
-   local kj = 4
-   local si = 2
-   local sj = 3
-   local outi = 1
-   local outj = 1
-   local ini = (outi-1)*si+ki
-   local inj = (outj-1)*sj+kj
-   
-   local tm = {}
-   local title = string.format('SpatialAveragePooling.forward %dx%dx%d o %dx%d -> %dx%dx%d',
-      from, inj, ini, kj, ki, to, outj, outi)
-   times[title] = tm
-   
-   local input = torch.randn(from,inj,ini)
-   local sconv = nn.SpatialAveragePooling(ki,kj,si,sj)
-   local groundtruth = sconv:forward(input)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundtruth = sconv:forward(input)
-   end
-   tm.cpu = a:time().real
-   
-   input = input:cl()
-   local gconv = nn.SpatialAveragePooling(ki,kj,si,sj):cl()
-   local rescl = gconv:forward(input)
-   a:reset()
-   for i = 1,nloop do
-      rescl = gconv:forward(input)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-   
-   local error = rescl:float() - groundtruth
-   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
-end
-
-function clnntest.SpatialAveragePooling_backward()
-   local from = 31
-   local to = from
-   local ki = 5
-   local kj = 4
-   local si = 2
-   local sj = 3
-   local outi = 1
-   local outj = 1
-   local ini = (outi-1)*si+ki
-   local inj = (outj-1)*sj+kj
-   
-   local tm = {}
-   local title = string.format('SpatialAveragePooling.backward %dx%dx%d o %dx%d -> %dx%dx%d',
-      from, inj, ini, kj, ki, to, outj, outi)
-   times[title] = tm
-   
-   local input = torch.randn(from,inj,ini)
-   local gradOutput = torch.randn(to,outj,outi)
-   local sconv = nn.SpatialAveragePooling(ki,kj,si,sj)
-   sconv:forward(input)
-   sconv:zeroGradParameters()
-   local groundgrad = sconv:backward(input, gradOutput)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      sconv:zeroGradParameters()
-      groundgrad = sconv:backward(input, gradOutput)
-   end
-   tm.cpu = a:time().real
-   
-   input = input:cl()
-   gradOutput = gradOutput:cl()
-   local gconv = nn.SpatialAveragePooling(ki,kj,si,sj):cl()
-   gconv:forward(input)
-   gconv:zeroGradParameters()
-   local rescl = gconv:backward(input, gradOutput)
-   a:reset()
-   for i = 1,nloop do
-      gconv:zeroGradParameters()
-      rescl = gconv:backward(input, gradOutput)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-   
-   local error = rescl:float() - groundgrad
-   
-   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
 function x_clnntest.SpatialAdaptiveMaxPooling_forward()
