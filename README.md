@@ -22,7 +22,7 @@ These mostly 'just work', since based on underlying tensor methods, already impl
 ### Convolution layers
 
 * nn.SpatialConvolutionMM
-* nn.SpatialMaxPooling (note: half the pooling size should be no greater than stride currently, though easy to fix this, so please log an issue if you need)
+* nn.SpatialMaxPooling (including `ceil` mode)
 * nn.SpatialAveragePooling (either filter size must equal input size, or filter size must equal stride size)
 
 ### Transfer function layers
@@ -125,6 +125,9 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 ## Recent changes
 
+* 23rd September:
+  * ported latest cunn implementation of `SpatialMaxPooling` across, ie approximately Sergey's [Deterministic max-pooling](https://github.com/torch/cunn/pull/106) PR
+    * this includes `:ceil()` implementation
 * 22nd September:
   * added non-batch implementation of LogSoftMax (previously only handled batched input)
   * added SoftMax, for both batched and non-batched
