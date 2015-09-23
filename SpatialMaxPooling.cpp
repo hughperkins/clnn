@@ -8,6 +8,7 @@
 #include "EasyCL.h"
 #include "THClKernels.h"
 #include "templates/TemplatedKernel.h"
+#include "common.h"
 
 #include <iostream>
 #include <string>
@@ -76,45 +77,46 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
 
   int count = THClTensor_nElement(state, output);
 
+  EasyCL *cl = input->storage->cl;
+  std::string uniqueName = __FILE__ "MaxPoolForward";
+  CLKernel *kernel = 0;
+  if(cl->kernelExists(uniqueName)) {
+    kernel = cl->getKernel(uniqueName);
+  } else {
+    TemplatedKernel kernelBuilder(cl);
+    kernelBuilder.set("forward", 1);
+    kernelBuilder.set("Dtype", "float");
+    kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
+      SpatialMaxPooling_getKernelTemplate(), "MaxPoolForward");
+  }
 
-    EasyCL *cl = input->storage->cl;
-    std::string uniqueName = __FILE__ "MaxPoolForward";
-    CLKernel *kernel = 0;
-    if(cl->kernelExists(uniqueName)) {
-      kernel = cl->getKernel(uniqueName);
-    } else {
-      TemplatedKernel kernelBuilder(cl);
-      cl.set("forward", 1);
-      kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-        SpatialMaxPooling_getKernelTemplate(), "MaxPoolForward");
-    }
+  THClKernels k(state, kernel);
+  k.in((int)count);
+  k.in(input);
+  k.in((int)batchSize);
+  k.in((int)nInputPlane);
+  k.in((int)nInputRows);
+  k.in((int)nInputCols);
+  k.in((int)nOutputRows);
+  k.in((int)nOutputCols);
+  k.in((int)kH);
+  k.in((int)kW);
+  k.in((int)dH);
+  k.in((int)dW);
+  k.in((int)padH);
+  k.in((int)padW);
+  k.out(output);
+  k.out(indices);
 
-    THClKernels k(state, kernel);
-    k.in(count);
-    k.in(input);
-    k.in(batchSize);
-    k.in(nInputPlane);
-    k.in(nInputRows);
-    k.in(nInputCols);
-    k.in(nOutputRows);
-    k.in(nOutputCols);
-    k.in(kH);
-    k.in(kW);
-    k.in(dH);
-    k.in(dW);
-    k.in(padH);
-    k.in(padW);
-    k.out(output);
-    k.out(indices);
-
-    k.run(blocks, threads);
+  dim3 blocks(GET_BLOCKS(state, count));
+  dim3 threads(GET_CL_NUM_THREADS(state));
+  k.run(blocks, threads);
 
 //    maxpool <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (
 //      input_data, output_data,
 //      indices_data+nbatch*nInputPlane*nOutputCols*nOutputRows, indices_data,
 //      nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
 //    THError("not implemented");
-  }
 
   if(input->nDimension == 3)
     THClTensor_resize3d(state, output, nInputPlane, nOutputRows, nOutputCols);
@@ -184,34 +186,41 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
     kernel = cl->getKernel(uniqueName);
   } else {
     TemplatedKernel kernelBuilder(cl);
-    cl.set("backward", 1);
+    kernelBuilder.set("backward", 1);
+    kernelBuilder.set("Dtype", "float");
     kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
       SpatialMaxPooling_getKernelTemplate(), "MaxPoolBackward");
   }
 
   THClKernels k(state, kernel);
-  k.in(count);
-
-
-  k.inout(gradInput);
+  k.in((int)count);
   k.in(gradOutput);
   k.in(indices);
-  k.in((int)(nBatch*nInputPlane*nOutputCols*nOutputRows));
-  k.in((int)0);
-
+  k.in((int)batchSize);
   k.in((int)nInputPlane);
   k.in((int)nInputRows);
   k.in((int)nInputCols);
-
+  k.in((int)nOutputRows);
+  k.in((int)nOutputCols);
   k.in((int)kH);
   k.in((int)kW);
   k.in((int)dH);
   k.in((int)dW);
-  
-  k.in((int)2);
-  k.in((int)staggerCombo);
+  k.in((int)padH);
+  k.in((int)padW);
+  k.out(gradInput);
 
+  dim3 blocks(GET_BLOCKS(state, count));
+  dim3 threads(GET_CL_NUM_THREADS(state));
   k.run(blocks, threads);
+
+//  MaxPoolBackward <<< GET_BLOCKS(count), CL_NUM_THREADS, 0, THClState_getCurrentStream(state) >>> 
+//      (count,
+//      THClTensor_data(state, gradOutput),
+//      THClTensor_data(state, indices),
+//      batchSize, nInputPlane, nInputRows, nInputCols, nOutputRows, nOutputCols,
+//      kH, kW, dH, dW, padH, padW,
+//      THClTensor_data(state, gradInput));
 
   // clean
   THClTensor_free(state, input);
@@ -252,15 +261,16 @@ std::string SpatialMaxPooling_getKernelTemplate() {
   "#define Dtype {{Dtype}}\n" 
   "\n" 
   "\n" 
-  "{% if forward %}\n" 
-  "kernel void MaxPoolForward(const int nthreads, const Dtype* bottom_data_data,\n" 
-  "    int bottom_data_offset,\n" 
+  "{% if forward then %}\n" 
+  "kernel void MaxPoolForward(const int nthreads,\n" 
+  "    global const Dtype* bottom_data_data, int bottom_data_offset,\n" 
   "    const int num, const int channels, const int height,\n" 
   "    const int width, const int pooled_height, const int pooled_width,\n" 
   "    const int kernel_h, const int kernel_w, const int stride_h,\n" 
-  "    const int stride_w, const int pad_h, const int pad_w, Dtype* top_data_data,\n" 
-  "    int top_data_offset,\n" 
-  "    Dtype* top_mask_data, int top_mask_offset) {\n" 
+  "    const int stride_w, const int pad_h, const int pad_w,\n" 
+  "    global Dtype* top_data_data, int top_data_offset,\n" 
+  "    global Dtype* top_mask_data, int top_mask_offset\n" 
+  "  ) {\n" 
   "\n" 
   "  global Dtype *bottom_data = bottom_data_data + bottom_data_offset;\n" 
   "  global Dtype *top_data = top_data_data + top_data_offset;\n" 
@@ -294,14 +304,17 @@ std::string SpatialMaxPooling_getKernelTemplate() {
   "}\n" 
   "{% end %}\n" 
   "\n" 
-  "{% if backward %}\n" 
-  "kernel void MaxPoolBackward(const int nthreads, const Dtype* top_diff_data,\n" 
-  "    int top_diff_offset,\n" 
-  "    const Dtype* top_mask_data, const int top_mask_offset, const int num, const int channels,\n" 
+  "{% if backward then %}\n" 
+  "kernel void MaxPoolBackward(\n" 
+  "    const int nthreads,\n" 
+  "    global const Dtype* top_diff_data, int top_diff_offset,\n" 
+  "    global const Dtype* top_mask_data, const int top_mask_offset,\n" 
+  "    const int num, const int channels,\n" 
   "    const int height, const int width, const int pooled_height,\n" 
   "    const int pooled_width, const int kernel_h, const int kernel_w,\n" 
   "    const int stride_h, const int stride_w, const int pad_h, const int pad_w,\n" 
-  "    Dtype* bottom_diff_data, int bottom_diff_offset) {\n" 
+  "    global Dtype* bottom_diff_data, int bottom_diff_offset\n" 
+  "  ) {\n" 
   "\n" 
   "  global Dtype *top_diff = top_diff_data + top_diff_offset;\n" 
   "  global Dtype *top_mask = top_mask_data + top_mask_offset;\n" 

@@ -10,15 +10,16 @@
 #define Dtype {{Dtype}}
 
 
-{% if forward %}
-kernel void MaxPoolForward(const int nthreads, const Dtype* bottom_data_data,
-    int bottom_data_offset,
+{% if forward then %}
+kernel void MaxPoolForward(const int nthreads,
+    global const Dtype* bottom_data_data, int bottom_data_offset,
     const int num, const int channels, const int height,
     const int width, const int pooled_height, const int pooled_width,
     const int kernel_h, const int kernel_w, const int stride_h,
-    const int stride_w, const int pad_h, const int pad_w, Dtype* top_data_data,
-    int top_data_offset,
-    Dtype* top_mask_data, int top_mask_offset) {
+    const int stride_w, const int pad_h, const int pad_w,
+    global Dtype* top_data_data, int top_data_offset,
+    global Dtype* top_mask_data, int top_mask_offset
+  ) {
 
   global Dtype *bottom_data = bottom_data_data + bottom_data_offset;
   global Dtype *top_data = top_data_data + top_data_offset;
@@ -52,14 +53,17 @@ kernel void MaxPoolForward(const int nthreads, const Dtype* bottom_data_data,
 }
 {% end %}
 
-{% if backward %}
-kernel void MaxPoolBackward(const int nthreads, const Dtype* top_diff_data,
-    int top_diff_offset,
-    const Dtype* top_mask_data, const int top_mask_offset, const int num, const int channels,
+{% if backward then %}
+kernel void MaxPoolBackward(
+    const int nthreads,
+    global const Dtype* top_diff_data, int top_diff_offset,
+    global const Dtype* top_mask_data, const int top_mask_offset,
+    const int num, const int channels,
     const int height, const int width, const int pooled_height,
     const int pooled_width, const int kernel_h, const int kernel_w,
     const int stride_h, const int stride_w, const int pad_h, const int pad_w,
-    Dtype* bottom_diff_data, int bottom_diff_offset) {
+    global Dtype* bottom_diff_data, int bottom_diff_offset
+  ) {
 
   global Dtype *top_diff = top_diff_data + top_diff_offset;
   global Dtype *top_mask = top_mask_data + top_mask_offset;
