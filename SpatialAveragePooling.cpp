@@ -14,8 +14,6 @@
 #include <string>
 using namespace std;
 
-//#define CL_MAX_THREADS 1024   // this is safe, in reality 256 is our limit
-
 static std::string getKernelTemplate();
 
 static int clnn_SpatialAveragePooling_updateOutput(lua_State *L)
@@ -26,88 +24,107 @@ static int clnn_SpatialAveragePooling_updateOutput(lua_State *L)
   int kH = luaT_getfieldcheckint(L, 1, "kH");
   int dW = luaT_getfieldcheckint(L, 1, "dW");
   int dH = luaT_getfieldcheckint(L, 1, "dH");
+  int padW = luaT_getfieldcheckint(L, 1, "padW");
+  int padH = luaT_getfieldcheckint(L, 1, "padH");
+  bool ceil_mode = luaT_getfieldcheckboolean(L, 1, "ceil_mode");
+  bool count_include_pad = luaT_getfieldcheckboolean(L, 1, "count_include_pad");
 
   THClTensor *output = (THClTensor *)luaT_getfieldcheckudata(L, 1, "output", "torch.ClTensor");
+
   THAssert(THClTensor_checkGPU(state, 2, input, output));
-
-  // float *output_data;
-  // float *input_data;
-
   luaL_argcheck(L, input->nDimension == 3 || input->nDimension == 4, 2, "3D or 4D (batch) tensor expected");
 
-  long nInputCols = 0;
-  long nInputRows = 0;
-  long nbatch = 0;
-  long nOutputCols = 0;
-  long nOutputRows = 0;
-  long nInputPlane = 0;
+  long nInputCols, nInputRows, nInputPlane, batchSize;
+  long nOutputCols, nOutputRows;
 
   if (input->nDimension == 3) {
     nInputCols = input->size[2];
     nInputRows = input->size[1];
-    nOutputCols = (nInputCols - kW) / dW + 1;
-    nOutputRows = (nInputRows - kH) / dH + 1;
     nInputPlane = input->size[0];
-    nbatch = 1;
-
-    THClTensor_resize3d(state, output, nInputPlane, nOutputRows, nOutputCols);
-    // output_data = THClTensor_data(state, output);
-  } else {
+    batchSize = 1;
+  }
+  else
+  {
     nInputCols = input->size[3];
     nInputRows = input->size[2];
-    nbatch = input->size[0];
-    nOutputCols = (nInputCols - kW) / dW + 1;
-    nOutputRows = (nInputRows - kH) / dH + 1;
     nInputPlane = input->size[1];
-
-    THClTensor_resize4d(state, output, nbatch, nInputPlane, nOutputRows, nOutputCols);
-    // output_data = THClTensor_data(state, output);
+    batchSize = input->size[0];
   }
 
-  luaL_argcheck(L, nInputCols >= kW && nInputRows >= kH, 2, "input image smaller than kernel size");
+  luaL_argcheck(L, nInputCols >= kW - padW && nInputRows >= kH - padH, 2, "input image smaller than kernel size");
+  luaL_argcheck(L, kW/2 >= padW && kH/2 >= padH, 2, "pad should be smaller than half of kernel size");
+
+  if(ceil_mode) {
+    nOutputCols = ceil(float(nInputCols - kW + 2*padW) / float(dW)) + 1;
+    nOutputRows = ceil(float(nInputRows - kH + 2*padH) / float(dH)) + 1;
+  }
+  else {
+    nOutputCols = floor(float(nInputCols - kW + 2*padW) / float(dW)) + 1;
+    nOutputRows = floor(float(nInputRows - kH + 2*padH) / float(dH)) + 1;
+  }
 
   input = THClTensor_newContiguous(state, input);
   // input_data = THClTensor_data(state, input);
 
-  int yblocks = (int)(16L / nInputPlane);
-  yblocks = yblocks < 1 ? 1 : yblocks;
-  dim3 blocks(nInputPlane*nbatch,yblocks);
-  dim3 threads(32,8);
+  THClTensor_resize4d(state, output, batchSize, nInputPlane, nOutputRows, nOutputCols);
+  
+  // float* output_data = THClTensor_data(state, output);
 
-  // run subsample kernel
+  int count = THClTensor_nElement(state, output);
+
   EasyCL *cl = input->storage->cl;
-  std::string uniqueName = __FILE__ "subsample";
+  const char *uniqueName = 0;
+  if(count_include_pad) {
+    uniqueName = __FILE__ "forward_includepad";
+  } else {
+    uniqueName = __FILE__ "forward_not_includepad";
+  }
   CLKernel *kernel = 0;
   if(cl->kernelExists(uniqueName)) {
     kernel = cl->getKernel(uniqueName);
   } else {
     TemplatedKernel kernelBuilder(cl);
+    kernelBuilder.set("forward", 1);
+    kernelBuilder.set("Dtype", "float");
+    kernelBuilder.set("COUNT_INCLUDE_PAD", count_include_pad);
     kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
       getKernelTemplate(), "subsample");
   }
 
   THClKernels k(state, kernel);
+  k.in(int)count);
   k.in(input);
-  k.out(output);
+  k.in((int)batchSize);
   k.in((int)nInputPlane);
   k.in((int)nInputRows);
   k.in((int)nInputCols);
+  k.in((int)nOutputRows);
+  k.in((int)nOutputCols);
   k.in((int)kH);
   k.in((int)kW);
   k.in((int)dH);
   k.in((int)dW);
+  k.in((int)padH);
+  k.in((int)padW);
+  k.out(output);
+
+  dim3 blocks(GET_BLOCKS(state, count));
+  dim3 threads(GET_CL_NUM_THREADS(state));
   k.run(blocks, threads);
 
-//    subsample <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (input_data, output_data,
-//                                     nInputPlane, nInputRows, nInputCols, kH, kW, dH, dW);
+//    AvePoolForward<float, true>
+//      <<<GET_BLOCKS(count), CL_NUM_THREADS, 0, THClState_getCurrentStream(state) >>>(
+//        count, input_data,
+//        batchSize, nInputPlane, nInputRows, nInputCols, nOutputRows, nOutputCols,
+//        kH, kW, dH, dW, padH, padW, output_data);
 
-  // clean
+  if(input->nDimension == 3)
+    THClTensor_resize3d(state, output, nInputPlane, nOutputRows, nOutputCols);
+
   THClTensor_free(state, input);
 
   return 1;
 }
-
-
 
 static int clnn_SpatialAveragePooling_updateGradInput(lua_State *L)
 {
