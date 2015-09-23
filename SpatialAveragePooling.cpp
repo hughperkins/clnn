@@ -5,6 +5,7 @@
 #include "THClTensor.h"
 #include "THClTensorMath.h"
 #include "THClBlas.h"
+#include "common.h"
 
 #include "EasyCL.h"
 #include "THClKernels.h"
@@ -88,7 +89,7 @@ static int clnn_SpatialAveragePooling_updateOutput(lua_State *L)
     kernelBuilder.set("Dtype", "float");
     kernelBuilder.set("COUNT_INCLUDE_PAD", count_include_pad);
     kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-      getKernelTemplate(), "subsample");
+      getKernelTemplate(), "AvePoolForward");
   }
 
   THClKernels k(state, kernel);
@@ -135,78 +136,107 @@ static int clnn_SpatialAveragePooling_updateGradInput(lua_State *L)
   int kH = luaT_getfieldcheckint(L, 1, "kH");
   int dW = luaT_getfieldcheckint(L, 1, "dW");
   int dH = luaT_getfieldcheckint(L, 1, "dH");
+  int padW = luaT_getfieldcheckint(L, 1, "padW");
+  int padH = luaT_getfieldcheckint(L, 1, "padH");
+  bool ceil_mode = luaT_getfieldcheckboolean(L, 1, "ceil_mode");
+  bool count_include_pad = luaT_getfieldcheckboolean(L, 1, "count_include_pad");
 
   THClTensor *gradInput = (THClTensor *)luaT_getfieldcheckudata(L, 1, "gradInput", "torch.ClTensor");
-  THAssert(THClTensor_checkGPU(state, 3, input, gradInput, gradOutput));
 
-  long nInputCols = 0;
-  long nInputRows = 0;
-  long nInputPlane = 0;
-  long nbatch = 0;
+  THAssert(THClTensor_checkGPU(state, 3, input, gradOutput, gradInput));
+
+  input = THClTensor_newContiguous(state, input);
+  gradOutput = THClTensor_newContiguous(state, gradOutput);
+
+  long nInputCols, nInputRows, nInputPlane, batchSize;
+  long nOutputCols, nOutputRows;
+
   if (input->nDimension == 3) {
     nInputCols = input->size[2];
     nInputRows = input->size[1];
     nInputPlane = input->size[0];
-    nbatch = 1;
-  } else {
+    batchSize = 1;
+  }
+  else
+  {
     nInputCols = input->size[3];
     nInputRows = input->size[2];
     nInputPlane = input->size[1];
-    nbatch = input->size[0];
+    batchSize = input->size[0];
   }
 
-  // float *gradOutput_data = THClTensor_data(state, gradOutput);
-  // float *gradInput_data;
+  if(ceil_mode) {
+    nOutputCols = ceil(float(nInputCols - kW + 2*padW) / float(dW)) + 1;
+    nOutputRows = ceil(float(nInputRows - kH + 2*padH) / float(dH)) + 1;
+  }
+  else {
+    nOutputCols = floor(float(nInputCols - kW + 2*padW) / float(dW)) + 1;
+    nOutputRows = floor(float(nInputRows - kH + 2*padH) / float(dH)) + 1;
+  }
 
+
+  gradOutput = THClTensor_newContiguous(state, gradOutput);
   THClTensor_resizeAs(state, gradInput, input);
-  THClTensor_zero(state, gradInput);
-  // gradInput_data = THClTensor_data(state, gradInput);
+  
+  int count = THClTensor_nElement(state, input);
 
-  int yblocks = (int)(16L / nInputPlane);
-  yblocks = yblocks < 1 ? 1 : yblocks;
-  dim3 blocks(nInputPlane*nbatch,yblocks);
-  dim3 threads(32,8);
-
-  // run updateGradInput kernel
-  if ((kH == dH && kW == dW) || (kH == nInputRows && kW == nInputCols)) {
-    EasyCL *cl = input->storage->cl;
-    std::string uniqueName = __FILE__ "subgradinput";
-    CLKernel *kernel = 0;
-    if(cl->kernelExists(uniqueName)) {
-      kernel = cl->getKernel(uniqueName);
-    } else {
-      TemplatedKernel kernelBuilder(cl);
-      kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-        getKernelTemplate(), "subgradinput");
-    }
-
-    THClKernels k(state, kernel);
-    k.out(gradInput);
-    k.in(gradOutput);
-
-    k.in((int)nInputPlane);
-    k.in((int)nInputRows);
-    k.in((int)nInputCols);
-
-    k.in((int)kH);
-    k.in((int)kW);
-    k.in((int)dH);
-    k.in((int)dW);
-
-    k.run(blocks, threads);
-
-//      subgradinput <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (gradInput_data, gradOutput_data,
-//                                          nInputPlane, nInputRows, nInputCols,
-//                                          kH, kW, dH, dW);
+  EasyCL *cl = input->storage->cl;
+  const char *uniqueName = 0;
+  if(count_include_pad) {
+    uniqueName = __FILE__ "backward_includepad";
   } else {
-    THError("Not implemented");
-//      subgradinputAtomic <<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (gradInput_data, gradOutput_data,
-//                                                nInputPlane, nInputRows, nInputCols,
-//                                                kH, kW, dH, dW);
+    uniqueName = __FILE__ "backward_not_includepad";
   }
+  CLKernel *kernel = 0;
+  if(cl->kernelExists(uniqueName)) {
+    kernel = cl->getKernel(uniqueName);
+  } else {
+    TemplatedKernel kernelBuilder(cl);
+    kernelBuilder.set("backward", 1);
+    kernelBuilder.set("Dtype", "float");
+    kernelBuilder.set("COUNT_INCLUDE_PAD", count_include_pad);
+    kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
+      getKernelTemplate(), "AvePoolBackward");
+  }
+
+  THClKernels k(state, kernel);
+  k.in((int)count);
+  k.in(gradOutput);
+  k.in((int)batchSize);
+  k.in((int)nInputPlane);
+  k.in((int)nInputRows);
+  k.in((int)nInputCols);
+  k.in((int)nOutputRows);
+  k.in((int)nOutputCols);
+  k.in((int)kH);
+  k.in((int)kW);
+  k.in((int)dH);
+  k.in((int)dW);
+  k.in((int)padH);
+  k.in((int)padW);
+  k.out(gradInput);
+
+  dim3 blocks(GET_BLOCKS(state, count));
+  dim3 threads(GET_CL_NUM_THREADS(state));
+  k.run(blocks, threads);
+
+//    AvePoolBackward<float, true>
+//      <<< GET_BLOCKS(count), CL_NUM_THREADS, 0, THClState_getCurrentStream(state) >>> 
+//        (count,
+//        THClTensor_data(state, gradOutput),
+//        batchSize, nInputPlane, nInputRows, nInputCols, nOutputRows, nOutputCols,
+//        kH, kW, dH, dW, padH, padW,
+//        THClTensor_data(state, gradInput));
+
+  THClTensor_free(state, gradOutput);
+
+  // clean
+  THClTensor_free(state, input);
+  THClTensor_free(state, gradOutput);
 
   return 1;
 }
+
 
 static const struct luaL_Reg clnn_SpatialAveragePooling__ [] = {
   {"SpatialAveragePooling_updateOutput", clnn_SpatialAveragePooling_updateOutput},
