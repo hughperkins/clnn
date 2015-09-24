@@ -23,7 +23,8 @@ These mostly 'just work', since based on underlying tensor methods, already impl
 
 * nn.SpatialConvolutionMM
 * nn.SpatialMaxPooling (including `ceil` mode)
-* nn.SpatialAveragePooling (either filter size must equal input size, or filter size must equal stride size)
+* nn.SpatialAveragePooling (either filter size must equal input size, or filter size must equal stride size):
+  * update: latest SpatialAveragePooling is available now, but you have to live 'on the bleeding edge', see section 'On the bleeding edge: getting latest SpatialAveragePooling', below
 
 ### Transfer function layers
 
@@ -118,6 +119,30 @@ The source-code for the tests:
   * [test/test-layers.lua](test/test-layers.lua)
 * For SpatialConvolutionMM, please see:
   * [test/test-spatialconvolution.lua](test/test-spatialconvolution.lua) (Needs `cunn` available, to do numerical comparison)
+
+## On the bleeding edge: getting latest SpatialAveragePooling
+
+* latest SpatialAveragePooling has been ported from Sergey's [SpatialAveragePadding and ceil kernels](https://github.com/torch/cunn/pull/134)
+* you need to update your `nn` first, to a post-master fork:
+```
+git clone https://github.com/hughperkins/nn.git -b avepool_plus_master nn-avepool
+cd nn-avepool
+luarocks make rocks/nn-scm-1.rockspec
+cd ..
+
+```
+* now, you can update `clnn` to a post-master fork:
+```
+git clone https://github.com/hughperkins/clnn.git -b avgpool clnn-avgpool
+cd clnn-avgpool
+luarocks make rocks/clnn-scm-1.rockspec
+cd ..
+```
+* finally, run tests:
+```
+luajit -l clnn -e 'clnn.test()'
+```
+* you can see an example of using it in Justin's [neural-style](https://github.com/jcjohnson/neural-style), in the [OpenCL support](https://github.com/jcjohnson/neural-style/issues/44) issue
 
 ## Porting guidelines
 
