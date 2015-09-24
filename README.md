@@ -125,6 +125,8 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 ## Recent changes
 
+* 25th September:
+  * ported latest version of SoftMax, ie essentially Jonghoon's [Update SoftMax to work in spatial mode](https://github.com/torch/cunn/pull/135)
 * 23rd September:
   * ported latest cunn implementation of `SpatialMaxPooling` across, ie approximately Sergey's [Deterministic max-pooling](https://github.com/torch/cunn/pull/106) PR
     * this includes `:ceil()` implementation
