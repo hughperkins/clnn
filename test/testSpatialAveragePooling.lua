@@ -65,8 +65,8 @@ function clnntest.SpatialAveragePooling_forward()
    params.to = params.from
    params.ki = math.random(2,4)
    params.kj = math.random(2,4)
-   params.si = math.random(1,ki)
-   params.sj = math.random(1,kj)
+   params.si = math.random(1,params.ki)
+   params.sj = math.random(1,params.kj)
    params.outi = math.random(32,256)
    params.outj = math.random(32,256)
    params.ceil_mode = false
@@ -80,8 +80,8 @@ function clnntest.SpatialAveragePooling_forward_ceil()
    params.to = params.from
    params.ki = math.random(2,4)
    params.kj = math.random(2,4)
-   params.si = math.random(1,ki)
-   params.sj = math.random(1,kj)
+   params.si = math.random(1,params.ki)
+   params.sj = math.random(1,params.kj)
    params.outi = math.random(32,256)
    params.outj = math.random(32,256)
    params.ceil_mode = true
@@ -90,14 +90,14 @@ end
 
 function clnntest.SpatialAveragePooling_forward_batch()
    torch.manualSeed(123)
-   params.params = {}
+   params = {}
    params.bs = math.random(4,10)
    params.from = math.random(1,64)
    params.to = params.from
    params.ki = math.random(2,4)
    params.kj = math.random(2,4)
-   params.si = math.random(1,ki)
-   params.sj = math.random(1,kj)
+   params.si = math.random(1,params.ki)
+   params.sj = math.random(1,params.kj)
    params.outi = math.random(32,64)
    params.outj = math.random(32,64)
    params.ceil_mode = false

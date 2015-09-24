@@ -17,8 +17,8 @@ kernel void AvePoolForward(const int nthreads,
     const int stride_h, const int stride_w, const int pad_h, const int pad_w,
     global Dtype* const top_data_data, int top_data_offset
     ) {
-  global const Dtype* const bottom_diff = bottom_diff_data + bottom_diff_offset;
-  global Dtype* const top_diff = top_diff_data + top_diff_offset;
+  global const Dtype* const bottom_data = bottom_data_data + bottom_data_offset;
+  global Dtype* const top_data = top_data_data + top_data_offset;
 
   // bake in later, once working and if this layer is shown to contribute highly to
   // slowness
@@ -37,7 +37,7 @@ kernel void AvePoolForward(const int nthreads,
     hend = min(hend, height);
     wend = min(wend, width);
     Dtype aveval = 0;
-    const Dtype* const bottom_slice = bottom_data + (n * channels + c) * height * width;
+    global const Dtype* const bottom_slice = bottom_data + (n * channels + c) * height * width;
     for (int h = hstart; h < hend; ++h) {
       for (int w = wstart; w < wend; ++w) {
         aveval += bottom_slice[h * width + w];
@@ -59,7 +59,7 @@ kernel void AvePoolBackward(
     const int width, const int pooled_height, const int pooled_width,
     const int kernel_h, const int kernel_w, const int stride_h,
     const int stride_w, const int pad_h, const int pad_w,
-    Dtype* const bottom_diff_data, int bottom_diff_offset
+    global Dtype* const bottom_diff_data, int bottom_diff_offset
     ) {
   global const Dtype * const top_diff = top_diff_data + top_diff_offset;
   global Dtype *const bottom_diff = bottom_diff_data + bottom_diff_offset;
@@ -75,7 +75,7 @@ kernel void AvePoolBackward(
     const int pwstart = (w < kernel_w) ? 0 : (w - kernel_w) / stride_w + 1;
     const int pwend = min(w / stride_w + 1, pooled_width);
     Dtype gradient = 0;
-    const Dtype* const top_diff_slice =
+    global const Dtype* const top_diff_slice =
         top_diff + (n * channels + c) * pooled_height * pooled_width;
     for (int ph = phstart; ph < phend; ++ph) {
       for (int pw = pwstart; pw < pwend; ++pw) {
