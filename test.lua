@@ -23,6 +23,15 @@ clnn._test.nloop = nloop
 clnn._test.precision_forward = precision_forward
 clnn._test.precision_backward = precision_backward
 
+-- hack tester, so it doesnt eat our assert stacktraces, where we are using a helper method
+function torch.Tester:assert_sub (condition, message)
+   self.countasserts = self.countasserts + 1
+   if not condition then
+      local ss = debug.traceback('tester',2)
+      self.errors[#self.errors+1] = self.curtestname .. '\n' .. (message or '') .. '\n' .. ss .. '\n'
+   end
+end
+
 include 'testSpatialAveragePooling.lua'
 include 'testLogSoftMax.lua'
 include 'testSoftMax.lua'

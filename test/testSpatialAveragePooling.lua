@@ -131,7 +131,12 @@ local function do_SpatialAveragePooling_backward(params)
    else
       input = torch.randn(from,inj,ini)
    end
-   local gradOutput = torch.randn(to,outj,outi)
+   local gradOutput = nil
+   if bs ~= nil then
+      gradOutput = torch.randn(bs,to,outj,outi)
+   else
+      gradOutput = torch.randn(to,outj,outi)
+   end
    local sconv = nn.SpatialAveragePooling(ki,kj,si,sj)
    if ceil_mode then sconv:ceil() end
    sconv:forward(input)
