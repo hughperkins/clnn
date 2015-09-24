@@ -3,7 +3,7 @@
 #define SOFTMAX_THREADS {{SOFTMAX_THREADS}}
 
 {% if forward then %}
-kernel void clnn_SoftMax_updateOutput_kernel(
+kernel void updateOutput(
   global float *output_data, int output_offset,
   global float *input_data, int input_offset,
   int nframe, int dim, int stride)
@@ -31,7 +31,7 @@ kernel void clnn_SoftMax_updateOutput_kernel(
 
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  // reduce
+//  // reduce
   if (get_local_id(0) == 0)
   {
     float max_k = -FLT_MAX;
@@ -45,18 +45,18 @@ kernel void clnn_SoftMax_updateOutput_kernel(
 
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  // sum?
+//  // sum?
   float max_k = buffer[SOFTMAX_THREADS];
   buffer[get_local_id(0)] = 0;
   for (int i=i_start; i<i_end; i+=i_step) {
-    float z = __expf(input_k[i*stride]-max_k);
+    float z = native_exp(input_k[i*stride]-max_k);
     buffer[get_local_id(0)] += z;
     output_k[i*stride] = z;
   }
 
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  // reduce
+//  // reduce
   if (get_local_id(0) == 0)
   {
     float sum_k = 0;
@@ -75,10 +75,10 @@ kernel void clnn_SoftMax_updateOutput_kernel(
 {% end %}
 
 {% if backward then %}
-kernel void clnn_SoftMax_updateGradInput_kernel(
+kernel void updateGradInput(
   global float *gradInput_data, int gradInput_offset,
   global float *output_data, int output_offset,
-  global float *gradOutput_data, int gradOutput_offset
+  global float *gradOutput_data, int gradOutput_offset,
   int nframe, int dim, int stride)
 {
   global float *gradInput = gradInput_data + gradInput_offset;

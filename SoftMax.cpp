@@ -64,7 +64,7 @@ static int clnn_SoftMax_updateOutput(lua_State *L)
     kernelBuilder.set("forward", 1);
     kernelBuilder.set("SOFTMAX_THREADS", SOFTMAX_THREADS);
     kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-      getKernelTemplate(), "clnn_SoftMax_updateOutput_kernel");
+      getKernelTemplate(), "updateOutput");
   }
 
   THClKernels k(state, kernel);
@@ -140,7 +140,7 @@ static int clnn_SoftMax_updateGradInput(lua_State *L)
     kernelBuilder.set("backward", 1);
     kernelBuilder.set("SOFTMAX_THREADS", SOFTMAX_THREADS);
     kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
-      getKernelTemplate(), "clnn_SoftMax_updateGradInput_kernel");
+      getKernelTemplate(), "updateGradInput");
   }
 
   THClKernels k(state, kernel);
@@ -192,7 +192,7 @@ static std::string getKernelTemplate() {
   "#define SOFTMAX_THREADS {{SOFTMAX_THREADS}}\n" 
   "\n" 
   "{% if forward then %}\n" 
-  "kernel void clnn_SoftMax_updateOutput_kernel(\n" 
+  "kernel void updateOutput(\n" 
   "  global float *output_data, int output_offset,\n" 
   "  global float *input_data, int input_offset,\n" 
   "  int nframe, int dim, int stride)\n" 
@@ -220,7 +220,7 @@ static std::string getKernelTemplate() {
   "\n" 
   "  barrier(CLK_LOCAL_MEM_FENCE);\n" 
   "\n" 
-  "  // reduce\n" 
+  "//  // reduce\n" 
   "  if (get_local_id(0) == 0)\n" 
   "  {\n" 
   "    float max_k = -FLT_MAX;\n" 
@@ -234,18 +234,18 @@ static std::string getKernelTemplate() {
   "\n" 
   "  barrier(CLK_LOCAL_MEM_FENCE);\n" 
   "\n" 
-  "  // sum?\n" 
+  "//  // sum?\n" 
   "  float max_k = buffer[SOFTMAX_THREADS];\n" 
   "  buffer[get_local_id(0)] = 0;\n" 
   "  for (int i=i_start; i<i_end; i+=i_step) {\n" 
-  "    float z = __expf(input_k[i*stride]-max_k);\n" 
+  "    float z = native_exp(input_k[i*stride]-max_k);\n" 
   "    buffer[get_local_id(0)] += z;\n" 
   "    output_k[i*stride] = z;\n" 
   "  }\n" 
   "\n" 
   "  barrier(CLK_LOCAL_MEM_FENCE);\n" 
   "\n" 
-  "  // reduce\n" 
+  "//  // reduce\n" 
   "  if (get_local_id(0) == 0)\n" 
   "  {\n" 
   "    float sum_k = 0;\n" 
@@ -264,10 +264,10 @@ static std::string getKernelTemplate() {
   "{% end %}\n" 
   "\n" 
   "{% if backward then %}\n" 
-  "kernel void clnn_SoftMax_updateGradInput_kernel(\n" 
+  "kernel void updateGradInput(\n" 
   "  global float *gradInput_data, int gradInput_offset,\n" 
   "  global float *output_data, int output_offset,\n" 
-  "  global float *gradOutput_data, int gradOutput_offset\n" 
+  "  global float *gradOutput_data, int gradOutput_offset,\n" 
   "  int nframe, int dim, int stride)\n" 
   "{\n" 
   "  global float *gradInput = gradInput_data + gradInput_offset;\n" 
