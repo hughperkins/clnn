@@ -114,12 +114,6 @@ To run, do:
 luajit -l clnn -e 'clnn.test()'
 ```
 
-The source-code for the tests:
-* For all layers except SpatialConvolutionMM, please see:
-  * [test/test-layers.lua](test/test-layers.lua)
-* For SpatialConvolutionMM, please see:
-  * [test/test-spatialconvolution.lua](test/test-spatialconvolution.lua) (Needs `cunn` available, to do numerical comparison)
-
 ## On the bleeding edge: getting latest SpatialAveragePooling
 
 * latest SpatialAveragePooling has been ported from Sergey's [SpatialAveragePadding and ceil kernels](https://github.com/torch/cunn/pull/134)
