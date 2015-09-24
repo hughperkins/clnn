@@ -1,4 +1,4 @@
-# Older changes
+## Older changes
 
 * 10th August:
   * Improve error message when out of memory, ie will say it ran out of memory, rather than say 'c++ exception' now, in many common cases
