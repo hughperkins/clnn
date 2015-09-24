@@ -4,7 +4,7 @@ local clnntest = _test.clnntest
 local x_clnntest = _test.x_clnntest
 local nloop = _test.nloop
 local precision_forward = 1e-4
-local precision_backward = 1e-2
+local precision_backward = 1e-3
 
 function clnntest.SoftMax_forward()
    torch.manualSeed(123)
@@ -76,6 +76,8 @@ function clnntest.SoftMax_backward()
 end
 
 function clnntest.SoftMax_forward_batch()
+   torch.manualSeed(123)
+
    local size = math.random(1,256)
    local bs = math.random(32,256)
    
@@ -107,6 +109,8 @@ function clnntest.SoftMax_forward_batch()
 end
 
 function clnntest.SoftMax_backward_batch()
+   torch.manualSeed(123)
+
    local size = math.random(1,256)
    local bs = math.random(32,256)
    

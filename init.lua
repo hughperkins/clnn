@@ -23,7 +23,7 @@ include 'Tanh.lua'
 include 'Pointwise.lua'
 include 'Threshold.lua'
 include 'LogSoftMax.lua'
-include 'SoftMax.lua'
+-- include 'SoftMax.lua'
 include 'Narrow.lua'
 
 include 'MSECriterion.lua'
