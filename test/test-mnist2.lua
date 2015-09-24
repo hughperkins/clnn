@@ -67,14 +67,14 @@ elseif netchoice == 'conv1' then
   model:add(nn.Reshape(128, 1, 28, 28))
   -- from https://github.com/torch/demos/blob/4abff87d89f7ad8de3c51cbd0fe549b6000f3a1a/train-a-digit-classifier/train-on-mnist.lua#L80
   model:add(nn.SpatialConvolutionMM(1, 32, 5, 5))
-  model.modules[#model].padW = model.modules[#model].padding
-  model.modules[#model].padH = model.modules[#model].padding
+--  model.modules[#model].padW = model.modules[#model].padding
+--  model.modules[#model].padH = model.modules[#model].padding
 --  model[#model].padH = model[#model].padding
   model:add(nn.Tanh())
   model:add(nn.SpatialMaxPooling(3, 3, 3, 3))
   model:add(nn.SpatialConvolutionMM(32, 64, 5, 5))
-  model.modules[#model].padW = model.modules[#model].padding
-  model.modules[#model].padH = model.modules[#model].padding
+--  model.modules[#model].padW = model.modules[#model].padding
+--  model.modules[#model].padH = model.modules[#model].padding
   print('model.modules[#model].padding',  model.modules[#model].padding)
   model:add(nn.Tanh())
   model:add(nn.SpatialMaxPooling(2, 2, 2, 2))
