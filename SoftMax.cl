@@ -74,7 +74,7 @@ kernel void clnn_SoftMax_updateOutput_kernel(
 }
 {% end %}
 
-{% if backward %}
+{% if backward then %}
 kernel void clnn_SoftMax_updateGradInput_kernel(
   global float *gradInput_data, int gradInput_offset,
   global float *output_data, int output_offset,

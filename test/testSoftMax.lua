@@ -76,6 +76,8 @@ function clnntest.SoftMax_backward()
 end
 
 function clnntest.SoftMax_forward_batch()
+   torch.manualSeed(123)
+
    local size = math.random(1,256)
    local bs = math.random(32,256)
    
@@ -107,6 +109,8 @@ function clnntest.SoftMax_forward_batch()
 end
 
 function clnntest.SoftMax_backward_batch()
+   torch.manualSeed(123)
+
    local size = math.random(1,256)
    local bs = math.random(32,256)
    

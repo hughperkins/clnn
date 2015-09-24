@@ -61,6 +61,7 @@ static int clnn_SoftMax_updateOutput(lua_State *L)
     kernel = cl->getKernel(uniqueName);
   } else {
     TemplatedKernel kernelBuilder(cl);
+    kernelBuilder.set("forward", 1);
     kernelBuilder.set("SOFTMAX_THREADS", SOFTMAX_THREADS);
     kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
       getKernelTemplate(), "clnn_SoftMax_updateOutput_kernel");
@@ -136,6 +137,7 @@ static int clnn_SoftMax_updateGradInput(lua_State *L)
     kernel = cl->getKernel(uniqueName);
   } else {
     TemplatedKernel kernelBuilder(cl);
+    kernelBuilder.set("backward", 1);
     kernelBuilder.set("SOFTMAX_THREADS", SOFTMAX_THREADS);
     kernel = kernelBuilder.buildKernel(uniqueName, __FILE__,
       getKernelTemplate(), "clnn_SoftMax_updateGradInput_kernel");
@@ -261,7 +263,7 @@ static std::string getKernelTemplate() {
   "}\n" 
   "{% end %}\n" 
   "\n" 
-  "{% if backward %}\n" 
+  "{% if backward then %}\n" 
   "kernel void clnn_SoftMax_updateGradInput_kernel(\n" 
   "  global float *gradInput_data, int gradInput_offset,\n" 
   "  global float *output_data, int output_offset,\n" 
