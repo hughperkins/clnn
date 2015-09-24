@@ -17,7 +17,7 @@ local function do_SpatialAveragePooling_forward(params)
    local sj = params.sj
    local outi = params.outi
    local outj = params.outj
-   local ceil_mode = params.ceil_mode or 0
+   local ceil_mode = params.ceil_mode or false
 
    local ini = (outi-1)*si+ki
    local inj = (outj-1)*sj+kj
@@ -69,7 +69,7 @@ function clnntest.SpatialAveragePooling_forward()
    params.sj = math.random(1,kj)
    params.outi = math.random(32,256)
    params.outj = math.random(32,256)
-   params.ceil_mode = 0
+   params.ceil_mode = false
    do_SpatialAveragePooling_forward(params)
 end
 
@@ -84,7 +84,7 @@ function clnntest.SpatialAveragePooling_forward_ceil()
    params.sj = math.random(1,kj)
    params.outi = math.random(32,256)
    params.outj = math.random(32,256)
-   params.ceil_mode = 1
+   params.ceil_mode = true
    do_SpatialAveragePooling_forward(params)
 end
 
@@ -98,22 +98,25 @@ function clnntest.SpatialAveragePooling_forward_batch()
    params.kj = math.random(2,4)
    params.si = math.random(1,ki)
    params.sj = math.random(1,kj)
-   params.outi = math.random(32,256)
-   params.outj = math.random(32,256)
-   params.ceil_mode = 0
+   params.outi = math.random(32,64)
+   params.outj = math.random(32,64)
+   params.ceil_mode = false
    do_SpatialAveragePooling_forward(params)
 end
 
-function clnntest.SpatialAveragePooling_backward()
+local function do_SpatialAveragePooling_backward(params)
    torch.manualSeed(123)
-   local from = math.random(1,64)
-   local to = from
-   local ki = math.random(2,4)
-   local kj = math.random(2,4)
-   local si = math.random(1,ki)
-   local sj = math.random(1,kj)
-   local outi = math.random(32,64)
-   local outj = math.random(32,64)
+   local bs = params.bs
+   local from = params.from
+   local to = params.to
+   local ki = params.ki
+   local kj = params.kj
+   local si = params.si
+   local sj = params.sj
+   local outi = params.outi
+   local outj = params.outj
+   local ceil_mode = params.ceil_mode or false
+
    local ini = (outi-1)*si+ki
    local inj = (outj-1)*sj+kj
 
@@ -122,9 +125,15 @@ function clnntest.SpatialAveragePooling_backward()
                                from, inj, ini, kj, ki, to, outj, outi)
    times[title] = tm
 
-   local input = torch.randn(from,inj,ini)
+   local input = nil
+   if bs ~= nil then
+      local input = torch.randn(bs,from,inj,ini)
+   else
+      local input = torch.randn(from,inj,ini)
+   end
    local gradOutput = torch.randn(to,outj,outi)
    local sconv = nn.SpatialAveragePooling(ki,kj,si,sj)
+   if ceil_mode then sconv:ceil() end
    sconv:forward(input)
    sconv:zeroGradParameters()
    local groundgrad = sconv:backward(input, gradOutput)
@@ -138,6 +147,7 @@ function clnntest.SpatialAveragePooling_backward()
    input = input:cl()
    gradOutput = gradOutput:cl()
    local gconv = nn.SpatialAveragePooling(ki,kj,si,sj):cl()
+   if ceil_mode then gconv:ceil() end
    gconv:forward(input)
    gconv:zeroGradParameters()
    local res_gpu = gconv:backward(input, gradOutput)
@@ -154,54 +164,67 @@ function clnntest.SpatialAveragePooling_backward()
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
 
+function clnntest.SpatialAveragePooling_backward()
+   torch.manualSeed(123)
+   local params = {}
+   params.bs = nil  -- a nop, technically, I know...
+   params.from = math.random(1,64)
+   params.to = from
+   params.ki = math.random(2,4)
+   params.kj = math.random(2,4)
+   params.si = math.random(1,ki)
+   params.sj = math.random(1,kj)
+   params.outi = math.random(32,256)
+   params.outj = math.random(32,256)
+   params.ceil_mode = false
+   do_SpatialAveragePooling_backward(params)
+end
+
+function clnntest.SpatialAveragePooling_backward_ceil()
+   torch.manualSeed(123)
+   local params = {}
+   params.bs = nil  -- a nop, technically, I know...
+   params.from = math.random(1,64)
+   params.to = from
+   params.ki = math.random(2,4)
+   params.kj = math.random(2,4)
+   params.si = math.random(1,ki)
+   params.sj = math.random(1,kj)
+   params.outi = math.random(32,256)
+   params.outj = math.random(32,256)
+   params.ceil_mode = true
+   do_SpatialAveragePooling_backward(params)
+end
+
 function clnntest.SpatialAveragePooling_backward_batch()
    torch.manualSeed(123)
-   local bs = math.random(4,10)
-   local from = math.random(1,64)
-   local to = from
-   local ki = math.random(2,4)
-   local kj = math.random(2,4)
-   local si = math.random(1,ki)
-   local sj = math.random(1,kj)
-   local outi = math.random(32,64)
-   local outj = math.random(32,64)
-   local ini = (outi-1)*si+ki
-   local inj = (outj-1)*sj+kj
+   local params = {}
+   params.bs = math.random(4,10)
+   params.from = math.random(1,64)
+   params.to = from
+   params.ki = math.random(2,4)
+   params.kj = math.random(2,4)
+   params.si = math.random(1,ki)
+   params.sj = math.random(1,kj)
+   params.outi = math.random(32,64)
+   params.outj = math.random(32,64)
+   params.ceil_mode = false
+   do_SpatialAveragePooling_backward(params)
+end
 
-   local tm = {}
-   local title = string.format('SpatialAveragePooling.backward %dx%dx%dx%d o %dx%d -> %dx%dx%dx%d',
-                               bs, from, inj, ini, kj, ki, bs, to, outj, outi)
-   times[title] = tm
-
-   local input = torch.randn(bs,from,inj,ini)
-   local gradOutput = torch.randn(bs,to,outj,outi)
-   local sconv = nn.SpatialAveragePooling(ki,kj,si,sj)
-   sconv:forward(input)
-   sconv:zeroGradParameters()
-   local groundgrad = sconv:backward(input, gradOutput)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      sconv:zeroGradParameters()
-      groundgrad = sconv:backward(input, gradOutput)
-   end
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   gradOutput = gradOutput:cl()
-   local gconv = nn.SpatialAveragePooling(ki,kj,si,sj):cl()
-   gconv:forward(input)
-   gconv:zeroGradParameters()
-   local res_gpu = gconv:backward(input, gradOutput)
-   a:reset()
-   for i = 1,nloop do
-      gconv:zeroGradParameters()
-      res_gpu = gconv:backward(input, gradOutput)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local error = res_gpu:float() - groundgrad
-
-   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
+function clnntest.SpatialAveragePooling_backward_batch_ceil()
+   torch.manualSeed(123)
+   local params = {}
+   params.bs = math.random(4,10)
+   params.from = math.random(1,64)
+   params.to = from
+   params.ki = math.random(2,4)
+   params.kj = math.random(2,4)
+   params.si = math.random(1,ki)
+   params.sj = math.random(1,kj)
+   params.outi = math.random(32,64)
+   params.outj = math.random(32,64)
+   params.ceil_mode = true
+   do_SpatialAveragePooling_backward(params)
 end
 
