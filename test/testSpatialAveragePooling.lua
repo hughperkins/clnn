@@ -62,7 +62,7 @@ function clnntest.SpatialAveragePooling_forward()
    local params = {}
    params.bs = nil  -- a nop, technically, I know...
    params.from = math.random(1,64)
-   params.to = from
+   params.to = params.from
    params.ki = math.random(2,4)
    params.kj = math.random(2,4)
    params.si = math.random(1,ki)
@@ -77,7 +77,7 @@ function clnntest.SpatialAveragePooling_forward_ceil()
    torch.manualSeed(123)
    local params = {}
    params.from = math.random(1,64)
-   params.to = from
+   params.to = params.from
    params.ki = math.random(2,4)
    params.kj = math.random(2,4)
    params.si = math.random(1,ki)
@@ -93,7 +93,7 @@ function clnntest.SpatialAveragePooling_forward_batch()
    params.params = {}
    params.bs = math.random(4,10)
    params.from = math.random(1,64)
-   params.to = from
+   params.to = params.from
    params.ki = math.random(2,4)
    params.kj = math.random(2,4)
    params.si = math.random(1,ki)
@@ -127,9 +127,9 @@ local function do_SpatialAveragePooling_backward(params)
 
    local input = nil
    if bs ~= nil then
-      local input = torch.randn(bs,from,inj,ini)
+      input = torch.randn(bs,from,inj,ini)
    else
-      local input = torch.randn(from,inj,ini)
+      input = torch.randn(from,inj,ini)
    end
    local gradOutput = torch.randn(to,outj,outi)
    local sconv = nn.SpatialAveragePooling(ki,kj,si,sj)
@@ -169,11 +169,11 @@ function clnntest.SpatialAveragePooling_backward()
    local params = {}
    params.bs = nil  -- a nop, technically, I know...
    params.from = math.random(1,64)
-   params.to = from
+   params.to = params.from
    params.ki = math.random(2,4)
    params.kj = math.random(2,4)
-   params.si = math.random(1,ki)
-   params.sj = math.random(1,kj)
+   params.si = math.random(1,params.ki)
+   params.sj = math.random(1,params.kj)
    params.outi = math.random(32,256)
    params.outj = math.random(32,256)
    params.ceil_mode = false
@@ -185,11 +185,11 @@ function clnntest.SpatialAveragePooling_backward_ceil()
    local params = {}
    params.bs = nil  -- a nop, technically, I know...
    params.from = math.random(1,64)
-   params.to = from
+   params.to = params.from
    params.ki = math.random(2,4)
    params.kj = math.random(2,4)
-   params.si = math.random(1,ki)
-   params.sj = math.random(1,kj)
+   params.si = math.random(1,params.ki)
+   params.sj = math.random(1,params.kj)
    params.outi = math.random(32,256)
    params.outj = math.random(32,256)
    params.ceil_mode = true
@@ -201,11 +201,11 @@ function clnntest.SpatialAveragePooling_backward_batch()
    local params = {}
    params.bs = math.random(4,10)
    params.from = math.random(1,64)
-   params.to = from
+   params.to = params.from
    params.ki = math.random(2,4)
    params.kj = math.random(2,4)
-   params.si = math.random(1,ki)
-   params.sj = math.random(1,kj)
+   params.si = math.random(1,params.ki)
+   params.sj = math.random(1,params.kj)
    params.outi = math.random(32,64)
    params.outj = math.random(32,64)
    params.ceil_mode = false
@@ -217,11 +217,11 @@ function clnntest.SpatialAveragePooling_backward_batch_ceil()
    local params = {}
    params.bs = math.random(4,10)
    params.from = math.random(1,64)
-   params.to = from
+   params.to = params.from
    params.ki = math.random(2,4)
    params.kj = math.random(2,4)
-   params.si = math.random(1,ki)
-   params.sj = math.random(1,kj)
+   params.si = math.random(1,params.ki)
+   params.sj = math.random(1,params.kj)
    params.outi = math.random(32,64)
    params.outj = math.random(32,64)
    params.ceil_mode = true
