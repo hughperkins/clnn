@@ -37,7 +37,7 @@ These mostly 'just work', since based on underlying tensor methods, already impl
 * nn.LogSigmoid
 * nn.HardTanh
 * nn.LogSoftMax
-* nn.SoftMax
+* nn.SoftMax (including spatial mode)
 
 ### Table layers
 
