@@ -135,7 +135,7 @@ cd ..
 ```
 luajit -l clnn -e 'clnn.test()'
 ```
-* you can see an example of using it in Justin's [neural-style](https://github.com/jcjohnson/neural-style), in the [OpenCL support](https://github.com/jcjohnson/neural-style/issues/44) issue
+* you can see an example of using it in Justin's [neural-style](https://github.com/jcjohnson/neural-style), in the [OpenCL support](https://github.com/jcjohnson/neural-style/issues/44#issuecomment-142912267) issue
 
 ## Porting guidelines
 
