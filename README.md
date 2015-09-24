@@ -129,7 +129,6 @@ git clone https://github.com/hughperkins/nn.git -b avepool_plus_master nn-avepoo
 cd nn-avepool
 luarocks make rocks/nn-scm-1.rockspec
 cd ..
-
 ```
 * now, you can update `clnn` to a post-master fork:
 ```
@@ -151,6 +150,7 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 ## Recent changes
 
 * 25th September:
+  * ported Sergey's not-yet-merged  [SpatialAveragePadding and ceil kernels](https://github.com/torch/cunn/pull/134), into `clnn-avgpool` branch
   * ported latest version of SoftMax, ie essentially Jonghoon's [Update SoftMax to work in spatial mode](https://github.com/torch/cunn/pull/135)
 * 23rd September:
   * ported latest cunn implementation of `SpatialMaxPooling` across, ie approximately Sergey's [Deterministic max-pooling](https://github.com/torch/cunn/pull/106) PR
