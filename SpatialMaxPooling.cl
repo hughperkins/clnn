@@ -21,7 +21,7 @@ kernel void MaxPoolForward(const int nthreads,
     global Dtype* top_mask_data, int top_mask_offset
   ) {
 
-  global Dtype *bottom_data = bottom_data_data + bottom_data_offset;
+  global const Dtype *bottom_data = bottom_data_data + bottom_data_offset;
   global Dtype *top_data = top_data_data + top_data_offset;
   global Dtype *top_mask = top_mask_data + top_mask_offset;
 
@@ -65,8 +65,8 @@ kernel void MaxPoolBackward(
     global Dtype* bottom_diff_data, int bottom_diff_offset
   ) {
 
-  global Dtype *top_diff = top_diff_data + top_diff_offset;
-  global Dtype *top_mask = top_mask_data + top_mask_offset;
+  global const Dtype *top_diff = top_diff_data + top_diff_offset;
+  global const Dtype *top_mask = top_mask_data + top_mask_offset;
   global Dtype *bottom_diff = bottom_diff_data + bottom_diff_offset;
 
   // looks like this could probably be baked, anyway, we can do that later...
