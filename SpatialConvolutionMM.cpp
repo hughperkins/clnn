@@ -9,6 +9,7 @@
 #include "templates/TemplatedKernel.h"
 #include "DeviceInfo.h"
 #include "EasyCL.h"
+#include "conv/ClConvolver.h"
 
 #include <iostream>
 #include <string>
@@ -132,6 +133,20 @@ static int clnn_SpatialConvolutionMM_updateOutput(lua_State *L) {
   // Input
   THClTensor *input = (THClTensor*)luaT_checkudata(L, 2, "torch.ClTensor");
 
+  // Convolver
+  lua_getfield(L, 1, "convolver");
+  ClConvolver *conv = (ClConvolver*)luaT_toudata(L, -1, "nn.ClConvolver");
+//  , "nn.ClConvolver")
+  if(conv == 0) {
+    ClConvolver_new(L);
+    lua_pushvalue(L, -1);
+    lua_setfield(L, 1, "convolver");
+    conv = (ClConvolver*)luaT_toudata(L, -1, "nn.ClConvolver");
+  }
+  if(conv == 0) {
+    THError("failed to create convolver object");
+  }
+
   // Params:
   int dW = luaT_getfieldcheckint(L, 1, "dW");
   int dH = luaT_getfieldcheckint(L, 1, "dH");
@@ -141,6 +156,15 @@ static int clnn_SpatialConvolutionMM_updateOutput(lua_State *L) {
   int nOutputPlane = luaT_getfieldcheckint(L, 1, "nOutputPlane");
   int padW = luaT_getfieldcheckint(L, 1, "padW");
   int padH = luaT_getfieldcheckint(L, 1, "padH");
+
+  conv->dW = dW;
+  conv->dH = dH;
+  conv->kW = kW;
+  conv->kH = kH;
+  conv->nInputPlane = nInputPlane;
+  conv->nOutputPlane = nOutputPlane;
+  conv->padW = padW;
+  conv->padH = padH;
 
 //  cout << "dW=" << dW << " dH=" << dH << " kW=" << kW << " kH=" << kH 
 //    << " nInputPlane=" << nInputPlane << " nOutputPlane=" << nOutputPlane

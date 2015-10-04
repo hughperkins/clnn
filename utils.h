@@ -1,5 +1,4 @@
-#ifndef CLNN_UTILS_H
-#define CLNN_UTILS_H
+#pragma once 
 
 struct THClState;
 
@@ -14,8 +13,5 @@ struct THClState* getCltorchState(lua_State* L);
 } // extern "C"
 #endif
 
-#include "THClGeneral.h"
-
-
-#endif
+// #include "THClGeneral.h"
 

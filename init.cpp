@@ -2,6 +2,7 @@
 extern "C" {
   #include "lua.h"
 }
+
 #include <iostream>
 using namespace std;
 
@@ -13,10 +14,12 @@ void clnn_SpatialConvolutionMM_init(lua_State *L);
 void clnn_SpatialMaxPooling_init(lua_State *L);
 void clnn_SpatialAveragePooling_init(lua_State *L);
 void clnn_SoftMax_init(lua_State *L);
+#include "conv/ClConvolver.h"
 
 int luaopen_libclnn( lua_State *L ) {
   lua_newtable(L);
 //    printf("luaopen_libclnn called :-)\n");
+    clnn_ClConvolver_init(L);
     clnn_SpatialConvolutionMM_init(L);
     clnn_SpatialMaxPooling_init(L);
     clnn_SpatialAveragePooling_init(L);

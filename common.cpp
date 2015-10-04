@@ -1,6 +1,7 @@
 #include "common.h"
 #include "utils.h"
 #include "DeviceInfo.h"
+#include "THClGeneral.h"
 
 int GET_CL_NUM_THREADS(THClState *state) {
   int blockSize = 1024;
