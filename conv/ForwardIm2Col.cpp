@@ -83,14 +83,17 @@ ForwardIm2Col::ForwardIm2Col(THClState *state, int device, ClConvolver *conv) {
   this->device = device;
   this->conv = conv;
 
-  columns = THClTensor_newv2(state, device);
-  ones = THClTensor_newv2(state, device);
+//  columns = THClTensor_newv2(state, device);
+//  ones = THClTensor_newv2(state, device);
 }
 ForwardIm2Col::~ForwardIm2Col() {
-  THClTensor_free(state, columns);
-  THClTensor_free(state, ones);
+//  THClTensor_free(state, columns);
+//  THClTensor_free(state, ones);
 }
 void ForwardIm2Col::forward(THClState *state, THClTensor *input, THClTensor *weight, THClTensor *bias, THClTensor *output) {
+  THClTensor *columns = THClTensor_newv2(state, device);
+  THClTensor *ones = THClTensor_newv2(state, device);
+
   // Resize temporary columns
   THClTensor_resize2d(state, columns, conv->nInputPlane*conv->kW*conv->kH, conv->outputHeight*conv->outputWidth);
 
@@ -163,6 +166,9 @@ void ForwardIm2Col::forward(THClState *state, THClTensor *input, THClTensor *wei
   // Free
   THClTensor_free(state, input_n);
   THClTensor_free(state, output_n);
+
+  THClTensor_free(state, columns);
+  THClTensor_free(state, ones);
 
   // Resize output
   if (conv->batch == 0) {

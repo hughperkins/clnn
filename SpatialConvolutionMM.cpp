@@ -143,20 +143,10 @@ static int clnn_SpatialConvolutionMM_accGradParameters(lua_State *L) {
   }
 
   // Params
-//  int dW = luaT_getfieldcheckint(L, 1, "dW");
-//  int dH = luaT_getfieldcheckint(L, 1, "dH");
-//  int kW = luaT_getfieldcheckint(L, 1, "kW");
-//  int kH = luaT_getfieldcheckint(L, 1, "kH");
-//  int nInputPlane = luaT_getfieldcheckint(L, 1, "nInputPlane");
-//  int nOutputPlane = luaT_getfieldcheckint(L, 1, "nOutputPlane");
-//  int padW = luaT_getfieldcheckint(L, 1, "padW");
-//  int padH = luaT_getfieldcheckint(L, 1, "padH");
   float scale = luaL_optnumber(L, 4, 1);
 
   THClTensor *gradWeight = (THClTensor *)luaT_getfieldcheckudata(L, 1, "gradWeight", "torch.ClTensor");
   THClTensor *gradBias = (THClTensor *)luaT_getfieldcheckudata(L, 1, "gradBias", "torch.ClTensor");
-//  THClTensor *columns = (THClTensor*)luaT_getfieldcheckudata(L, 1, "finput", "torch.ClTensor");
-//  THClTensor *ones = (THClTensor*)luaT_getfieldcheckudata(L, 1, "fgradInput", "torch.ClTensor");
 
   THAssert(THClTensor_checkGPU(state, 4, input, gradOutput, gradWeight,
                                  gradBias));
@@ -169,11 +159,6 @@ static int clnn_SpatialConvolutionMM_accGradParameters(lua_State *L) {
     THClTensor_resize4d(state, input, 1, input->size[0], input->size[1], input->size[2]);
     THClTensor_resize4d(state, gradOutput, 1, gradOutput->size[0], gradOutput->size[1], gradOutput->size[2]);
   }
-
-//  long inputWidth   = input->size[3];
-//  long inputHeight  = input->size[2];
-//  long outputWidth  = (inputWidth + 2*padW - kW) / dW + 1;
-//  long outputHeight = (inputHeight + 2*padH - kH) / dH + 1;
 
   // Batch size + input planes
   conv->batchSize = input->size[0];

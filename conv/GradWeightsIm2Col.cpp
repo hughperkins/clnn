@@ -82,15 +82,13 @@ GradWeightsIm2Col::GradWeightsIm2Col(THClState *state, int device, ClConvolver *
   this->state = state;
   this->device = device;
   this->conv = conv;
-
-  columns = THClTensor_newv2(state, device);
-  ones = THClTensor_newv2(state, device);
 }
 GradWeightsIm2Col::~GradWeightsIm2Col() {
-  THClTensor_free(state, columns);
-  THClTensor_free(state, ones);
 }
 void GradWeightsIm2Col::accGradParameters(THClState *state, THClTensor *input, THClTensor *gradOutput, THClTensor *gradWeight, THClTensor *gradBias, float scale) {
+  THClTensor *columns = THClTensor_newv2(state, device);
+  THClTensor *ones = THClTensor_newv2(state, device);
+
   // Define a buffer of ones, for bias accumulation
   if (ones->nDimension != 2 || ones->size[0]*ones->size[1] < conv->outputHeight*conv->outputWidth) {
     // Resize plane and fill with ones...
@@ -160,6 +158,9 @@ void GradWeightsIm2Col::accGradParameters(THClState *state, THClTensor *input, T
   // Free
   THClTensor_free(state, input_n);
   THClTensor_free(state, gradOutput_n);
+
+  THClTensor_free(state, columns);
+  THClTensor_free(state, ones);
 
   // Resize
   if (conv->batch == 0) {

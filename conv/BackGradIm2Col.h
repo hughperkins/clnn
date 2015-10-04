@@ -10,7 +10,7 @@ public:
   int device;
   ClConvolver *conv;
 
-  THClTensor *gradColumns;
+//  THClTensor *gradColumns;
 
   BackGradIm2Col(THClState *state, int device, ClConvolver *conv);
   virtual ~BackGradIm2Col();

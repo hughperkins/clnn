@@ -131,14 +131,14 @@ BackGradIm2Col::BackGradIm2Col(THClState *state, int device, ClConvolver *conv) 
   this->device = device;
   this->conv = conv;
 
-  gradColumns = THClTensor_newv2(state, device);
 //  ones = THClTensor_newv2(state, device);
 }
 BackGradIm2Col::~BackGradIm2Col() {
-  THClTensor_free(state, gradColumns);
 //  THClTensor_free(state, ones);
 }
 void BackGradIm2Col::updateGradInput(THClState *state, THClTensor *input, THClTensor *gradOutput, THClTensor *weight, THClTensor *gradInput) {
+  THClTensor *gradColumns = THClTensor_newv2(state, device);
+
   // Resize temporary columns
   THClTensor_resize2d(state, gradColumns, conv->nInputPlane*conv->kW*conv->kH, conv->outputHeight*conv->outputWidth);
 
@@ -186,6 +186,8 @@ void BackGradIm2Col::updateGradInput(THClState *state, THClTensor *input, THClTe
   THClTensor_free(state, input_n);
   THClTensor_free(state, gradInput_n);
   THClTensor_free(state, gradOutput_n);
+
+  THClTensor_free(state, gradColumns);
 
   // Resize output
   if (conv->batch == 0) {

@@ -10,8 +10,8 @@ public:
   int device;
   ClConvolver *conv;
 
-  THClTensor *columns;
-  THClTensor *ones;
+//  THClTensor *columns;
+//  THClTensor *ones;
   
   ForwardIm2Col(THClState *state, int device, ClConvolver *conv);
   virtual ~ForwardIm2Col();
