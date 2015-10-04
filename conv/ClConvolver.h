@@ -5,6 +5,9 @@ extern "C" {
   void clnn_ClConvolver_init(lua_State *L);
 }
 
+class Forward;
+class BackGrad;
+
 int ClConvolver_new(lua_State *L);
 
 class ClConvolver {
@@ -19,6 +22,9 @@ public:
   int nOutputPlane;
   int padW;
   int padH;
+
+  Forward *forwarder;
+  BackGrad *backGradder;
 
   ClConvolver() {
   }

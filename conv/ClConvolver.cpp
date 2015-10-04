@@ -8,6 +8,8 @@ extern "C" {
 
 #include "THAtomic.h"
 #include "THClGeneral.h"
+#include "conv/Forward.h"
+#include "conv/BackGrad.h"
 
 #include <iostream>
 #include <string>
@@ -17,6 +19,8 @@ using namespace std;
 
 static void ClConvolver_rawInit(ClConvolver *self) {
   self->refCount = 1;
+  self->forwarder = 0;
+  self->backGradder = 0;
 }
 
 int ClConvolver_new(lua_State *L) {
@@ -33,6 +37,8 @@ static int ClConvolver_free(lua_State *L) {
   }
   if(THAtomicDecrementRef(&self->refCount))
   {
+    delete self->backGradder;
+    delete self->forwarder;
     self->~ClConvolver();
     THFree(self);
   }

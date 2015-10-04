@@ -1,4 +1,12 @@
 #include "ForwardIm2Col.h"
+#include "THClGeneral.h"
+#include "EasyCL.h"
+#include "THClTensor.h"
+#include "THClKernels.h"
+#include "templates/TemplatedKernel.h"
+#include "conv/ClConvolver.h"
+#include "THClTensorMath.h"
+#include "THClBlas.h"
 
 #include <iostream>
 #include <string>
@@ -18,14 +26,14 @@ inline int getNumThreads(THClState *state) {
   return blockSize;
 }
 
-std::string SpatialConvolutionMM_getKernelTemplate();
+static std::string getKernelTemplate();
 
 // CL: number of blocks for threads.
 inline int GET_BLOCKS(THClState *state, const int N) {
   return (N + getNumThreads(state) - 1) / getNumThreads(state);
 }
 
-void im2col(THClState *state, THClTensor* im, const int channels,
+static void im2col(THClState *state, THClTensor* im, const int channels,
     const int height, const int width, const int ksize_h, const int ksize_w, const int pad_h,
     const int pad_w, const int stride_h, const int stride_w, THClTensor* col) {
   // We are going to launch channels * height_col * width_col kernels, each
@@ -42,7 +50,7 @@ void im2col(THClState *state, THClTensor* im, const int channels,
   } else {
     TemplatedKernel kernelBuilder(cl);
     kernel = kernelBuilder.buildKernel(uniqueName, "SpatialConvolutionMM.cl",
-      SpatialConvolutionMM_getKernelTemplate(), "im2col_kernel");
+      getKernelTemplate(), "im2col_kernel");
   }
 
   THClKernels k(state, kernel);
@@ -70,57 +78,120 @@ void im2col(THClState *state, THClTensor* im, const int channels,
 //  );
 }
 
-void col2im(THClState *state, THClTensor* col, const int channels,
-    const int height, const int width, const int patch_h, const int patch_w, const int pad_h,
-    const int pad_w, const int stride_h, const int stride_w, THClTensor* im) {
-  int height_col = (height + 2 * pad_h - patch_h) / stride_h + 1;
-  int width_col = (width + 2 * pad_w - patch_w) / stride_w + 1;
-  int num_kernels = channels * height * width;
-  // To avoid involving atomic operations, we will launch one kernel per
-  // bottom dimension, and then in the kernel add up the top dimensions.
+ForwardIm2Col::ForwardIm2Col(THClState *state, int device, ClConvolver *conv) {
+  this->state = state;
+  this->device = device;
+  this->conv = conv;
 
-  EasyCL *cl = im->storage->cl;
-  std::string uniqueName = "SpatialConvolutionMM::col2im";
-  CLKernel *kernel = 0;
-  if(cl->kernelExists(uniqueName)) {
-    kernel = cl->getKernel(uniqueName);
-  } else {
-    TemplatedKernel kernelBuilder(cl);
-    kernel = kernelBuilder.buildKernel(uniqueName, "SpatialConvolutionMM.cl",
-      SpatialConvolutionMM_getKernelTemplate(), "col2im_kernel");
+  columns = THClTensor_newv2(state, device);
+  ones = THClTensor_newv2(state, device);
+}
+ForwardIm2Col::~ForwardIm2Col() {
+  THClTensor_free(state, columns);
+  THClTensor_free(state, ones);
+}
+void ForwardIm2Col::forward(THClState *state, int batch, THClTensor *input, THClTensor *weight, THClTensor *bias, THClTensor *output) {
+  THAssert(THClTensor_checkGPU(state, 6, input, output, weight,
+                                 bias, columns, ones));
+
+  long inputWidth   = input->size[3];
+  long inputHeight  = input->size[2];
+  long outputWidth  = (inputWidth + 2*conv->padW - conv->kW) / conv->dW + 1;
+  long outputHeight = (inputHeight + 2*conv->padH - conv->kH) / conv->dH + 1;
+
+  if (outputWidth < 1 || outputHeight < 1)
+    THError("Given input size: (%dx%dx%d). Calculated output size: (%dx%dx%d). Output size is too small",
+        conv->nInputPlane,inputHeight,inputWidth,conv->nOutputPlane,outputHeight,outputWidth);
+
+  // Batch size + input planes
+  long batchSize = input->size[0];
+
+  // Resize output
+  THClTensor_resize4d(state, output, batchSize, conv->nOutputPlane, outputHeight, outputWidth);
+
+  // Resize temporary columns
+  THClTensor_resize2d(state, columns, conv->nInputPlane*conv->kW*conv->kH, outputHeight*outputWidth);
+
+  // Define a buffer of ones, for bias accumulation
+  // Note: this buffer can be shared with other modules, it only ever gets increased,
+  // and always contains ones.
+  if (ones->nDimension != 2 || ones->size[0]*ones->size[1] < outputHeight*outputWidth) {
+    // Resize plane and fill with ones...
+    THClTensor_resize2d(state, ones, outputHeight, outputWidth);
+    THClTensor_fill(state, ones, 1);
   }
 
-  THClKernels k(state, kernel);
-  k.in(num_kernels);
-  k.in(col);
-  k.in(height);
-  k.in(width);
-  k.in(channels);
+  // Helpers
+  THClTensor *input_n = THClTensor_newv2(state, input->storage->device);
+  THClTensor *output_n = THClTensor_newv2(state, input->storage->device);
 
-  k.in(patch_h);
-  k.in(patch_w);
-  k.in(pad_h);
-  k.in(pad_w);
-  k.in(stride_h);
-  k.in(stride_w);
+  // For each elt in batch, do:
+  for (int elt = 0; elt < batchSize; elt ++) {
+    // Matrix mulitply per output:
+    THClTensor_select(state, input_n, input, 0, elt);
+    THClTensor_select(state, output_n, output, 0, elt);
 
-  k.in(height_col);
-  k.in(width_col);
-  k.out(im);
+    // Do Bias first:
+    // M,N,K are dims of matrix A and B
+    // (see http://docs.nvidia.com/cuda/clblas/#clblas-lt-t-gt-gemm)
+    long m_ = conv->nOutputPlane;
+    long n_ = outputHeight * outputWidth;
+    long k_ = 1;
 
-  k.run(GET_BLOCKS(state, num_kernels), getNumThreads(state));
+    // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
+    THClBlas_gemm(
+        state,
+        't', 'n',
+        n_, m_, k_,
+        1,
+        ones, k_,
+        bias, k_,
+        0,
+        output_n, n_
+    );
 
-//  col2im_kernel <<<GET_BLOCKS(num_kernels), CL_NUM_THREADS, 0, stream>>> (
-//      num_kernels, data_col, height, width, channels,
-//      patch_h, patch_w, pad_h, pad_w, stride_h, stride_w,
-//      height_col, width_col, data_im
-//  );
-//  THError("Not implemented");
+    // Extract columns:
+    im2col(
+      state,
+//      THClState_getCurrentStream(state),
+      input_n,
+      conv->nInputPlane, inputHeight, inputWidth, conv->kH, conv->kW, conv->padH, conv->padW, conv->dH, conv->dW,
+      columns
+    );
+
+    // M,N,K are dims of matrix A and B
+    // (see http://docs.nvidia.com/cuda/clblas/#clblas-lt-t-gt-gemm)
+    long m = weight->size[0];
+    long n = columns->size[1];
+    long k = weight->size[1];
+
+    // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
+    THClBlas_gemm(
+        state,
+        'n', 'n',
+        n, m, k,
+        1,
+        columns, n,
+        weight, k,
+        1,
+        output_n, n
+    );
+  }
+
+  // Free
+  THClTensor_free(state, input_n);
+  THClTensor_free(state, output_n);
+
+  // Resize output
+  if (batch == 0) {
+    THClTensor_resize3d(state, output, conv->nOutputPlane, outputHeight, outputWidth);
+    THClTensor_resize3d(state, input, conv->nInputPlane, inputHeight, inputWidth);
+  }
 }
 
 #undef CL_KERNEL_LOOP
 
-std::string SpatialConvolutionMM_getKernelTemplate() {
+std::string getKernelTemplate() {
   // [[[cog
   // import stringify
   // stringify.write_kernel( "kernel", "SpatialConvolutionMM.cl" )
