@@ -10,6 +10,7 @@ extern "C" {
 #include "THClGeneral.h"
 #include "conv/Forward.h"
 #include "conv/BackGrad.h"
+#include "conv/GradWeights.h"
 
 #include <iostream>
 #include <string>
@@ -21,6 +22,7 @@ static void ClConvolver_rawInit(ClConvolver *self) {
   self->refCount = 1;
   self->forwarder = 0;
   self->backGradder = 0;
+  self->gradWeights = 0;
 }
 
 int ClConvolver_new(lua_State *L) {
@@ -39,6 +41,7 @@ static int ClConvolver_free(lua_State *L) {
   {
     delete self->backGradder;
     delete self->forwarder;
+    delete self->gradWeights;
     self->~ClConvolver();
     THFree(self);
   }

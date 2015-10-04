@@ -7,6 +7,7 @@ extern "C" {
 
 class Forward;
 class BackGrad;
+class GradWeights;
 
 int ClConvolver_new(lua_State *L);
 
@@ -33,6 +34,7 @@ public:
 
   Forward *forwarder;
   BackGrad *backGradder;
+  GradWeights *gradWeights;
 
   ClConvolver() {
   }
