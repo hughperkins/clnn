@@ -10,7 +10,7 @@
 #include "DeviceInfo.h"
 #include "EasyCL.h"
 #include "conv/ClConvolver.h"
-#include "conv/Forward.h"
+#include "conv/ForwardAuto.h"
 #include "conv/BackGradIm2Col.h"
 #include "conv/GradWeightsIm2Col.h"
 
@@ -68,7 +68,7 @@ static int clnn_SpatialConvolutionMM_updateOutput(lua_State *L) {
         conv->nInputPlane,conv->inputHeight,conv->inputWidth,conv->nOutputPlane,conv->outputHeight,conv->outputWidth);
 
   if(conv->forwarder == 0) {
-    conv->forwarder = Forward::instanceSpecific(0, state, input->storage->device, conv);
+    conv->forwarder = new ForwardAuto(state, input->storage->device, conv);
   }
 
   THClTensor *weight = (THClTensor*)luaT_getfieldcheckudata(L, 1, "weight", "torch.ClTensor");
