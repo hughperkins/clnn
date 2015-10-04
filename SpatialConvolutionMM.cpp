@@ -159,6 +159,16 @@ static int clnn_SpatialConvolutionMM_updateOutput(lua_State *L) {
   conv->padW = luaT_getfieldcheckint(L, 1, "padW");
   conv->padH = luaT_getfieldcheckint(L, 1, "padH");
 
+  conv->batch = 1;
+  if (input->nDimension == 3) {
+    luaL_argcheck(L, input->size[0] == conv->nInputPlane, 2, "input channels and nInputPlane dont match");
+    // Force batch
+    conv->batch = 0;
+    THClTensor_resize4d(state, input, 1, input->size[0], input->size[1], input->size[2]);
+  } else {
+    luaL_argcheck(L, input->size[1] == conv->nInputPlane, 2, "input channels and nInputPlane dont match");
+  }
+
   conv->inputWidth   = input->size[3];
   conv->inputHeight  = input->size[2];
   conv->outputWidth  = (conv->inputWidth + 2*conv->padW - conv->kW) / conv->dW + 1;
@@ -181,16 +191,6 @@ static int clnn_SpatialConvolutionMM_updateOutput(lua_State *L) {
 //  conv->nOutputPlane = nOutputPlane;
 //  conv->padW = padW;
 //  conv->padH = padH;
-
-  conv->batch = 1;
-  if (input->nDimension == 3) {
-    luaL_argcheck(L, input->size[0] == conv->nInputPlane, 2, "input channels and nInputPlane dont match");
-    // Force batch
-    conv->batch = 0;
-    THClTensor_resize4d(state, input, 1, input->size[0], input->size[1], input->size[2]);
-  } else {
-    luaL_argcheck(L, input->size[1] == conv->nInputPlane, 2, "input channels and nInputPlane dont match");
-  }
 
   if(conv->forwarder == 0) {
     conv->forwarder = new ForwardIm2Col(state, input->storage->device, conv);
