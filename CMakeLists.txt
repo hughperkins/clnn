@@ -25,6 +25,7 @@ message("Torch_INSTALL_LIB ${Torch_INSTALL_LIB}")
 set(src init.cpp utils.cpp SpatialConvolutionMM.cpp SpatialMaxPooling.cpp
     SpatialAveragePooling.cpp common.cpp SoftMax.cpp conv/ClConvolver.cpp conv/Forward.cpp conv/ForwardIm2Col.cpp
     conv/BackGrad.cpp conv/BackGradIm2Col.cpp conv/GradWeights.cpp conv/GradWeightsIm2Col.cpp
+    conv/ForwardAuto.cpp
 )
 set(luasrc init.lua MSECriterion.lua Tanh.lua Pointwise.lua Threshold.lua
   LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua

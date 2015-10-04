@@ -1,22 +1,35 @@
+#pragma once
+
+#include "conv/Forward.h"
+
+#define STATIC static
+#define VIRTUAL virtual
+
 class ForwardAuto : public Forward {
 public:
-    int num;
-    int *milliseconds;
-    bool *valid;
-    int chosenIndex;
-    Forward **instances;
-    int nextIndex;
+  THClState *state;
+  int device;
+  ClConvolver *conv;
 
-    // [[[cog
-    // import cog_addheaders
-    // cog_addheaders.add()
-    // ]]]
-    // generated, using cog:
-    ForwardAuto(EasyCL *cl, LayerDimensions dim);
-    VIRTUAL ~ForwardAuto();
-    VIRTUAL void forward(int batchSize, CLWrapper *dataWrapper, CLWrapper *weightsWrapper,
-    CLWrapper *biasWrapper, CLWrapper *outputWrapper);
+  int num;
+  int *milliseconds;
+  bool *valid;
+  int chosenIndex;
+  Forward **instances;
+  int nextIndex;
 
-    // [[[end]]]
+//  virtual ~Forward() {}
+//  virtual void forward(THClState *state, THClTensor *input, THClTensor *weight, THClTensor *bias, THClTensor *output) = 0;
+
+  // [[[cog
+  // import cog_addheaders
+  // cog_addheaders.add()
+  // ]]]
+  // generated, using cog:
+  ForwardAuto(THClState *state, int device, ClConvolver *conv);
+  VIRTUAL ~ForwardAuto();
+  VIRTUAL void forward(THClState *state, THClTensor *input, THClTensor *weight, THClTensor *bias, THClTensor *output);
+
+  // [[[end]]]
 };
 
