@@ -90,34 +90,16 @@ ForwardIm2Col::~ForwardIm2Col() {
   THClTensor_free(state, columns);
   THClTensor_free(state, ones);
 }
-void ForwardIm2Col::forward(THClState *state, int batch, THClTensor *input, THClTensor *weight, THClTensor *bias, THClTensor *output) {
-  THAssert(THClTensor_checkGPU(state, 6, input, output, weight,
-                                 bias, columns, ones));
-
-  long inputWidth   = input->size[3];
-  long inputHeight  = input->size[2];
-  long outputWidth  = (inputWidth + 2*conv->padW - conv->kW) / conv->dW + 1;
-  long outputHeight = (inputHeight + 2*conv->padH - conv->kH) / conv->dH + 1;
-
-  if (outputWidth < 1 || outputHeight < 1)
-    THError("Given input size: (%dx%dx%d). Calculated output size: (%dx%dx%d). Output size is too small",
-        conv->nInputPlane,inputHeight,inputWidth,conv->nOutputPlane,outputHeight,outputWidth);
-
-  // Batch size + input planes
-  long batchSize = input->size[0];
-
-  // Resize output
-  THClTensor_resize4d(state, output, batchSize, conv->nOutputPlane, outputHeight, outputWidth);
-
+void ForwardIm2Col::forward(THClState *state, THClTensor *input, THClTensor *weight, THClTensor *bias, THClTensor *output) {
   // Resize temporary columns
-  THClTensor_resize2d(state, columns, conv->nInputPlane*conv->kW*conv->kH, outputHeight*outputWidth);
+  THClTensor_resize2d(state, columns, conv->nInputPlane*conv->kW*conv->kH, conv->outputHeight*conv->outputWidth);
 
   // Define a buffer of ones, for bias accumulation
   // Note: this buffer can be shared with other modules, it only ever gets increased,
   // and always contains ones.
-  if (ones->nDimension != 2 || ones->size[0]*ones->size[1] < outputHeight*outputWidth) {
+  if (ones->nDimension != 2 || ones->size[0]*ones->size[1] < conv->outputHeight*conv->outputWidth) {
     // Resize plane and fill with ones...
-    THClTensor_resize2d(state, ones, outputHeight, outputWidth);
+    THClTensor_resize2d(state, ones, conv->outputHeight, conv->outputWidth);
     THClTensor_fill(state, ones, 1);
   }
 
@@ -126,7 +108,7 @@ void ForwardIm2Col::forward(THClState *state, int batch, THClTensor *input, THCl
   THClTensor *output_n = THClTensor_newv2(state, input->storage->device);
 
   // For each elt in batch, do:
-  for (int elt = 0; elt < batchSize; elt ++) {
+  for (int elt = 0; elt < conv->batchSize; elt ++) {
     // Matrix mulitply per output:
     THClTensor_select(state, input_n, input, 0, elt);
     THClTensor_select(state, output_n, output, 0, elt);
@@ -135,7 +117,7 @@ void ForwardIm2Col::forward(THClState *state, int batch, THClTensor *input, THCl
     // M,N,K are dims of matrix A and B
     // (see http://docs.nvidia.com/cuda/clblas/#clblas-lt-t-gt-gemm)
     long m_ = conv->nOutputPlane;
-    long n_ = outputHeight * outputWidth;
+    long n_ = conv->outputHeight * conv->outputWidth;
     long k_ = 1;
 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
@@ -155,7 +137,7 @@ void ForwardIm2Col::forward(THClState *state, int batch, THClTensor *input, THCl
       state,
 //      THClState_getCurrentStream(state),
       input_n,
-      conv->nInputPlane, inputHeight, inputWidth, conv->kH, conv->kW, conv->padH, conv->padW, conv->dH, conv->dW,
+      conv->nInputPlane, conv->inputHeight, conv->inputWidth, conv->kH, conv->kW, conv->padH, conv->padW, conv->dH, conv->dW,
       columns
     );
 
@@ -183,9 +165,9 @@ void ForwardIm2Col::forward(THClState *state, int batch, THClTensor *input, THCl
   THClTensor_free(state, output_n);
 
   // Resize output
-  if (batch == 0) {
-    THClTensor_resize3d(state, output, conv->nOutputPlane, outputHeight, outputWidth);
-    THClTensor_resize3d(state, input, conv->nInputPlane, inputHeight, inputWidth);
+  if (conv->batch == 0) {
+    THClTensor_resize3d(state, output, conv->nOutputPlane, conv->outputHeight, conv->outputWidth);
+    THClTensor_resize3d(state, input, conv->nInputPlane, conv->inputHeight, conv->inputWidth);
   }
 }
 

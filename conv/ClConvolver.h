@@ -14,6 +14,9 @@ class ClConvolver {
 public:
   int refCount;
 
+  int batch;
+  int batchSize;
+
   int dW;
   int dH;
   int kW;
@@ -22,6 +25,11 @@ public:
   int nOutputPlane;
   int padW;
   int padH;
+
+  int inputWidth;
+  int inputHeight;
+  int outputWidth;
+  int outputHeight;
 
   Forward *forwarder;
   BackGrad *backGradder;

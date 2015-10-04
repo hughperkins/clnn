@@ -15,6 +15,6 @@ public:
   
   ForwardIm2Col(THClState *state, int device, ClConvolver *conv);
   virtual ~ForwardIm2Col();
-  virtual void forward(THClState *state, int batch, THClTensor *input, THClTensor *weight, THClTensor *bias, THClTensor *output);
+  virtual void forward(THClState *state, THClTensor *input, THClTensor *weight, THClTensor *bias, THClTensor *output);
 };
 
