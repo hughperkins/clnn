@@ -10,6 +10,7 @@
 #define gInputSize {{inputSize}}
 #define gOutputSize {{outputSize}}
 #define gFilterSize {{filterSize}}
+#define gHalfFilterSize {{halfFilterSize}}
 #define gPadding {{padding}}
 #define gEven {{even}}
 
@@ -24,7 +25,6 @@
 
 #define gInputSizeSquared {{inputSizeSquared}}
 #define gOutputSizeSquared {{outputSizeSquared}}
-#define gPadding {{padding}}
 #define gFilterSizeSquared {{filterSizeSquared}}
 
 void copyLocal(local float *target, global float const *source, int N) {
@@ -39,7 +39,7 @@ void copyLocal(local float *target, global float const *source, int N) {
 
 // workgroup id organized like: [n][filterid]
 // local id organized like: [outrow][outcol]
-// each thread iterates over: [upstreamplane][filterrow][filtercol]
+// each thread iterates over: [inputplane][filterrow][filtercol]
 // number workgroups = 32
 // one filter plane takes up 5 * 5 * 4 = 100 bytes
 // one filter cube (corresponding to one outplane) = 5*5 * 32 * 4 = 3.2KB (ok)
@@ -98,23 +98,49 @@ void kernel forward_4_by_n_outplane_smallercache(
   const int outputRow = effectiveLocalId / gOutputSize;
   const int outputCol = effectiveLocalId % gOutputSize;
 
+  if(get_global_id(0) == 0) {
+//    output[0] = 0;
+//    output[1] = 0;
+  }
+
   float sum = 0;
-  for (int upstreamPlane = 0; upstreamPlane < gInputPlanes; upstreamPlane++) {
+  for (int inputPlane = 0; inputPlane < gInputPlanes; inputPlane++) {
     barrier(CLK_LOCAL_MEM_FENCE);
-    copyLocal(_inputPlane, images + (n * gInputPlanes + upstreamPlane) * gInputSizeSquared, gInputSizeSquared);
-    copyLocal(_filterPlane, filters + (outPlane * gInputPlanes + upstreamPlane) * gFilterSizeSquared, gFilterSizeSquared);
+    copyLocal(_inputPlane, images + (n * gInputPlanes + inputPlane) * gInputSizeSquared, gInputSizeSquared);
+    copyLocal(_filterPlane, filters + (outPlane * gInputPlanes + inputPlane) * gFilterSizeSquared, gFilterSizeSquared);
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (effectiveLocalId < gOutputSizeSquared) {
-      for (int u = -gPadding; u <= gPadding - gEven; u++) {
+    if(get_global_id(0) == 0) {
+//       output[0] = 122;
+//      output[0] = output[0] * 10 + (u+2);
+//        output[0] = gHalfFilterSize;
+    }
+      for (int u = -gHalfFilterSize; u <= gHalfFilterSize - gEven; u++) {
+    if(get_global_id(0) == 0) {
+//      output[0] = output[0] * 10 + (u+2);
+//        output[0] = 124;
+    }
         // trying to reduce register pressure...
-        #define inputRow (outputRow + u + gPadding)
+        #if gPadding != 0
+        #define inputRow (outputRow + u)
+        #else
+        #define inputRow (outputRow + u + gHalfFilterSize)
+        #endif
         int inputimagerowoffset = inputRow * gInputSize;
-        int filterrowoffset = (u+gPadding) * gFilterSize + gPadding;
+        int filterrowoffset = (u+gHalfFilterSize) * gFilterSize + gHalfFilterSize;
         bool rowOk = inputRow >= 0 && inputRow < gInputSize;
-        for (int v = -gPadding; v <= gPadding - gEven; v++) {
-          #define inputCol (outputCol + v + gPadding)
+        for (int v = -gHalfFilterSize; v <= gHalfFilterSize - gEven; v++) {
+          #if gPadding != 0
+          #define inputCol (outputCol + v)
+          #else
+          #define inputCol (outputCol + v + gHalfFilterSize)
+          #endif
           bool process = rowOk && inputCol >= 0 && inputCol < gInputSize;
+          if(get_global_id(0) == 0) {
+            output[1] = output[1] * 10 + (v+2);
+            output[2+(u+1)*2+(v+1)] = _inputPlane[ (u+1)*2+(v+1)];
+          }
           if (process) {
               sum += _inputPlane[ inputimagerowoffset + inputCol] * _filterPlane[ filterrowoffset + v ];
           }
@@ -126,6 +152,9 @@ void kernel forward_4_by_n_outplane_smallercache(
   #define resultIndex (( n * gNumFilters + outPlane) * gOutputSizeSquared + effectiveLocalId)
   if (effectiveLocalId < gOutputSizeSquared) {
     output[resultIndex ] = sum;
+  }
+  if(get_global_id(0) == 0) {
+//    output[0] = filters[0];
   }
 }
 

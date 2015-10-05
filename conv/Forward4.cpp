@@ -29,11 +29,64 @@ PUBLIC VIRTUAL Forward4::~Forward4() {
   delete kernel;
   delete addBias;
 }
+static void printTensor(THClState *state, THClTensor *tensor) {
+  int dims = THClTensor_nDimension(state, tensor);
+  if(dims == 1) {
+    int size0 = THClTensor_size(state, tensor, 0);
+    for(int x = 0; x < size0; x++) {
+      cout << THClTensor_get1d(state, tensor, x) << " ";
+    }
+    cout << endl;
+  } else if(dims == 2) {
+    int size0 = THClTensor_size(state, tensor, 0);
+    int size1 = THClTensor_size(state, tensor, 1);
+    for(int y = 0; y < size0; y++) {
+      for(int x = 0; x < size1; x++) {
+        cout << THClTensor_get2d(state, tensor, y, x) << " ";
+      }
+      cout << endl;
+    }
+  } else if(dims == 3) {
+    int size0 = THClTensor_size(state, tensor, 0);
+    for(int z = 0; z < size0; z++) {
+      THClTensor *view = THClTensor_newSelect(state, tensor, 0, z);
+      cout << "(" << z << ",.,.) =" << endl;
+      printTensor(state, view);
+      THClTensor_free(state, view);
+    }
+  } else if(dims == 4) {
+    int size0 = THClTensor_size(state, tensor, 0);
+    int size1 = THClTensor_size(state, tensor, 1);
+    for(int x0 = 0; x0 < size0; x0++) {
+      THClTensor *v0 = THClTensor_newSelect(state, tensor, 0, x0);
+      for(int x1 = 0; x1 < size1; x1++) {
+        THClTensor *v1 = THClTensor_newSelect(state, v0, 0, x1);
+        cout << "(" << x0 << "," << x1 << ",.,.) =" << endl;
+        printTensor(state, v1);
+        THClTensor_free(state, v1);
+      }
+      THClTensor_free(state, v0);
+    }
+  } else {
+    ostringstream oss;
+    oss << "not implemented for " << dims << " dimensions";
+    cout << oss.str() << endl;
+    throw runtime_error(oss.str().c_str());
+  }
+}
 PUBLIC VIRTUAL void Forward4::forward(THClState *state, THClTensor *input, THClTensor *weight, THClTensor *bias, THClTensor *output) {
   StatefulTimer::timeCheck("Forward4::forward start");
 
+//  cout << "batchSize=" << conv->batchSize << endl;
   int numWorkgroups = conv->nOutputPlane * conv->batchSize * pixelsPerThread;
   int globalSize = workgroupSize * numWorkgroups;
+
+//  cout << "input " << THClTensor_toString(state, input) << endl;
+//  printTensor(state, input);
+//  cout << "weight " << THClTensor_toString(state, weight) << endl;
+//  printTensor(state, weight);
+//  cout << "bias " << THClTensor_toString(state, bias) << endl;
+//  printTensor(state, bias);
 
   THClKernels k(state, kernel);
   k.in((int)conv->batchSize);
@@ -43,15 +96,22 @@ PUBLIC VIRTUAL void Forward4::forward(THClState *state, THClTensor *input, THClT
   k.localFloats((int)(conv->inputHeight * conv->inputWidth));
   k.localFloats((int)(conv->kH * conv->kW));
 
+//  cout << "globalSize=" << globalSize << " workgroupSize=" << workgroupSize << endl;
   kernel->run_1d(globalSize, workgroupSize);
-//  cl->finish();
   StatefulTimer::timeCheck("Forward4::forward after call forward");
 
 //  if(dim.biased) {
+//  if(false){
     addBias->forward(
       conv->batchSize, conv->nOutputPlane, conv->outputHeight, conv->outputWidth,
       output, bias);
 //  }
+
+  EasyCL *cl = THClState_getClv2(state, device);
+  cl->finish();
+
+//  cout << "output " << THClTensor_toString(state, output) << endl;
+//  printTensor(state, output);
 }
 PUBLIC Forward4::Forward4(THClState *state, int device, ClConvolver *conv)
       {
@@ -119,6 +179,7 @@ PUBLIC Forward4::Forward4(THClState *state, int device, ClConvolver *conv)
   builder.set("filterSizeSquared", conv->kH * conv->kH);
   builder.set("even", even);
   builder.set("padding", conv->padH);
+  builder.set("halfFilterSize", conv->kH >> 1);
   builder.set("nInputPlane", conv->nInputPlane);
   builder.set("nOutputPlane", conv->nOutputPlane);
   builder.set("inputSize", conv->inputHeight);
@@ -127,6 +188,7 @@ PUBLIC Forward4::Forward4(THClState *state, int device, ClConvolver *conv)
   builder.set("outputSizeSquared", conv->outputHeight * conv->outputWidth);
   builder.set("workgroupSize", workgroupSize);
   builder.set("pixelsPerThread", pixelsPerThread);
+  cout << "rendered template:\n" << builder.getRenderedKernel(getKernelTemplate()) << endl;
   kernel = builder.buildKernel(uniqueName, "Forward4.cl",
     getKernelTemplate(), "forward_4_by_n_outplane_smallercache");
 
@@ -155,6 +217,7 @@ static std::string getKernelTemplate() {
   "#define gInputSize {{inputSize}}\n" 
   "#define gOutputSize {{outputSize}}\n" 
   "#define gFilterSize {{filterSize}}\n" 
+  "#define gHalfFilterSize {{halfFilterSize}}\n" 
   "#define gPadding {{padding}}\n" 
   "#define gEven {{even}}\n" 
   "\n" 
@@ -169,7 +232,6 @@ static std::string getKernelTemplate() {
   "\n" 
   "#define gInputSizeSquared {{inputSizeSquared}}\n" 
   "#define gOutputSizeSquared {{outputSizeSquared}}\n" 
-  "#define gPadding {{padding}}\n" 
   "#define gFilterSizeSquared {{filterSizeSquared}}\n" 
   "\n" 
   "void copyLocal(local float *target, global float const *source, int N) {\n" 
@@ -184,7 +246,7 @@ static std::string getKernelTemplate() {
   "\n" 
   "// workgroup id organized like: [n][filterid]\n" 
   "// local id organized like: [outrow][outcol]\n" 
-  "// each thread iterates over: [upstreamplane][filterrow][filtercol]\n" 
+  "// each thread iterates over: [inputplane][filterrow][filtercol]\n" 
   "// number workgroups = 32\n" 
   "// one filter plane takes up 5 * 5 * 4 = 100 bytes\n" 
   "// one filter cube (corresponding to one outplane) = 5*5 * 32 * 4 = 3.2KB (ok)\n" 
@@ -243,23 +305,49 @@ static std::string getKernelTemplate() {
   "  const int outputRow = effectiveLocalId / gOutputSize;\n" 
   "  const int outputCol = effectiveLocalId % gOutputSize;\n" 
   "\n" 
+  "  if(get_global_id(0) == 0) {\n" 
+  "//    output[0] = 0;\n" 
+  "//    output[1] = 0;\n" 
+  "  }\n" 
+  "\n" 
   "  float sum = 0;\n" 
-  "  for (int upstreamPlane = 0; upstreamPlane < gInputPlanes; upstreamPlane++) {\n" 
+  "  for (int inputPlane = 0; inputPlane < gInputPlanes; inputPlane++) {\n" 
   "    barrier(CLK_LOCAL_MEM_FENCE);\n" 
-  "    copyLocal(_inputPlane, images + (n * gInputPlanes + upstreamPlane) * gInputSizeSquared, gInputSizeSquared);\n" 
-  "    copyLocal(_filterPlane, filters + (outPlane * gInputPlanes + upstreamPlane) * gFilterSizeSquared, gFilterSizeSquared);\n" 
+  "    copyLocal(_inputPlane, images + (n * gInputPlanes + inputPlane) * gInputSizeSquared, gInputSizeSquared);\n" 
+  "    copyLocal(_filterPlane, filters + (outPlane * gInputPlanes + inputPlane) * gFilterSizeSquared, gFilterSizeSquared);\n" 
   "    barrier(CLK_LOCAL_MEM_FENCE);\n" 
   "\n" 
   "    if (effectiveLocalId < gOutputSizeSquared) {\n" 
-  "      for (int u = -gPadding; u <= gPadding - gEven; u++) {\n" 
+  "    if(get_global_id(0) == 0) {\n" 
+  "//       output[0] = 122;\n" 
+  "//      output[0] = output[0] * 10 + (u+2);\n" 
+  "//        output[0] = gHalfFilterSize;\n" 
+  "    }\n" 
+  "      for (int u = -gHalfFilterSize; u <= gHalfFilterSize - gEven; u++) {\n" 
+  "    if(get_global_id(0) == 0) {\n" 
+  "//      output[0] = output[0] * 10 + (u+2);\n" 
+  "//        output[0] = 124;\n" 
+  "    }\n" 
   "        // trying to reduce register pressure...\n" 
-  "        #define inputRow (outputRow + u + gPadding)\n" 
+  "        #if gPadding != 0\n" 
+  "        #define inputRow (outputRow + u)\n" 
+  "        #else\n" 
+  "        #define inputRow (outputRow + u + gHalfFilterSize)\n" 
+  "        #endif\n" 
   "        int inputimagerowoffset = inputRow * gInputSize;\n" 
-  "        int filterrowoffset = (u+gPadding) * gFilterSize + gPadding;\n" 
+  "        int filterrowoffset = (u+gHalfFilterSize) * gFilterSize + gHalfFilterSize;\n" 
   "        bool rowOk = inputRow >= 0 && inputRow < gInputSize;\n" 
-  "        for (int v = -gPadding; v <= gPadding - gEven; v++) {\n" 
-  "          #define inputCol (outputCol + v + gPadding)\n" 
+  "        for (int v = -gHalfFilterSize; v <= gHalfFilterSize - gEven; v++) {\n" 
+  "          #if gPadding != 0\n" 
+  "          #define inputCol (outputCol + v)\n" 
+  "          #else\n" 
+  "          #define inputCol (outputCol + v + gHalfFilterSize)\n" 
+  "          #endif\n" 
   "          bool process = rowOk && inputCol >= 0 && inputCol < gInputSize;\n" 
+  "          if(get_global_id(0) == 0) {\n" 
+  "            output[1] = output[1] * 10 + (v+2);\n" 
+  "            output[2+(u+1)*2+(v+1)] = _inputPlane[ (u+1)*2+(v+1)];\n" 
+  "          }\n" 
   "          if (process) {\n" 
   "              sum += _inputPlane[ inputimagerowoffset + inputCol] * _filterPlane[ filterrowoffset + v ];\n" 
   "          }\n" 
@@ -271,6 +359,9 @@ static std::string getKernelTemplate() {
   "  #define resultIndex (( n * gNumFilters + outPlane) * gOutputSizeSquared + effectiveLocalId)\n" 
   "  if (effectiveLocalId < gOutputSizeSquared) {\n" 
   "    output[resultIndex ] = sum;\n" 
+  "  }\n" 
+  "  if(get_global_id(0) == 0) {\n" 
+  "//    output[0] = filters[0];\n" 
   "  }\n" 
   "}\n" 
   "\n" 
