@@ -1,22 +1,21 @@
---require 'cltorch'
---require 'clnn'
 require 'torch'
 require 'nn'
 require 'sys'
 
-api = os.getenv('API')
-if api == nil then
-   api = 'cl'
-end
+local cmd = torch.CmdLine()
+cmd:option('-backend', 'cl', 'cl|cu')
+cmd:option('-scenario', 'all', 'which scenario')
+cmd:option('-its', 10, 'number iterations')
+local params = cmd:parse(arg)
 
-if api == 'cl' then
+if params.backend == 'cl' then
    require 'cltorch'
    require 'clnn'
-elseif api == 'cuda' then
+elseif params.backend == 'cu' then
    require 'cutorch'
    require 'cunn'
 else
-   error("unknown api", api)
+   error("unknown backend", params.backend)
 end
 
 local batchSize = 128
@@ -30,6 +29,8 @@ table.insert(scenarios, {name='l3', inplanes=128, insize=32, outplanes=128, filt
 table.insert(scenarios, {name='l4', inplanes=128, insize=16, outplanes=128, filtersize=7})
 table.insert(scenarios, {name='l5', inplanes=384, insize=13, outplanes=384, filtersize=3})
 
+table.insert(scenarios, {name='vgg_e_22', inplanes=512, insize=28, outplanes=512, filtersize=3})
+
 --if api == 'cl' then
 --   inputcl = input:cl()
 --   layercl = layer:cl()
@@ -42,7 +43,7 @@ table.insert(scenarios, {name='l5', inplanes=384, insize=13, outplanes=384, filt
 --   end
 --end
 
-function run_scenario(scenario, numIts)
+function run_scenario(api, scenario, numIts)
    collectgarbage()
    print('scenario ' .. scenario.name .. ' inplanes=' .. scenario.inplanes .. ' insize=' ..scenario.insize .. ' filtersize=' .. scenario.filtersize)
    input = torch.Tensor(batchSize, scenario.inplanes, scenario.insize, scenario.insize):uniform()
@@ -111,14 +112,11 @@ function run_scenario(scenario, numIts)
    print('Average backward:', (averageGradInput + averageUpdateWeights) .. 'ms')
 end
 
-local numIts = 10
-if os.getenv('NUMITS') then
-   numIts = tonumber(os.getenv('NUMITS'))
-end
+local numIts = params.its
 print('Number iterations: ' .. numIts)
 for i, scenario in ipairs(scenarios) do
-   if os.getenv('NET') == nil or scenario.name == os.getenv('NET') then
-      run_scenario(scenario, numIts)
+   if params.scenario == 'all' or scenario.name == params.scenario then
+      run_scenario(params.backend, scenario, numIts)
    end
 end
 
