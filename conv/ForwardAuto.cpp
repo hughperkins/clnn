@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <stdexcept>
 
+#include "EasyCL.h"
+#include "THClGeneral.h"
 #include "conv/ForwardAuto.h"
 //#include "util/stringhelper.h"
 #include "util/StatefulTimer.h"
@@ -70,9 +72,12 @@ VIRTUAL void ForwardAuto::forward(THClState *state, THClTensor *input, THClTenso
       }
       if(valid[thisIndex]) {
 //        Timer timer;
+        EasyCL *cl = THClState_getClv2(state, device);
+        cl->finish();
         double start = StatefulTimer::getSystemMilliseconds();
         try {
           candidate->forward(state, input, weight, bias, output);
+          cl->finish();
           milliseconds[thisIndex] = (int)(StatefulTimer::getSystemMilliseconds() - start);
           cout << StatefulTimer::instance()->prefix << "ForwardAuto: kernel " << thisIndex << " " << milliseconds[thisIndex] << "ms" << endl;
           return;
