@@ -33,51 +33,6 @@ inline int GET_BLOCKS(THClState *state, const int N) {
   return (N + getNumThreads(state) - 1) / getNumThreads(state);
 }
 
-static void im2col(THClState *state, THClTensor* im, const int channels,
-    const int height, const int width, const int ksize_h, const int ksize_w, const int pad_h,
-    const int pad_w, const int stride_h, const int stride_w, THClTensor* col) {
-  // We are going to launch channels * height_col * width_col kernels, each
-  // kernel responsible for copying a single-channel grid.
-  int height_col = (height + 2 * pad_h - ksize_h) / stride_h + 1;
-  int width_col = (width + 2 * pad_w - ksize_w) / stride_w + 1;
-  int num_kernels = channels * height_col * width_col;
-
-  std::string uniqueName = "SpatialConvolutionMM::im2col";
-  EasyCL *cl = im->storage->cl;
-  CLKernel *kernel = 0;
-  if(cl->kernelExists(uniqueName)) {
-    kernel = cl->getKernel(uniqueName);
-  } else {
-    TemplatedKernel kernelBuilder(cl);
-    kernel = kernelBuilder.buildKernel(uniqueName, "SpatialConvolutionMM.cl",
-      getKernelTemplate(), "im2col_kernel");
-  }
-
-  THClKernels k(state, kernel);
-  k.in(num_kernels);
-  k.in(im);
-  k.in(height);
-  k.in(width);
-  k.in(ksize_h);
-  k.in(ksize_w);
-  k.in(pad_h);
-  k.in(pad_w);
-  k.in(stride_h);
-  k.in(stride_w);
-  k.in(height_col);
-  k.in(width_col);
-  k.out(col);
-
-  k.run(GET_BLOCKS(state, num_kernels), getNumThreads(state));
-
-  // Launch
-//  im2col_kernel <<<GET_BLOCKS(num_kernels), CL_NUM_THREADS, 0, stream>>> (
-//      num_kernels, data_im, height, width, ksize_h, ksize_w,
-//      pad_h, pad_w, stride_h, stride_w,
-//      height_col, width_col, data_col
-//  );
-}
-
 static void col2im(THClState *state, THClTensor* col, const int channels,
     const int height, const int width, const int patch_h, const int patch_w, const int pad_h,
     const int pad_w, const int stride_h, const int stride_w, THClTensor* im) {

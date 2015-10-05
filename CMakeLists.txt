@@ -25,7 +25,7 @@ message("Torch_INSTALL_LIB ${Torch_INSTALL_LIB}")
 set(src init.cpp utils.cpp SpatialConvolutionMM.cpp SpatialMaxPooling.cpp
     SpatialAveragePooling.cpp common.cpp SoftMax.cpp conv/ClConvolver.cpp conv/Forward.cpp conv/ForwardIm2Col.cpp
     conv/BackGrad.cpp conv/BackGradIm2Col.cpp conv/GradWeights.cpp conv/GradWeightsIm2Col.cpp
-    conv/ForwardAuto.cpp
+    conv/ForwardAuto.cpp conv/AddBias.cpp conv/Forward4.cpp
 )
 set(luasrc init.lua MSECriterion.lua Tanh.lua Pointwise.lua Threshold.lua
   LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua
@@ -36,7 +36,7 @@ ADD_TORCH_PACKAGE(clnn "${src}" "${luasrc}" )
 if(DEV_RUN_COG)
     add_custom_target(
         cog_clnn
-        python ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cogapp/cog.py -q -I ${CMAKE_CURRENT_SOURCE_DIR}/cog-batteries -r ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/*.h ${CMAKE_CURRENT_SOURCE_DIR}/conv/*.h
+        python ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cogapp/cog.py -q -I ${CMAKE_CURRENT_SOURCE_DIR}/cog-batteries -r ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/*.h ${CMAKE_CURRENT_SOURCE_DIR}/conv/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/conv/*.h
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
     add_dependencies( clnn cog_clnn )

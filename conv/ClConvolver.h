@@ -18,10 +18,10 @@ public:
   int batch;
   int batchSize;
 
-  int dW;
   int dH;
-  int kW;
+  int dW;
   int kH;
+  int kW;
   int nInputPlane;
   int nOutputPlane;
   int padW;

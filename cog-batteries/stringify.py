@@ -1,5 +1,6 @@
 import sys, os
 import cog
+from os import path
 
 def stringify( var_name, kernel_filename ):
     cog.outl( '// generated using cog, from ' + kernel_filename + ':' )
@@ -14,6 +15,8 @@ def write_kernel( var_name, kernel_filename ):
     cog.outl( '"";')
 
 def write_file2( filepath ):
+    this_dir = path.dirname(cog.inFile)
+    filepath = path.join(this_dir, filepath)
     f = open( filepath, 'r')
     line = f.readline()
     while( line != '' ):
