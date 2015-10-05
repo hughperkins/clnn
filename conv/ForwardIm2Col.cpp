@@ -243,6 +243,10 @@ void ForwardIm2Col::forward(THClState *state, THClTensor *input, THClTensor *wei
     long n = columns->size[1];
     long k = weight->size[1];
 
+//    cout << "m=" << m << " n=" << n << " k=" << k << endl;
+//    cout << " columns:\n" << THClTensor_toString(state, columns) << endl;
+//    cout << " output_n:\n" << THClTensor_toString(state, output_n) << endl;
+
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
 //    cout << "second gemm" << endl;
     THClBlas_gemm(

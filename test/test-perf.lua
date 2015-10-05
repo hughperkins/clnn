@@ -29,7 +29,7 @@ table.insert(scenarios, {name='l3', inplanes=128, insize=32, outplanes=128, filt
 table.insert(scenarios, {name='l4', inplanes=128, insize=16, outplanes=128, filtersize=7})
 table.insert(scenarios, {name='l5', inplanes=384, insize=13, outplanes=384, filtersize=3})
 
-table.insert(scenarios, {name='unit1', inplanes=6, insize=16, outplanes=6, filtersize=3})
+table.insert(scenarios, {name='unit1', inplanes=8, insize=16, outplanes=8, filtersize=3})
 table.insert(scenarios, {name='vgg_e_22', inplanes=512, insize=28, outplanes=512, filtersize=3})
 
 --if api == 'cl' then
@@ -49,9 +49,9 @@ function run_scenario(api, scenario, numIts)
    print('scenario ' .. scenario.name .. ' inplanes=' .. scenario.inplanes .. ' insize=' ..scenario.insize .. ' filtersize=' .. scenario.filtersize)
    input = torch.Tensor(batchSize, scenario.inplanes, scenario.insize, scenario.insize):uniform()
    layer = nn.SpatialConvolutionMM(scenario.inplanes, scenario.outplanes,
-      scenario.filtersize, scenario.filtersize)
-   layer.padW = 0
-   layer.padH = 0
+      scenario.filtersize, scenario.filtersize,1,1,1,1)
+--   layer.padW = 0
+--   layer.padH = 0
    if api == 'cl' then
       input = input:cl()
       layer = layer:cl()
