@@ -1,4 +1,5 @@
 #include "conv/Forward.h"
+#include "conv/ForwardAuto.h"
 #include "conv/Forward4.h"
 #include "conv/ForwardIm2Col.h"
 #include "THGeneral.h"
@@ -21,7 +22,7 @@ STATIC bool Forward::plausiblyOptimal(int index, ClConvolver *conv) {
   return true;
 }
 STATIC Forward *Forward::instance(THClState *state, int device, ClConvolver *conv) {
-    return new Forward4(state, device, conv);
+    return new ForwardAuto(state, device, conv);
 }
 STATIC Forward *Forward::instanceSpecific(int idx, THClState *state, int device, ClConvolver *conv) {
   if(idx == 0) {
