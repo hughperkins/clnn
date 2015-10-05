@@ -127,14 +127,14 @@ void ForwardIm2Col::forward(THClState *state, THClTensor *input, THClTensor *wei
   THClTensor *ones = THClTensor_newv2(state, device);
 
   // Resize temporary columns
-  THClTensor_resize2d(state, columns, conv->nInputPlane*conv->kW*conv->kH, conv->outputHeight*conv->outputWidth);
+  THClTensor_resize2d(state, columns, conv->nInputPlane*conv->kW*conv->kH, batchedOutputHeight*batchedOutputWidth);
 
   // Define a buffer of ones, for bias accumulation
   // Note: this buffer can be shared with other modules, it only ever gets increased,
   // and always contains ones.
-  if (ones->nDimension != 2 || ones->size[0]*ones->size[1] < conv->outputHeight*conv->outputWidth) {
+  if (ones->nDimension != 2 || ones->size[0]*ones->size[1] < batchedOutputHeight*batchedOutputWidth) {
     // Resize plane and fill with ones...
-    THClTensor_resize2d(state, ones, conv->outputHeight, conv->outputWidth);
+    THClTensor_resize2d(state, ones, batchedOutputHeight, batchedOutputWidth);
     THClTensor_fill(state, ones, 1);
   }
 
@@ -215,6 +215,7 @@ void ForwardIm2Col::forward(THClState *state, THClTensor *input, THClTensor *wei
     long k_ = 1;
 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
+//    cout << "first gemm" << endl;
     THClBlas_gemm(
         state,
         't', 'n',
@@ -227,6 +228,7 @@ void ForwardIm2Col::forward(THClState *state, THClTensor *input, THClTensor *wei
     );
 
     // Extract columns:
+//    cout << "im2col" << endl;
     im2col(
       state,
 //      THClState_getCurrentStream(state),
@@ -242,6 +244,7 @@ void ForwardIm2Col::forward(THClState *state, THClTensor *input, THClTensor *wei
     long k = weight->size[1];
 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
+//    cout << "second gemm" << endl;
     THClBlas_gemm(
         state,
         'n', 'n',
