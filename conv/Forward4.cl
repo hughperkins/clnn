@@ -14,13 +14,6 @@
 #define gPadding {{padding}}
 #define gEven {{even}}
 
-//#define 
-//#define kH {{kH}}
-//#define kW {{kW}}
-//#define dH {{dH}}
-//#define dW {{dW}}
-//#define padH {{padH}}
-//#define padW {{padW}}
 #define gInputPlanes {{nInputPlane}}
 
 #define gInputSizeSquared {{inputSizeSquared}}
@@ -88,7 +81,6 @@ void kernel forward_4_by_n_outplane_smallercache(
 
   #define localId (get_local_id(0))
   #define workgroupId (get_group_id(0))
-//  const int workgroupSize = get_local_size(0);
   const int effectiveWorkgroupId = workgroupId / gPixelsPerThread;
   const int pixel = workgroupId % gPixelsPerThread;
   const int effectiveLocalId = localId + pixel * gWorkgroupSize;
@@ -98,11 +90,6 @@ void kernel forward_4_by_n_outplane_smallercache(
   const int outputRow = effectiveLocalId / gOutputSize;
   const int outputCol = effectiveLocalId % gOutputSize;
 
-  if(get_global_id(0) == 0) {
-//    output[0] = 0;
-//    output[1] = 0;
-  }
-
   float sum = 0;
   for (int inputPlane = 0; inputPlane < gInputPlanes; inputPlane++) {
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -111,16 +98,7 @@ void kernel forward_4_by_n_outplane_smallercache(
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (effectiveLocalId < gOutputSizeSquared) {
-    if(get_global_id(0) == 0) {
-//       output[0] = 122;
-//      output[0] = output[0] * 10 + (u+2);
-//        output[0] = gHalfFilterSize;
-    }
       for (int u = -gHalfFilterSize; u <= gHalfFilterSize - gEven; u++) {
-    if(get_global_id(0) == 0) {
-//      output[0] = output[0] * 10 + (u+2);
-//        output[0] = 124;
-    }
         // trying to reduce register pressure...
         #if gPadding != 0
         #define inputRow (outputRow + u)
@@ -152,9 +130,6 @@ void kernel forward_4_by_n_outplane_smallercache(
   #define resultIndex (( n * gNumFilters + outPlane) * gOutputSizeSquared + effectiveLocalId)
   if (effectiveLocalId < gOutputSizeSquared) {
     output[resultIndex ] = sum;
-  }
-  if(get_global_id(0) == 0) {
-//    output[0] = filters[0];
   }
 }
 
