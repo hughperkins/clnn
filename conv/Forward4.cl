@@ -6,13 +6,25 @@
 
 #define gPixelsPerThread {{pixelsPerThread}}
 #define gWorkgroupSize {{workgroupSize}}
-#define gNumFilters {{numFilters}}
+#define gNumFilters {{nOutputPlane}}
 #define gInputSize {{inputSize}}
 #define gOutputSize {{outputSize}}
-#define gInputPlanes {{inputPlanes}}
+#define gFilterSize {{filterSize}}
+#define gPadding {{padding}}
+#define gEven {{even}}
 
+//#define 
+//#define kH {{kH}}
+//#define kW {{kW}}
+//#define dH {{dH}}
+//#define dW {{dW}}
+//#define padH {{padH}}
+//#define padW {{padW}}
+#define gInputPlanes {{nInputPlane}}
+
+#define gInputSizeSquared {{inputSizeSquared}}
 #define gOutputSizeSquared {{outputSizeSquared}}
-#define gHalfFilterSize {{halfFilterSize}}
+#define gPadding {{padding}}
 #define gFilterSizeSquared {{filterSizeSquared}}
 
 void copyLocal(local float *target, global float const *source, int N) {
@@ -94,22 +106,14 @@ void kernel forward_4_by_n_outplane_smallercache(
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (effectiveLocalId < gOutputSizeSquared) {
-      for (int u = -gHalfFilterSize; u <= gHalfFilterSize - gEven; u++) {
+      for (int u = -gPadding; u <= gPadding - gEven; u++) {
         // trying to reduce register pressure...
-        #if gPadZeros == 1
-          #define inputRow (outputRow + u)
-        #else
-          #define inputRow (outputRow + u + gHalfFilterSize)
-        #endif
+        #define inputRow (outputRow + u + gPadding)
         int inputimagerowoffset = inputRow * gInputSize;
-        int filterrowoffset = (u+gHalfFilterSize) * gFilterSize + gHalfFilterSize;
+        int filterrowoffset = (u+gPadding) * gFilterSize + gPadding;
         bool rowOk = inputRow >= 0 && inputRow < gInputSize;
-        for (int v = -gHalfFilterSize; v <= gHalfFilterSize - gEven; v++) {
-          #if gPadZeros == 1
-            #define inputCol (outputCol + v)
-          #else
-            #define inputCol (outputCol + v + gHalfFilterSize)
-          #endif
+        for (int v = -gPadding; v <= gPadding - gEven; v++) {
+          #define inputCol (outputCol + v + gPadding)
           bool process = rowOk && inputCol >= 0 && inputCol < gInputSize;
           if (process) {
               sum += _inputPlane[ inputimagerowoffset + inputCol] * _filterPlane[ filterrowoffset + v ];

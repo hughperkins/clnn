@@ -183,6 +183,94 @@ function clnntest.SpatialConvolutionMM_forward_batch()
    mytester:assertlt(error:abs():max(), 1e-5, 'error on state (forward) ')
 end
 
+function clnntest.SpatialConvolutionMM_forward_batch_square_odd()
+   torch.manualSeed(123)
+   local bs = 4
+   local from = 16
+   local to = 24
+   local ki = 3
+   local kj = 3
+   local si = 1
+   local sj = 1
+   local outi = 28
+   local outj = 28
+   local ini = (outi-1)*si+ki
+   local inj = (outj-1)*sj+kj
+   
+   local tm = {}
+   local title = string.format('SpatialConvolutionMM.forward %dx%dx%dx%d o %dx%d -> %dx%dx%dx%d [s: %dx%d]',
+      bs, from, inj, ini, kj, ki, bs, to, outj, outi, sj, si)
+   times[title] = tm
+   
+   local input = torch.randn(bs,from,inj,ini)
+   local sconv = nn.SpatialConvolutionMM(from,to,ki,kj,si,sj)
+   local groundtruth = sconv:forward(input)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundtruth = sconv:forward(input)
+   end
+   tm.cpu = a:time().real
+   
+   input = input:cl()
+   local gconv = nn.SpatialConvolutionMM(from,to,ki,kj,si,sj):cl()
+   gconv.weight = sconv.weight:cl()
+   gconv.bias = sconv.bias:cl()
+   local rescl = gconv:forward(input)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:forward(input)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+   
+   local error = rescl:float() - groundtruth
+   mytester:assertlt(error:abs():max(), 1e-5, 'error on state (forward) ')
+end
+
+function clnntest.SpatialConvolutionMM_forward_batch_square_even()
+   torch.manualSeed(123)
+   local bs = 4
+   local from = 16
+   local to = 24
+   local ki = 2
+   local kj = 2
+   local si = 1
+   local sj = 1
+   local outi = 28
+   local outj = 28
+   local ini = (outi-1)*si+ki
+   local inj = (outj-1)*sj+kj
+   
+   local tm = {}
+   local title = string.format('SpatialConvolutionMM.forward %dx%dx%dx%d o %dx%d -> %dx%dx%dx%d [s: %dx%d]',
+      bs, from, inj, ini, kj, ki, bs, to, outj, outi, sj, si)
+   times[title] = tm
+   
+   local input = torch.randn(bs,from,inj,ini)
+   local sconv = nn.SpatialConvolutionMM(from,to,ki,kj,si,sj)
+   local groundtruth = sconv:forward(input)
+   local a = torch.Timer()
+   for i = 1,nloop do
+      groundtruth = sconv:forward(input)
+   end
+   tm.cpu = a:time().real
+   
+   input = input:cl()
+   local gconv = nn.SpatialConvolutionMM(from,to,ki,kj,si,sj):cl()
+   gconv.weight = sconv.weight:cl()
+   gconv.bias = sconv.bias:cl()
+   local rescl = gconv:forward(input)
+   a:reset()
+   for i = 1,nloop do
+      rescl = gconv:forward(input)
+   end
+   cltorch.synchronize()
+   tm.gpu = a:time().real
+   
+   local error = rescl:float() - groundtruth
+   mytester:assertlt(error:abs():max(), 1e-5, 'error on state (forward) ')
+end
+
 function clnntest.SpatialConvolutionMM_backward_single()
    torch.manualSeed(123)
    local from = math.random(1,32)

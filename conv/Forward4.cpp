@@ -12,6 +12,9 @@
 #include "conv/AddBias.h"
 #include "conv/ClConvolver.h"
 
+#include <sstream>
+#include <string>
+#include <iostream>
 using namespace std;
 
 #undef VIRTUAL
@@ -33,12 +36,12 @@ PUBLIC VIRTUAL void Forward4::forward(THClState *state, THClTensor *input, THClT
   int globalSize = workgroupSize * numWorkgroups;
 
   THClKernels k(state, kernel);
-  k.in(conv->batchSize);
+  k.in((int)conv->batchSize);
   k.in(input);
   k.in(weight);
   k.out(output);
-  k.localFloats(conv->inputHeight * conv->inputWidth);
-  k.localFloats(conv->kH * conv->kW);
+  k.localFloats((int)(conv->inputHeight * conv->inputWidth));
+  k.localFloats((int)(conv->kH * conv->kW));
 
   kernel->run_1d(globalSize, workgroupSize);
 //  cl->finish();
@@ -55,6 +58,22 @@ PUBLIC Forward4::Forward4(THClState *state, int device, ClConvolver *conv)
   this->state = state;
   this->device = device;
   this->conv = conv;
+
+  if(conv->inputHeight != conv->inputWidth) {
+    throw runtime_error("input must be square");
+  }
+  if(conv->kH != conv->kW) {
+    throw runtime_error("filter must be square");
+  }
+  if(conv->dH != conv->dW) {
+    throw runtime_error("stride must be 1");
+  }
+  if(conv->dH != 1) {
+    throw runtime_error("stride must be 1");
+  }
+  if(conv->padH != conv->padW) {
+    throw runtime_error("padH and padW must be same");
+  }
 
   addBias = new AddBias(state, device, conv);
 
@@ -74,16 +93,38 @@ PUBLIC Forward4::Forward4(THClState *state, int device, ClConvolver *conv)
     pixelsPerThread <<= 1;
   }
 
-  string uniqueName = __FILE__ ":forward4";
+//  string uniqueName = __FILE__ ":forward4";
+  ostringstream oss;
+  oss << __FILE__ << ":forward4";
+  oss << conv->inputHeight << "x" << conv->inputWidth;
+  oss << "_" << conv->kH;
+//  oss << "_" << conv->dH;
+  oss << "_" << conv->padH;
+  oss << "_" << conv->nInputPlane << "->" << conv->nOutputPlane;
+  std::string uniqueName = oss.str();
   EasyCL *cl = THClState_getClv2(state, device);
   if(cl->kernelExists(uniqueName) ) {
     this->kernel = cl->getKernel(uniqueName);
     return;
   }
 
-  TemplatedKernel kernelBuilder(cl);
+  int even = (conv->kH + 1) % 2;
+
+  TemplatedKernel builder(cl);
   // kernelBuilder.set("", ""); // do this here...
-  kernel = kernelBuilder.buildKernel(uniqueName, "Forward4.cl",
+  builder.set("filterSize", conv->kH);
+  builder.set("filterSizeSquared", conv->kH * conv->kH);
+  builder.set("even", even);
+  builder.set("padding", conv->padH);
+  builder.set("nInputPlane", conv->nInputPlane);
+  builder.set("nOutputPlane", conv->nOutputPlane);
+  builder.set("inputSize", conv->inputHeight);
+  builder.set("inputSizeSquared", conv->inputHeight * conv->inputWidth);
+  builder.set("outputSize", conv->outputHeight);
+  builder.set("outputSizeSquared", conv->outputHeight * conv->outputWidth);
+  builder.set("workgroupSize", workgroupSize);
+  builder.set("pixelsPerThread", pixelsPerThread);
+  kernel = builder.buildKernel(uniqueName, "Forward4.cl",
     getKernelTemplate(), "forward_4_by_n_outplane_smallercache");
 
   //cout << "workgroupSize=" << workgroupSize << " pixelsPerThread=" << pixelsPerThread << endl;
@@ -107,13 +148,25 @@ static std::string getKernelTemplate() {
   "\n" 
   "#define gPixelsPerThread {{pixelsPerThread}}\n" 
   "#define gWorkgroupSize {{workgroupSize}}\n" 
-  "#define gNumFilters {{numFilters}}\n" 
+  "#define gNumFilters {{nOutputPlane}}\n" 
   "#define gInputSize {{inputSize}}\n" 
   "#define gOutputSize {{outputSize}}\n" 
-  "#define gInputPlanes {{inputPlanes}}\n" 
+  "#define gFilterSize {{filterSize}}\n" 
+  "#define gPadding {{padding}}\n" 
+  "#define gEven {{even}}\n" 
   "\n" 
+  "//#define\n" 
+  "//#define kH {{kH}}\n" 
+  "//#define kW {{kW}}\n" 
+  "//#define dH {{dH}}\n" 
+  "//#define dW {{dW}}\n" 
+  "//#define padH {{padH}}\n" 
+  "//#define padW {{padW}}\n" 
+  "#define gInputPlanes {{nInputPlane}}\n" 
+  "\n" 
+  "#define gInputSizeSquared {{inputSizeSquared}}\n" 
   "#define gOutputSizeSquared {{outputSizeSquared}}\n" 
-  "#define gHalfFilterSize {{halfFilterSize}}\n" 
+  "#define gPadding {{padding}}\n" 
   "#define gFilterSizeSquared {{filterSizeSquared}}\n" 
   "\n" 
   "void copyLocal(local float *target, global float const *source, int N) {\n" 
@@ -195,22 +248,14 @@ static std::string getKernelTemplate() {
   "    barrier(CLK_LOCAL_MEM_FENCE);\n" 
   "\n" 
   "    if (effectiveLocalId < gOutputSizeSquared) {\n" 
-  "      for (int u = -gHalfFilterSize; u <= gHalfFilterSize - gEven; u++) {\n" 
+  "      for (int u = -gPadding; u <= gPadding - gEven; u++) {\n" 
   "        // trying to reduce register pressure...\n" 
-  "        #if gPadZeros == 1\n" 
-  "          #define inputRow (outputRow + u)\n" 
-  "        #else\n" 
-  "          #define inputRow (outputRow + u + gHalfFilterSize)\n" 
-  "        #endif\n" 
+  "        #define inputRow (outputRow + u + gPadding)\n" 
   "        int inputimagerowoffset = inputRow * gInputSize;\n" 
-  "        int filterrowoffset = (u+gHalfFilterSize) * gFilterSize + gHalfFilterSize;\n" 
+  "        int filterrowoffset = (u+gPadding) * gFilterSize + gPadding;\n" 
   "        bool rowOk = inputRow >= 0 && inputRow < gInputSize;\n" 
-  "        for (int v = -gHalfFilterSize; v <= gHalfFilterSize - gEven; v++) {\n" 
-  "          #if gPadZeros == 1\n" 
-  "            #define inputCol (outputCol + v)\n" 
-  "          #else\n" 
-  "            #define inputCol (outputCol + v + gHalfFilterSize)\n" 
-  "          #endif\n" 
+  "        for (int v = -gPadding; v <= gPadding - gEven; v++) {\n" 
+  "          #define inputCol (outputCol + v + gPadding)\n" 
   "          bool process = rowOk && inputCol >= 0 && inputCol < gInputSize;\n" 
   "          if (process) {\n" 
   "              sum += _inputPlane[ inputimagerowoffset + inputCol] * _filterPlane[ filterrowoffset + v ];\n" 

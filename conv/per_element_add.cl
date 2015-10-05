@@ -5,28 +5,34 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 
 kernel void per_element_add(const int N, global float *target, global const float *source) {
-    const int globalId = get_global_id(0);
-    if (globalId >= N) {
-        return;
-    }
-    target[globalId] += source[globalId];
+  const int globalId = get_global_id(0);
+  if (globalId >= N) {
+    return;
+  }
+  target[globalId] += source[globalId];
 }
 
 // adds source to target
 // tiles source as necessary, according to tilingSize
 kernel void per_element_tiled_add(const int N, const int tilingSize, global float *target, global const float *source) {
-    const int globalId = get_global_id(0);
-    if (globalId >= N) {
-        return;
-    }
-    target[globalId] += source[globalId % tilingSize];
+  const int globalId = get_global_id(0);
+  if (globalId >= N) {
+    return;
+  }
+  target[globalId] += source[globalId % tilingSize];
 }
 
-kernel void repeated_add(const int N, const int sourceSize, const int repeatSize, global float *target, global const float *source) {
-    const int globalId = get_global_id(0);
-    if (globalId >= N) {
-        return;
-    }
-    target[globalId] += source[ (globalId / repeatSize) % sourceSize ];
+kernel void repeated_add(
+    const int N, const int sourceSize, const int repeatSize,
+    global float *target_data, int target_offset,
+    global const float *source_data, int source_offset) {
+  global float *target = target_data + target_offset;
+  global const float *source = source_data + source_offset;
+
+  const int globalId = get_global_id(0);
+  if (globalId >= N) {
+    return;
+  }
+  target[globalId] += source[ (globalId / repeatSize) % sourceSize ];
 }
 
