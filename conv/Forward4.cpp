@@ -74,6 +74,9 @@ PUBLIC Forward4::Forward4(THClState *state, int device, ClConvolver *conv)
   if(conv->padH != conv->padW) {
     throw runtime_error("padH and padW must be same");
   }
+  if(conv->padH != 0 && conv->padH != (conv->kH >> 1)) {
+    throw runtime_error("padH must equal 0 or floor(kH/2)");
+  }
 
   addBias = new AddBias(state, device, conv);
 
