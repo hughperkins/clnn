@@ -90,7 +90,7 @@ void ForwardIm2Col::forward(THClState *state, THClTensor *input, THClTensor *wei
   // for layers whose width * height is smaller than 1024, batch into grid of 4x4 images (experimental ... :-P )
   bool batchedGemm = false;
   const int gemmBatchSide = 4;
-  if(conv->inputWidth * conv->inputHeight <= 1024 && (conv->batchSize % 16 == 0)) {
+  if(conv->inputWidth * conv->inputHeight <= 1024 && (conv->batchSize % (gemmBatchSide * gemmBatchSide) == 0)) {
     batchedGemm = true;
     cout << "Using batchedGemm" << endl;
   } else {
@@ -148,7 +148,10 @@ void ForwardIm2Col::forward(THClState *state, THClTensor *input, THClTensor *wei
   }
 
   // For each elt in batch, do:
-  int numGemmBatches = conv->batchSize / gemmBatchSide / gemmBatchSide;
+  int numGemmBatches = conv->batchSize;
+  if(batchedGemm) {
+    numGemmBatches = conv->batchSize / gemmBatchSide / gemmBatchSide;
+  }
   for (int elt = 0; elt < numGemmBatches; elt ++) {
     // batch up before gemm
     if(batchedGemm) {
