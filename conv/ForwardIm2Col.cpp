@@ -6,6 +6,7 @@
 #include "templates/TemplatedKernel.h"
 #include "conv/ClConvolver.h"
 #include "THClTensorMath.h"
+#include "THClTensorCopy.h"
 #include "THClBlas.h"
 
 #include <iostream>
@@ -82,15 +83,46 @@ ForwardIm2Col::ForwardIm2Col(THClState *state, int device, ClConvolver *conv) {
   this->state = state;
   this->device = device;
   this->conv = conv;
-
-//  columns = THClTensor_newv2(state, device);
-//  ones = THClTensor_newv2(state, device);
 }
 ForwardIm2Col::~ForwardIm2Col() {
-//  THClTensor_free(state, columns);
-//  THClTensor_free(state, ones);
 }
 void ForwardIm2Col::forward(THClState *state, THClTensor *input, THClTensor *weight, THClTensor *bias, THClTensor *output) {
+  // for layers whose width * height is smaller than 1024, batch into grid of 4x4 images (experimental ... :-P )
+  bool batchedGemm = false;
+  const int gemmBatchSide = 4;
+  if(conv->inputWidth * conv->inputHeight <= 1024 && (conv->batchSize % 16 == 0)) {
+    batchedGemm = true;
+    cout << "Using batchedGemm" << endl;
+  } else {
+    cout << "single image per gemm" << endl;
+  }
+
+//  int unbatchedWidth = conv->inputWidth;
+//  int unbatchedHeight = conv->inputHeight;
+  int batchedInputWidth = conv->inputWidth;
+  int batchedInputHeight = conv->inputHeight;
+  int batchedOutputWidth = conv->outputWidth;
+  int batchedOutputHeight = conv->outputHeight;
+
+  int halfkH = conv->kH >> 1;
+  int halfkW = conv->kW >> 1;
+  THClTensor *batchedInput = 0;
+  THClTensor *batchedOutput = 0;
+  if(batchedGemm) {
+//    THClTensor *oldInput = input;
+    batchedInputHeight = (conv->inputHeight + halfkH) * gemmBatchSide - halfkH;
+    batchedInputWidth = (conv->inputWidth + halfkW) * gemmBatchSide - halfkW;
+//    int batchedInputPlaneSize = batchedHeight * batchedInpWidth;
+    batchedInput = THClTensor_newv2(state, device);
+    THClTensor_resize3d(state, batchedInput, conv->nInputPlane, batchedInputHeight, batchedInputWidth);
+    THClTensor_fill(state, batchedInput, 0);
+
+    batchedOutputHeight = (conv->outputHeight + halfkH) * gemmBatchSide - halfkH;
+    batchedOutputWidth = (conv->outputWidth + halfkW) * gemmBatchSide - halfkW;
+    batchedOutput = THClTensor_newv2(state, device);
+    THClTensor_resize3d(state, batchedOutput, conv->nOutputPlane, batchedOutputHeight, batchedOutputWidth);    
+  }
+
   THClTensor *columns = THClTensor_newv2(state, device);
   THClTensor *ones = THClTensor_newv2(state, device);
 
@@ -107,20 +139,76 @@ void ForwardIm2Col::forward(THClState *state, THClTensor *input, THClTensor *wei
   }
 
   // Helpers
-  THClTensor *input_n = THClTensor_newv2(state, input->storage->device);
-  THClTensor *output_n = THClTensor_newv2(state, input->storage->device);
+  THClTensor *input_n = 0;  // we will use these buffers for the im2col/gemm bit no matter what
+  THClTensor *output_n = 0;  // but if we are using batchedgemm, these will point to batchedInput
+                              // and batchedOutput, otherwise will be a select/view onto input/output
+  if(!batchedGemm) {
+    input_n = THClTensor_newv2(state, input->storage->device);
+    output_n = THClTensor_newv2(state, input->storage->device);
+  }
 
   // For each elt in batch, do:
-  for (int elt = 0; elt < conv->batchSize; elt ++) {
+  int numGemmBatches = conv->batchSize / gemmBatchSide / gemmBatchSide;
+  for (int elt = 0; elt < numGemmBatches; elt ++) {
+    // batch up before gemm
+    if(batchedGemm) {
+      input_n = batchedInput;
+      output_n = batchedOutput;
+
+      // copy the images in somehow...
+      // ummm ... how? :-P
+      // how about ... create a view onto batchedInput, that is same size as each input image, and then
+      // simply copy into that?
+      //
+      // just to recap, what we have is:
+      // - filters/weight wont have to change, in any way
+      // - non-batched input is a minibatch, ie: [conv->batchSize][nInputPlane][conv->inputHeight][conv->inputWidth]
+      // - non-batched output is a minibatch, ie: [conv->batchSize][nOutputPlane][conv->outputHeight][conv->outputWidth]
+      // we are going to batch gemmBatchSide * gemmBatchSide input cubes into a single new input cube which will be:
+      //       [nInputPlane][batchedInputHeight][batchedInputWidth]
+      // after im2col/gemm, this will become a gemmbatched output cube:
+      //       [nOutputPlane][batchedOutputHeight][batchedOutputWidth]
+      // ... and we will then unbatch this into the output minibatch, which is, as per above:
+      //   [conv->batchSize][nOutputPlane][conv->outputHeight][conv->outputWidth]
+
+      // so, to narrow/select, what we're going to do:
+      // for the input, ie the source of our copy, we're going to:
+      // - narrow from being [conv->batchSize][nInputPlane][conv->inputHeight][conv->inputWidth] to being
+      //                     [gemmBatchSide * gemmBatchSide][nInputPlane][conv->inputHeight][conv->inputWidth]
+      // - then we will select each of these cubes, ie:
+      //                                                    [nInputPlane][conv->inputHeight][conv->inputWidth]
+      // for the batchedInput, ie the destination of our copy, we're going to:
+      // - narrow onto the row, ie giving: [nInputPlane][conv->inputHeight][batchedInputWidth]
+      // - narrow again onto the image, ie giving: [nInputPlane][conv->inputHeight][conv->inputWidth]
+      THClTensor *inputCubeBlock = THClTensor_newNarrow(state, input, 0, elt * gemmBatchSide * gemmBatchSide, gemmBatchSide * gemmBatchSide);
+      for(int x0 = 0; x0 < gemmBatchSide; x0++) {
+        THClTensor *batchedV0 = THClTensor_newNarrow(state, batchedInput, 1, x0 * (conv->inputHeight + halfkH), conv->inputHeight);
+        for(int x1 = 0; x1 < gemmBatchSide; x1++) {
+          THClTensor *inputImage = THClTensor_newSelect(state, inputCubeBlock, 0, x0 * gemmBatchSide + x1);
+          THClTensor *batchedV1 = THClTensor_newNarrow(state, batchedV0, 2, x1 * (conv->inputWidth + halfkW), conv->inputWidth);
+
+          THClTensor_copy(state, batchedV1, inputImage);
+
+          THClTensor_free(state, batchedV1);
+          THClTensor_free(state, inputImage);
+        }
+        THClTensor_free(state, batchedV0);
+      }
+
+      THClTensor_free(state, inputCubeBlock);
+    } else {
+      THClTensor_select(state, input_n, input, 0, elt);
+      THClTensor_select(state, output_n, output, 0, elt);
+    }
+
+    // standard im2col bit BEGIN ======================
     // Matrix mulitply per output:
-    THClTensor_select(state, input_n, input, 0, elt);
-    THClTensor_select(state, output_n, output, 0, elt);
 
     // Do Bias first:
     // M,N,K are dims of matrix A and B
     // (see http://docs.nvidia.com/cuda/clblas/#clblas-lt-t-gt-gemm)
     long m_ = conv->nOutputPlane;
-    long n_ = conv->outputHeight * conv->outputWidth;
+    long n_ = batchedOutputHeight * batchedOutputWidth;
     long k_ = 1;
 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
@@ -140,7 +228,7 @@ void ForwardIm2Col::forward(THClState *state, THClTensor *input, THClTensor *wei
       state,
 //      THClState_getCurrentStream(state),
       input_n,
-      conv->nInputPlane, conv->inputHeight, conv->inputWidth, conv->kH, conv->kW, conv->padH, conv->padW, conv->dH, conv->dW,
+      conv->nInputPlane, batchedInputHeight, batchedInputWidth, conv->kH, conv->kW, conv->padH, conv->padW, conv->dH, conv->dW,
       columns
     );
 
@@ -161,14 +249,48 @@ void ForwardIm2Col::forward(THClState *state, THClTensor *input, THClTensor *wei
         1,
         output_n, n
     );
+    // standard im2col bit END ======================
+
+    // unbatch after gemm
+
+    // reverse of batching process, I suppose... ie:
+    //  - change 'in' to 'out', and
+    //  - reverse the THClTensor_copy
+    if(batchedGemm) {
+      THClTensor *outputCubeBlock = THClTensor_newNarrow(state, output, 0, elt * gemmBatchSide * gemmBatchSide, gemmBatchSide * gemmBatchSide);
+      for(int x0 = 0; x0 < gemmBatchSide; x0++) {
+        THClTensor *batchedV0 = THClTensor_newNarrow(state, batchedOutput, 1, x0 * (conv->outputHeight + halfkH), conv->outputHeight);
+        for(int x1 = 0; x1 < gemmBatchSide; x1++) {
+          THClTensor *outputImage = THClTensor_newSelect(state, outputCubeBlock, 0, x0 * gemmBatchSide + x1);
+          THClTensor *batchedV1 = THClTensor_newNarrow(state, batchedV0, 2, x1 * (conv->outputWidth + halfkW), conv->outputWidth);
+
+          THClTensor_copy(state, outputImage, batchedV1);
+
+          THClTensor_free(state, batchedV1);
+          THClTensor_free(state, outputImage);
+        }
+        THClTensor_free(state, batchedV0);
+      }
+
+      THClTensor_free(state, outputCubeBlock);
+    }
   }
 
   // Free
-  THClTensor_free(state, input_n);
-  THClTensor_free(state, output_n);
+  if(!batchedGemm) {
+    THClTensor_free(state, input_n);
+    THClTensor_free(state, output_n);
+  }
 
   THClTensor_free(state, columns);
   THClTensor_free(state, ones);
+
+  if(batchedGemm) {
+    THClTensor_free(state, batchedInput);
+    THClTensor_free(state, batchedOutput);
+//    THClTensor_free(state, input);
+//    input = oldInput;
+  }
 
   // Resize output
   if (conv->batch == 0) {
