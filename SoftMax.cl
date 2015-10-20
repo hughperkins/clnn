@@ -35,7 +35,7 @@ kernel void updateOutput(
   if (get_local_id(0) == 0)
   {
     float max_k = -FLT_MAX;
-    for (int i=0; i<get_local_size(0); i++)
+    for (int i=0; i<(int)get_local_size(0); i++)
     {
       if(max_k < buffer[i])
         max_k = buffer[i];
@@ -60,7 +60,7 @@ kernel void updateOutput(
   if (get_local_id(0) == 0)
   {
     float sum_k = 0;
-    for (int i=0; i<get_local_size(0); i++)
+    for (int i=0; i<(int)get_local_size(0); i++)
       sum_k += buffer[i];
     buffer[SOFTMAX_THREADS] = sum_k;
   }
@@ -105,7 +105,7 @@ kernel void updateGradInput(
   if (get_local_id(0) == 0)
   {
     float sum_k = 0;
-    for (int i=0; i<get_local_size(0); i++)
+    for (int i=0; i<(int)get_local_size(0); i++)
       sum_k += buffer[i];
     buffer[0] = sum_k;
   }
