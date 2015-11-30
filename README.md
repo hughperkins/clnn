@@ -31,6 +31,7 @@ These mostly 'just work', since based on underlying tensor methods, already impl
 * nn.Tanh
 * nn.Sigmoid
 * nn.ReLU
+* nn.ELU
 * nn.Exp
 * nn.Sqrt
 * nn.Square
@@ -143,6 +144,8 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 ## Recent changes
 
+* 29th November:
+  * added ELU
 * 25th September:
   * ported Sergey's not-yet-merged  [SpatialAveragePadding and ceil kernels](https://github.com/torch/cunn/pull/134), into `clnn-avgpool` branch
   * ported latest version of SoftMax, ie essentially Jonghoon's [Update SoftMax to work in spatial mode](https://github.com/torch/cunn/pull/135)

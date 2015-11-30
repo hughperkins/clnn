@@ -3,8 +3,8 @@ local times = _test.times
 local clnntest = _test.clnntest
 local x_clnntest = _test.x_clnntest
 local nloop = _test.nloop
-local precision_forward = 1e-4
-local precision_backward = 1e-2
+local precision_forward = 0.01
+local precision_backward = 0.01
 
 function clnntest.mse()
    torch.manualSeed(123)
