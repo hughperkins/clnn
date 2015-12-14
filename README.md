@@ -23,8 +23,7 @@ These mostly 'just work', since based on underlying tensor methods, already impl
 
 * nn.SpatialConvolutionMM
 * nn.SpatialMaxPooling (including `ceil` mode)
-* nn.SpatialAveragePooling (either filter size must equal input size, or filter size must equal stride size):
-  * update: latest SpatialAveragePooling is available now, but you have to live 'on the bleeding edge', see section 'On the bleeding edge: getting latest SpatialAveragePooling', below
+* nn.SpatialAveragePooling
 
 ### Transfer function layers
 
@@ -144,6 +143,8 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 ## Recent changes
 
+* 15th December:
+  * merged Sergey's [SpatialAveragePadding and ceil kernels](https://github.com/torch/cunn/pull/134) into `master` branch
 * 29th November:
   * added ELU
 * 25th September:
