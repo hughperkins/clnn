@@ -52,7 +52,7 @@ static int clnn_SpatialAveragePooling_updateOutput(lua_State *L)
     batchSize = input->size[0];
   }
 
-  luaL_argcheck(L, nInputCols >= kW - padW && nInputRows >= kH - padH, 2, "input image smaller than kernel size");
+  luaL_argcheck(L, nInputCols >= kW - 2*padW && nInputRows >= kH - 2*padH, 2, "input image smaller than kernel size");
   luaL_argcheck(L, kW/2 >= padW && kH/2 >= padH, 2, "pad should be smaller than half of kernel size");
 
   if(ceil_mode) {
@@ -62,6 +62,15 @@ static int clnn_SpatialAveragePooling_updateOutput(lua_State *L)
   else {
     nOutputCols = floor(float(nInputCols - kW + 2*padW) / float(dW)) + 1;
     nOutputRows = floor(float(nInputRows - kH + 2*padH) / float(dH)) + 1;
+  }
+  if (padW || padH)
+  {
+    // ensure that the last pooling starts inside the image
+    // needed to avoid problems in ceil mode
+    if ((nOutputRows - 1)*dH >= nInputRows + padH)
+      --nOutputRows;
+    if ((nOutputCols  - 1)*dW >= nInputCols  + padW)
+      --nOutputCols;
   }
 
   input = THClTensor_newContiguous(state, input);
@@ -173,9 +182,16 @@ static int clnn_SpatialAveragePooling_updateGradInput(lua_State *L)
     nOutputCols = floor(float(nInputCols - kW + 2*padW) / float(dW)) + 1;
     nOutputRows = floor(float(nInputRows - kH + 2*padH) / float(dH)) + 1;
   }
+  if (padW || padH)
+  {
+    // ensure that the last pooling starts inside the image
+    // needed to avoid problems in ceil mode
+    if ((nOutputRows - 1)*dH >= nInputRows + padH)
+      --nOutputRows;
+    if ((nOutputCols  - 1)*dW >= nInputCols  + padW)
+      --nOutputCols;
+  }
 
-
-  gradOutput = THClTensor_newContiguous(state, gradOutput);
   THClTensor_resizeAs(state, gradInput, input);
   
   int count = THClTensor_nElement(state, input);
@@ -227,8 +243,6 @@ static int clnn_SpatialAveragePooling_updateGradInput(lua_State *L)
 //        batchSize, nInputPlane, nInputRows, nInputCols, nOutputRows, nOutputCols,
 //        kH, kW, dH, dW, padH, padW,
 //        THClTensor_data(state, gradInput));
-
-  THClTensor_free(state, gradOutput);
 
   // clean
   THClTensor_free(state, input);
@@ -306,9 +320,9 @@ static std::string getKernelTemplate() {
   "      }\n" 
   "    }\n" 
   "    if(COUNT_INCLUDE_PAD)\n" 
-  "      top_data[index] = aveval / ((hend - hstart) * (wend - wstart));\n" 
-  "    else\n" 
   "      top_data[index] = aveval / pool_size;\n" 
+  "    else\n" 
+  "      top_data[index] = aveval / ((hend - hstart) * (wend - wstart));\n" 
   "  }\n" 
   "}\n" 
   "{% end %}\n" 
@@ -347,10 +361,14 @@ static std::string getKernelTemplate() {
   "        int hend = min(hstart + kernel_h, height + pad_h);\n" 
   "        int wend = min(wstart + kernel_w, width + pad_w);\n" 
   "        int pool_size = (hend - hstart) * (wend - wstart);\n" 
+  "        hstart = max(hstart, 0);\n" 
+  "        wstart = max(wstart, 0);\n" 
+  "        hend = min(hend, height);\n" 
+  "        wend = min(wend, width);\n" 
   "        if(COUNT_INCLUDE_PAD)\n" 
-  "          gradient += top_diff_slice[ph * pooled_width + pw] / ((hend - hstart) * (wend - wstart));\n" 
-  "        else\n" 
   "          gradient += top_diff_slice[ph * pooled_width + pw] / pool_size;\n" 
+  "        else\n" 
+  "          gradient += top_diff_slice[ph * pooled_width + pw] / ((hend - hstart) * (wend - wstart));\n" 
   "      }\n" 
   "    }\n" 
   "    bottom_diff[index] = gradient;\n" 
