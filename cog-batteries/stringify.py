@@ -18,7 +18,7 @@ def write_file2( filepath ):
     line = f.readline()
     while( line != '' ):
         line = process_includes( line )
-        cog.outl( '"' + line.rstrip().replace('\\','\\\\').replace('"', '\\"') + '\\n" ' )
+        cog.outl( '"' + line.rstrip().replace('\\','\\\\').replace('"', '\\"') + '\\n"' )
         line = f.readline()
     f.close()
 
