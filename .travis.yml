@@ -18,12 +18,8 @@ before_install:
   - cd
   - (git clone https://github.com/xianyi/OpenBLAS && cd OpenBLAS && make -j 4 && sudo make install)
   - ls /opt/OpenBLAS/lib
-  - mkdir ~/torch
-  - cd ~/torch
-  - wget http://hughperkins.com/download/torch-install.tar.bz2
-  - tar -xf torch-install.tar.bz2
-  - sed -i -e "s%/home/ubuntu%/Users/travis%g" ~/torch/install/bin/torch-activate
-  - sed -i -e "s%/home/ubuntu%/Users/travis%g" ~/torch/install/share/cmake/torch/*
+  - git clone https://github.com/torch/distro.git ~/torch --recursive
+  - cd ~/torch; ./install.sh
   - cd ~/build/hughperkins/clnn
 
 script:
