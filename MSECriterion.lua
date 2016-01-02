@@ -2,7 +2,8 @@ function torch.ClTensor.nn.MSECriterion_updateOutput(self, input, target)
    if self.workBuffer == nil then
       self.workBuffer = input:clone()
    end
-   
+
+   self.workBuffer:resizeAs(input)
    self.workBuffer:copy(input)
    self.workBuffer:csub(target)
    self.workBuffer:pow(2)

@@ -104,4 +104,17 @@ function clnntest.mse_nosizeaverage()
    end
 end
 
+function clnntest.mse_variablebatchsize()
+    torch.manualSeed(123)
+    local input1 = torch.randn(10,1,1):cl()
+    local input2 = torch.randn(20,1,1):cl()
+    local target1 = input1:clone()
+    local target2 = input2:clone()
+
+    local mod = nn.MSECriterion():cl()
+
+    mytester:assert(mod:forward(input1,target1), 0.0, 'error should be 0')
+    mytester:assert(mod:forward(input2,target2), 0.0, 'error should be 0')
+end
+
 
