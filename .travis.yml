@@ -15,10 +15,10 @@ before_install:
   - ls ~
   - echo $HOME
   - env
-  - wget http://hughperkins.com/download/torch-install.tar.bz2
   - mkdir ~/torch
   - cd ~/torch
-  - tar -xf ../torch-install.tar.bz2
+  - wget http://hughperkins.com/download/torch-install.tar.bz2
+  - tar -xf torch-install.tar.bz2
   - cd ~/build/hughperkins/clnn
 
 script:
