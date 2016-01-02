@@ -143,6 +143,8 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 ## Recent changes
 
+* 2nd January, 2016:
+  * merged/ported THNN architecture across, and the implementation of Abs, so the unit-tests pass again now
 * 15th December:
   * merged Sergey's [SpatialAveragePadding and ceil kernels](https://github.com/torch/cunn/pull/134) into `master` branch
 * 29th November:
