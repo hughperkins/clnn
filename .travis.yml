@@ -23,7 +23,7 @@ before_install:
 
 script:
   - echo hello
-  - source ~/torch/install/torch-activate
+  - source ~/torch/install/bin/torch-activate
   - env
   - mkdir build
   - cd build
