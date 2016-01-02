@@ -8,7 +8,7 @@ using namespace std;
 class ClnnAbs_forward : public HasOperator2 {
 public:
   string operator2() const {
-    return "*out = abs(*in1)";
+    return "*out = fabs(*in1)";
   }
 };
 

@@ -10,12 +10,6 @@ local libthclnn_searchpath = package.searchpath('libTHCLNN', package.cpath)
 print('libthclnn_searchpath', libthclnn_searchpath)
 THCLNN.C = ffi.load(libthclnn_searchpath)
 
-local THClState_ptr = ffi.typeof('THClState*')
-
-function THCLNN.getState()
-  return THClState_ptr(cltorch.getState());
-end
-
 local THCLNN_h = [[
 typedef void THClState;
 
@@ -45,6 +39,12 @@ TH_API void THNN_ClAbsCriterion_updateGradInput(
 
 local preprocessed = string.gsub(THCLNN_h, 'TH_API ', '')
 ffi.cdef(preprocessed)
+
+local THClState_ptr = ffi.typeof('THClState*')
+
+function THCLNN.getState()
+  return THClState_ptr(cltorch.getState());
+end
 
 local function extract_function_names(s)
   local t = {}
