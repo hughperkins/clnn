@@ -1,12 +1,8 @@
-require('cltorch')
+require 'cltorch'
 
 require "torch"
 require 'nn'
---print('nn.Module\n', nn.Module)
-
--- require('cltorch')
-
---torch.ClTensor.nn = {}
+require('clnn.THCLNN')
 
 clnn = paths.require("libclnn")
 
