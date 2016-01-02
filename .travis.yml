@@ -20,6 +20,7 @@ before_install:
   - wget http://hughperkins.com/download/torch-install.tar.bz2
   - tar -xf torch-install.tar.bz2
   - sed -i -e "s%/home/ubuntu%/Users/travis%g" ~/torch/install/bin/torch-activate
+  - sed -i -e "s%/home/ubuntu%/Users/travis%g" ~/torch/install/share/cmake/torch/*
   - cd ~/build/hughperkins/clnn
 
 script:
