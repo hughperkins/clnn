@@ -20,6 +20,12 @@ before_install:
   - ls /opt/OpenBLAS/lib
   - git clone https://github.com/torch/distro.git ~/torch --recursive
   - cd ~/torch; ./install.sh
+  - mkdir ~/git
+  - cd ~/git
+  - git clone https://github.com/hughperkins/cltorch.git ~/git/cltorch --recursive
+  - cd ~/git/cltorch
+  - source ~/torch/install/bin/torch-activate
+  - luarocks make rocks/cltorch-scm-1.rockspec
   - cd ~/build/hughperkins/clnn
 
 script:
