@@ -11,7 +11,7 @@ before_install:
   - whoami
   - pwd
   - env
-  - wget http://hughperkins.com/downloads/torch-install.tar.bz2
+  - wget http://hughperkins.com/download/torch-install.tar.bz2
   - mkdir torch
   - cd torch
   - tar -xf ../torch-install.tar.bz2
