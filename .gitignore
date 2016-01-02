@@ -4,6 +4,8 @@
 *.o
 *.obj
 
+*_generated.h
+
 # Precompiled Headers
 *.gch
 *.pch
