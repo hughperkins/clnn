@@ -36,6 +36,7 @@ script:
   - make -j 4
   - cd ..
   - luarocks make rocks/clnn-scm-1.rockspec
+  - luajit -e "print(package.searchpath('libTHCLNN', package.cpath))"
   - luajit -e 'require "clnn"'
 
 notifications:
