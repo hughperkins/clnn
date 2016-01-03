@@ -12,7 +12,7 @@ ENDIF()
 #FILE(GLOB src-cl *.cpp)
 set(src-cl Abs.cpp)
 
-add_library(THCLNN SHARED ${src-cl})
+add_library(THCLNN MODULE ${src-cl})
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 TARGET_LINK_LIBRARIES(THCLNN THCl TH)
