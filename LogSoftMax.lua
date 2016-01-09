@@ -1,4 +1,13 @@
-function torch.ClTensor.nn.LogSoftMax_updateOutput(self, input)
+require 'nn'
+
+nn.LogSoftMax.baseUpdateOutput = nn.LogSoftMax.updateOutput
+nn.LogSoftMax.baseUpdateGradInput = nn.LogSoftMax.updateGradInput
+
+function nn.LogSoftMax:updateOutput(input)
+   if torch.type(input) ~= 'torch.ClTensor' then
+      return self:baseUpdateOutput(input)
+   end
+
    if input:dim() == 1 then
       if self.maxbuffer == nil then
          self.maxbuffer, self.resind = input:max(1)
@@ -40,7 +49,11 @@ function torch.ClTensor.nn.LogSoftMax_updateOutput(self, input)
    end
 end
 
-function torch.ClTensor.nn.LogSoftMax_updateGradInput(self, input, gradOutput)
+function nn.LogSoftMax:updateGradInput(input, gradOutput)
+   if torch.type(input) ~= 'torch.ClTensor' then
+      return self:baseUpdateGradInput(input, gradOutput)
+   end
+
    local nElement = self.gradInput:nElement()
    self.gradInput:resizeAs(input)
    if self.gradInput:nElement() ~= nElement then
