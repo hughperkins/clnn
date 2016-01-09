@@ -31,7 +31,7 @@ set(src init.cpp utils.cpp SpatialConvolutionMM.cpp SpatialMaxPooling.cpp
     SpatialAveragePooling.cpp common.cpp SoftMax.cpp ELU.cpp
 )
 set(luasrc init.lua MSECriterion.lua Tanh.lua Pointwise.lua Threshold.lua
-  LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua THCLNN.lua
+  LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua THCLNN.lua ELU.lua
   Narrow.lua CMulTable.lua test.lua test/testSpatialMaxPooling.lua test/testSpatialConvolutionMM.lua
   test/testMSECriterion.lua test/testSoftMax.lua test/testLogSoftMax.lua test/testSpatialAveragePooling.lua)
 ADD_TORCH_PACKAGE(clnn "${src}" "${luasrc}" )
