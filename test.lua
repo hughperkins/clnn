@@ -741,7 +741,7 @@ function clnntest.Sum_backward()
 end
 
 function clnntest.ClassNLLCriterionMultipleTarget()
-   local size = math.random(3000,5000)
+   local size = 3000
    local input = torch.randn(size, size)
    local target = torch.randperm(size)
    local mod = nn.ClassNLLCriterion()
