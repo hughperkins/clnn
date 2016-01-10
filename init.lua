@@ -15,6 +15,9 @@ function nn.Criterion:cl()
   return self:type('torch.ClTensor')
 end
 
+include 'SpatialConvolutionMM.lua'
+include 'SpatialAveragePooling.lua'
+include 'SpatialMaxPooling.lua'
 include 'ELU.lua'
 include 'Tanh.lua'
 include 'Pointwise.lua'
