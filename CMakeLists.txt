@@ -11,8 +11,8 @@ SET(CMAKE_CXX_FLAGS "-std=c++0x -Wall")
 
 execute_process( COMMAND git log -n 1 --pretty=%h OUTPUT_VARIABLE git_commit OUTPUT_STRIP_TRAILING_WHITESPACE)
 #execute_process( COMMAND echo string commit="${git_commit}" > ${CMAKE_CURRENT_SOURCE_DIR}/commit.h )
-file(GENERATE OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/commit_generated.h 
-  CONTENT "const char *commit=\"${git_commit}\";\n"
+file(GENERATE OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/clnn_commit_generated.h 
+  CONTENT "const char *clnn_commit=\"${git_commit}\";\n"
 )
 
 #Find_package(Lua51 REQUIRED)

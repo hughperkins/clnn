@@ -10,7 +10,7 @@ extern "C" {
 //  #include "luaT.h"
 }
 
-#include "commit_generated.h"
+#include "clnn_commit_generated.h"
 
 extern "C" {
     int luaopen_libclnn( lua_State *L );
@@ -25,7 +25,7 @@ void clnn_SoftMax_init(lua_State *L);
 static int clnn_about(lua_State *L)
 {
   cout << "clnn.  OpenCL backend for Torch nn" << endl;
-  cout << "Built from commit " << commit << endl;
+  cout << "Built from commit " << clnn_commit << endl;
   cout << "More info, doc: https://github.com/hughperkins/clnn" << endl;
   cout << "Issues: https://github.com/hughperkins/clnn/issues" << endl;
   return 0;
