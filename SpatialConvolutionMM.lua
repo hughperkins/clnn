@@ -18,7 +18,8 @@ function nn.SpatialConvolutionMM:updateGradInput(input, gradOutput)
       return self:baseUpdateGradInput(input, gradOutput)
    end
 
-   return input.nn.SpatialConvolutionMM_updateGradInput(self, input, gradOutput)
+   input.nn.SpatialConvolutionMM_updateGradInput(self, input, gradOutput)
+   return self.gradInput
 end
 
 function nn.SpatialConvolutionMM:accGradParameters(input, gradOutput, scale)
@@ -26,6 +27,6 @@ function nn.SpatialConvolutionMM:accGradParameters(input, gradOutput, scale)
       return self:baseAccGradParameters(input, gradOutput, scale)
    end
 
-   return input.nn.SpatialConvolutionMM_accGradParameters(self, input, gradOutput, scale)
+   input.nn.SpatialConvolutionMM_accGradParameters(self, input, gradOutput, scale)
 end
 

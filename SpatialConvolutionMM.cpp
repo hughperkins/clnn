@@ -127,7 +127,6 @@ void col2im(THClState *state, THClTensor* col, const int channels,
 }
 
 static int clnn_SpatialConvolutionMM_updateOutput(lua_State *L) {
-//  cout << "clnn_SpatialConvolutionMM_updateOutput(lua_State *L)" << endl;
   THClState *state = getCltorchState(L);
   // Input
   THClTensor *input = (THClTensor*)luaT_checkudata(L, 2, "torch.ClTensor");

@@ -4,6 +4,9 @@
 #include "luaT.h"
 #include "THClApply.h"
 
+#include <iostream>
+using namespace std;
+
 class ELUupdateOutput_functor : public HasOperator1, public HasOperator2, public HasScalars {
 public:
   int getNumScalars() const { return 1; }
