@@ -18,7 +18,9 @@ function nn.SpatialConvolutionMM:updateGradInput(input, gradOutput)
       return self:baseUpdateGradInput(input, gradOutput)
    end
 
-   input.nn.SpatialConvolutionMM_updateGradInput(self, input, gradOutput)
+   if self.gradInput then
+      input.nn.SpatialConvolutionMM_updateGradInput(self, input, gradOutput)
+   end
    return self.gradInput
 end
 
