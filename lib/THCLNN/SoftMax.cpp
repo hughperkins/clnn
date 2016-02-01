@@ -4,6 +4,7 @@
 #include "luaT.h"
 #include "THClTensor.h"
 #include "THClTensorMath.h"
+#include "THCLNN.h"
 
 #include "EasyCL.h"
 #include "THClKernels.h"
@@ -14,11 +15,8 @@
 
 static std::string getKernelTemplate();
 
-static int clnn_SoftMax_updateOutput(lua_State *L)
+void THNN_ClSoftMax_updateOutput(THClState *state, THClTensor *input, THClTensor *output)
 {
-  THClState *state = getCltorchState(L);
-  THClTensor *input = (THClTensor*)luaT_checkudata(L, 2, "torch.ClTensor");
-  THClTensor *output = (THClTensor*)luaT_getfieldcheckudata(L, 1, "output", "torch.ClTensor");
   THAssert(THClTensor_checkGPU(state, 2, input, output));
 
   input = THClTensor_newContiguous(state, input);
@@ -27,29 +25,29 @@ static int clnn_SoftMax_updateOutput(lua_State *L)
   long dim = 0;
   long stride = 0;
 
-  if(input->nDimension == 1)
+  if (input->nDimension == 1)
   {
     batchSize = 1;
     dim = input->size[0];
     stride = 1;
   }
-  else if(input->nDimension == 2)
+  else if (input->nDimension == 2)
   {
     batchSize = input->size[0];
     dim = input->size[1];
     stride = 1;
   }
-  else if(input->nDimension == 3)
+  else if (input->nDimension == 3)
   {
     batchSize = 1;
     dim = input->size[0];
-    stride = input->size[1]*input->size[2];
+    stride = input->size[1] * input->size[2];
   }
-  else if(input->nDimension == 4)
+  else if (input->nDimension == 4)
   {
     batchSize = input->size[0];
     dim = input->size[1];
-    stride = input->size[2]*input->size[3];
+    stride = input->size[2] * input->size[3];
   }
   else
     THError("1D, 2D, 3D or 4D tensor expected");
@@ -84,15 +82,10 @@ static int clnn_SoftMax_updateOutput(lua_State *L)
 //                                           batchSize, dim, stride);
 
   THClTensor_free(state, input);
-  return 1;
 }
 
-static int clnn_SoftMax_updateGradInput(lua_State *L)
+void THNN_ClSoftMax_updateGradInput(THClState *state, THClTensor *input, THClTensor *gradOutput, THClTensor *gradInput, THClTensor *output)
 {
-  THClState *state = getCltorchState(L);
-  THClTensor *gradOutput = (THClTensor*)luaT_checkudata(L, 3, "torch.ClTensor");
-  THClTensor *output = (THClTensor*)luaT_getfieldcheckudata(L, 1, "output", "torch.ClTensor");
-  THClTensor *gradInput = (THClTensor*)luaT_getfieldcheckudata(L, 1, "gradInput", "torch.ClTensor");
   THAssert(THClTensor_checkGPU(state, 3, output, gradOutput, gradInput));
 
   output = THClTensor_newContiguous(state, output);
@@ -103,29 +96,29 @@ static int clnn_SoftMax_updateGradInput(lua_State *L)
   long dim = 0;
   long stride = 0;
 
-  if(gradInput->nDimension == 1)
+  if (gradInput->nDimension == 1)
   {
     batchSize = 1;
     dim = gradInput->size[0];
     stride = 1;
   }
-  else if(gradInput->nDimension == 2)
+  else if (gradInput->nDimension == 2)
   {
     batchSize = gradInput->size[0];
     dim = gradInput->size[1];
     stride = 1;
   }
-  else if(gradInput->nDimension == 3)
+  else if (gradInput->nDimension == 3)
   {
     batchSize = 1;
     dim = gradInput->size[0];
-    stride = gradInput->size[1]*gradInput->size[2];
+    stride = gradInput->size[1] * gradInput->size[2];
   }
-  else if(gradInput->nDimension == 4)
+  else if (gradInput->nDimension == 4)
   {
     batchSize = gradInput->size[0];
     dim = gradInput->size[1];
-    stride = gradInput->size[2]*gradInput->size[3];
+    stride = gradInput->size[2] * gradInput->size[3];
   }
   else
     THError("1D, 2D, 3D or 4D tensor expected");
@@ -164,20 +157,6 @@ static int clnn_SoftMax_updateGradInput(lua_State *L)
 
   THClTensor_free(state, gradOutput);
   THClTensor_free(state, output);
-  return 1;
-}
-
-static const struct luaL_Reg clnn_SoftMax__ [] = {
-  {"SoftMax_updateOutput", clnn_SoftMax_updateOutput},
-  {"SoftMax_updateGradInput", clnn_SoftMax_updateGradInput},
-  {NULL, NULL}
-};
-
-void clnn_SoftMax_init(lua_State *L)
-{
-  luaT_pushmetatable(L, "torch.ClTensor");
-  luaT_registeratname(L, clnn_SoftMax__, "nn");
-  lua_pop(L,1);
 }
 
 static std::string getKernelTemplate() {

@@ -100,4 +100,13 @@ TH_API void THNN_ClSpatialMaxPooling_updateGradInput(
           int dW, int dH,
           int padW, int padH,
           bool ceil_mode);
-
+TH_API void THNN_ClSoftMax_updateOutput(
+          THClState *state,
+          THClTensor *input,
+          THClTensor *output);
+TH_API void THNN_ClSoftMax_updateGradInput(
+          THClState *state,
+          THClTensor *input,
+          THClTensor *gradOutput,
+          THClTensor *gradInput,
+          THClTensor *output);

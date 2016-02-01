@@ -14,8 +14,6 @@ extern "C" {
     int luaopen_libclnn( lua_State *L );
 }
 
-void clnn_SoftMax_init(lua_State *L);
-
 static int clnn_about(lua_State *L)
 {
   cout << "clnn.  OpenCL backend for Torch nn" << endl;
@@ -34,8 +32,6 @@ int luaopen_libclnn( lua_State *L ) {
   try {
     lua_newtable(L);
     luaL_setfuncs(L, clnn_stuff__, 0);
-
-    clnn_SoftMax_init(L);
   } catch(runtime_error &e) {
     THError("Something went wrong: %s", e.what());
   }
