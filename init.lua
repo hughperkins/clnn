@@ -18,7 +18,7 @@ end
 --include 'SpatialConvolutionMM.lua'
 include 'SpatialAveragePooling.lua'
 include 'SpatialMaxPooling.lua'
-include 'ELU.lua'
+--include 'ELU.lua'
 include 'Tanh.lua'
 include 'Pointwise.lua'
 include 'Threshold.lua'

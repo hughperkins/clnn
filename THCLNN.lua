@@ -22,6 +22,18 @@ TH_API void THNN_ClAbs_updateGradInput(
           THClTensor *input,
           THClTensor *gradOutput,
           THClTensor *gradInput);
+TH_API void THNN_ClELU_updateOutput(
+          THClState *state,
+          THClTensor *input,
+          THClTensor *output,
+          float alpha);
+TH_API void THNN_ClELU_updateGradInput(
+          THClState *state,
+          THClTensor *input,
+          THClTensor *gradOutput,
+          THClTensor *gradInput,
+          THClTensor *output,
+          float alpha);
 TH_API void THNN_ClSpatialConvolutionMM_updateOutput(
           THClState *state,
           THClTensor *input,

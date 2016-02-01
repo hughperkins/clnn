@@ -16,7 +16,7 @@ extern "C" {
     int luaopen_libclnn( lua_State *L );
 }
 
-void clnn_ELU_init(lua_State *L);
+//void clnn_ELU_init(lua_State *L);
 void clnn_SpatialMaxPooling_init(lua_State *L);
 void clnn_SpatialAveragePooling_init(lua_State *L);
 void clnn_SoftMax_init(lua_State *L);
@@ -41,7 +41,7 @@ int luaopen_libclnn( lua_State *L ) {
     luaL_setfuncs(L, clnn_stuff__, 0);
 
   //    printf("luaopen_libclnn called :-)\n");
-    clnn_ELU_init(L);
+//    clnn_ELU_init(L);
     clnn_SpatialMaxPooling_init(L);
     clnn_SpatialAveragePooling_init(L);
     clnn_SoftMax_init(L);
