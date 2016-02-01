@@ -143,6 +143,8 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 ## Recent changes
 
+* 1st Feb:
+  * merged/ported THNN phase 3.  Any weird build issues, please update both `nn` and `clnn`.
 * 2nd January, 2016:
   * merged/ported THNN architecture across, and the implementation of Abs, so the unit-tests pass again now
 * 15th December:
