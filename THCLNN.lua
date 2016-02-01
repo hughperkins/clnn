@@ -88,6 +88,26 @@ TH_API void THNN_ClSpatialAveragePooling_updateGradInput(
           int padW, int padH,
           bool ceil_mode,
           bool count_include_pad);
+
+TH_API void THNN_ClSpatialMaxPooling_updateOutput(
+          THClState *state,
+          THClTensor *input,
+          THClTensor *output,
+          THClTensor *indices,
+          int kW, int kH,
+          int dW, int dH,
+          int padW, int padH,
+          bool ceil_mode);
+TH_API void THNN_ClSpatialMaxPooling_updateGradInput(
+          THClState *state,
+          THClTensor *input,
+          THClTensor *gradOutput,
+          THClTensor *gradInput,
+          THClTensor *indices,
+          int kW, int kH,
+          int dW, int dH,
+          int padW, int padH,
+          bool ceil_mode);
 ]]
 
 local preprocessed = string.gsub(THCLNN_h, 'TH_API ', '')

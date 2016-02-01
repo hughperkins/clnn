@@ -9,6 +9,7 @@
 #include "THClKernels.h"
 #include "templates/TemplatedKernel.h"
 #include "common.h"
+#include "THCLNN.h"
 
 #include <iostream>
 #include <string>
@@ -19,23 +20,10 @@ using namespace std;
 
 std::string SpatialMaxPooling_getKernelTemplate();
 
-static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
+void THNN_ClSpatialMaxPooling_updateOutput(THClState *state, THClTensor *input, THClTensor *output, THClTensor *indices, int kW, int kH, int dW, int dH, int padW, int padH, bool ceil_mode)
 {
-  THClState *state = getCltorchState(L);
-  THClTensor *input = (THClTensor *)luaT_checkudata(L, 2, "torch.ClTensor");
-  int kW = luaT_getfieldcheckint(L, 1, "kW");
-  int kH = luaT_getfieldcheckint(L, 1, "kH");
-  int dW = luaT_getfieldcheckint(L, 1, "dW");
-  int dH = luaT_getfieldcheckint(L, 1, "dH");
-  int padW = luaT_getfieldcheckint(L, 1, "padW");
-  int padH = luaT_getfieldcheckint(L, 1, "padH");
-  bool ceil_mode = luaT_getfieldcheckboolean(L, 1, "ceil_mode");
-
-  THClTensor *output = (THClTensor *)luaT_getfieldcheckudata(L, 1, "output", "torch.ClTensor");
-  THClTensor *indices = (THClTensor *)luaT_getfieldcheckudata(L, 1, "indices", "torch.ClTensor");
-
   THAssert(THClTensor_checkGPU(state, 3, input, output, indices));
-  luaL_argcheck(L, input->nDimension == 3 || input->nDimension == 4, 2, "3D or 4D (batch) tensor expected");
+  THArgCheck(input->nDimension == 3 || input->nDimension == 4, 2, "3D or 4D (batch) tensor expected");
 
   long nInputCols, nInputRows, nInputPlane, batchSize;
   long nOutputCols, nOutputRows;
@@ -54,8 +42,8 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
     batchSize = input->size[0];
   }
 
-  luaL_argcheck(L, nInputCols >= kW - padW && nInputRows >= kH - padH, 2, "input image smaller than kernel size");
-  luaL_argcheck(L, kW/2 >= padW && kH/2 >= padH, 2, "pad should be smaller than half of kernel size");
+  THArgCheck(nInputCols >= kW - padW && nInputRows >= kH - padH, 2, "input image smaller than kernel size");
+  THArgCheck(kW/2 >= padW && kH/2 >= padH, 2, "pad should be smaller than half of kernel size");
 
   if(ceil_mode) {
     nOutputCols = ceil(float(nInputCols - kW + 2*padW) / float(dW)) + 1;
@@ -64,6 +52,15 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
   else {
     nOutputCols = floor(float(nInputCols - kW + 2*padW) / float(dW)) + 1;
     nOutputRows = floor(float(nInputRows - kH + 2*padH) / float(dH)) + 1;
+  }  
+  
+  if (padW || padH)
+  {
+    // ensure that the last pooling starts inside the image
+    if ((nOutputRows - 1)*dH >= nInputRows + padH)
+      --nOutputRows;
+    if ((nOutputCols  - 1)*dW >= nInputCols  + padW)
+      --nOutputCols;
   }
 
   input = THClTensor_newContiguous(state, input);
@@ -122,26 +119,10 @@ static int clnn_SpatialMaxPooling_updateOutput(lua_State *L)
     THClTensor_resize3d(state, output, nInputPlane, nOutputRows, nOutputCols);
 
   THClTensor_free(state, input);
-
-  return 1;
 }
 
-static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
+void THNN_ClSpatialMaxPooling_updateGradInput(THClState *state, THClTensor *input, THClTensor *gradOutput, THClTensor *gradInput, THClTensor *indices, int kW, int kH, int dW, int dH, int padW, int padH, bool ceil_mode)
 {
-  THClState *state = getCltorchState(L);
-  THClTensor *input = (THClTensor *)luaT_checkudata(L, 2, "torch.ClTensor");
-  THClTensor *gradOutput = (THClTensor *)luaT_checkudata(L, 3, "torch.ClTensor");
-  int kW = luaT_getfieldcheckint(L, 1, "kW");
-  int kH = luaT_getfieldcheckint(L, 1, "kH");
-  int dW = luaT_getfieldcheckint(L, 1, "dW");
-  int dH = luaT_getfieldcheckint(L, 1, "dH");
-  int padW = luaT_getfieldcheckint(L, 1, "padW");
-  int padH = luaT_getfieldcheckint(L, 1, "padH");
-  bool ceil_mode = luaT_getfieldcheckboolean(L, 1, "ceil_mode");
-
-  THClTensor *gradInput = (THClTensor *)luaT_getfieldcheckudata(L, 1, "gradInput", "torch.ClTensor");
-  THClTensor *indices = (THClTensor *)luaT_getfieldcheckudata(L, 1, "indices", "torch.ClTensor");
-
   THAssert(THClTensor_checkGPU(state, 4, input, gradOutput, indices, gradInput));
 
   input = THClTensor_newContiguous(state, input);
@@ -225,21 +206,6 @@ static int clnn_SpatialMaxPooling_updateGradInput(lua_State *L)
   // clean
   THClTensor_free(state, input);
   THClTensor_free(state, gradOutput);
-
-  return 1;
-}
-
-static const struct luaL_Reg clnn_SpatialMaxPooling__ [] = {
-  {"SpatialMaxPooling_updateOutput", clnn_SpatialMaxPooling_updateOutput},
-  {"SpatialMaxPooling_updateGradInput", clnn_SpatialMaxPooling_updateGradInput},
-  {NULL, NULL}
-};
-
-void clnn_SpatialMaxPooling_init(lua_State *L)
-{
-  luaT_pushmetatable(L, "torch.ClTensor");
-  luaT_registeratname(L, clnn_SpatialMaxPooling__, "nn");
-  lua_pop(L,1);
 }
 
 std::string SpatialMaxPooling_getKernelTemplate() {
