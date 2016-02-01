@@ -6,6 +6,7 @@
 #include "THClTensorMath.h"
 #include "THClBlas.h"
 #include "common.h"
+#include "THCLNN.h"
 
 #include "EasyCL.h"
 #include "THClKernels.h"
@@ -17,23 +18,10 @@ using namespace std;
 
 static std::string getKernelTemplate();
 
-static int clnn_SpatialAveragePooling_updateOutput(lua_State *L)
+void THNN_ClSpatialAveragePooling_updateOutput(THClState *state, THClTensor *input, THClTensor *output, int kW, int kH, int dW, int dH, int padW, int padH, bool ceil_mode, bool count_include_pad)
 {
-  THClState *state = getCltorchState(L);
-  THClTensor *input = (THClTensor *)luaT_checkudata(L, 2, "torch.ClTensor");
-  int kW = luaT_getfieldcheckint(L, 1, "kW");
-  int kH = luaT_getfieldcheckint(L, 1, "kH");
-  int dW = luaT_getfieldcheckint(L, 1, "dW");
-  int dH = luaT_getfieldcheckint(L, 1, "dH");
-  int padW = luaT_getfieldcheckint(L, 1, "padW");
-  int padH = luaT_getfieldcheckint(L, 1, "padH");
-  bool ceil_mode = luaT_getfieldcheckboolean(L, 1, "ceil_mode");
-  bool count_include_pad = luaT_getfieldcheckboolean(L, 1, "count_include_pad");
-
-  THClTensor *output = (THClTensor *)luaT_getfieldcheckudata(L, 1, "output", "torch.ClTensor");
-
   THAssert(THClTensor_checkGPU(state, 2, input, output));
-  luaL_argcheck(L, input->nDimension == 3 || input->nDimension == 4, 2, "3D or 4D (batch) tensor expected");
+  THArgCheck(input->nDimension == 3 || input->nDimension == 4, 2, "3D or 4D (batch) tensor expected");
 
   long nInputCols, nInputRows, nInputPlane, batchSize;
   long nOutputCols, nOutputRows;
@@ -52,8 +40,8 @@ static int clnn_SpatialAveragePooling_updateOutput(lua_State *L)
     batchSize = input->size[0];
   }
 
-  luaL_argcheck(L, nInputCols >= kW - 2*padW && nInputRows >= kH - 2*padH, 2, "input image smaller than kernel size");
-  luaL_argcheck(L, kW/2 >= padW && kH/2 >= padH, 2, "pad should be smaller than half of kernel size");
+  THArgCheck(nInputCols >= kW - 2*padW && nInputRows >= kH - 2*padH, 2, "input image smaller than kernel size");
+  THArgCheck(kW/2 >= padW && kH/2 >= padH, 2, "pad should be smaller than half of kernel size");
 
   if(ceil_mode) {
     nOutputCols = ceil(float(nInputCols - kW + 2*padW) / float(dW)) + 1;
@@ -132,26 +120,10 @@ static int clnn_SpatialAveragePooling_updateOutput(lua_State *L)
     THClTensor_resize3d(state, output, nInputPlane, nOutputRows, nOutputCols);
 
   THClTensor_free(state, input);
-
-  return 1;
 }
 
-static int clnn_SpatialAveragePooling_updateGradInput(lua_State *L)
+void THNN_ClSpatialAveragePooling_updateGradInput(THClState *state, THClTensor *input, THClTensor *gradOutput, THClTensor *gradInput, int kW, int kH, int dW, int dH, int padW, int padH, bool ceil_mode, bool count_include_pad)
 {
-  THClState *state = getCltorchState(L);
-  THClTensor *input = (THClTensor *)luaT_checkudata(L, 2, "torch.ClTensor");
-  THClTensor *gradOutput = (THClTensor *)luaT_checkudata(L, 3, "torch.ClTensor");
-  int kW = luaT_getfieldcheckint(L, 1, "kW");
-  int kH = luaT_getfieldcheckint(L, 1, "kH");
-  int dW = luaT_getfieldcheckint(L, 1, "dW");
-  int dH = luaT_getfieldcheckint(L, 1, "dH");
-  int padW = luaT_getfieldcheckint(L, 1, "padW");
-  int padH = luaT_getfieldcheckint(L, 1, "padH");
-  bool ceil_mode = luaT_getfieldcheckboolean(L, 1, "ceil_mode");
-  bool count_include_pad = luaT_getfieldcheckboolean(L, 1, "count_include_pad");
-
-  THClTensor *gradInput = (THClTensor *)luaT_getfieldcheckudata(L, 1, "gradInput", "torch.ClTensor");
-
   THAssert(THClTensor_checkGPU(state, 3, input, gradOutput, gradInput));
 
   input = THClTensor_newContiguous(state, input);
@@ -247,23 +219,8 @@ static int clnn_SpatialAveragePooling_updateGradInput(lua_State *L)
   // clean
   THClTensor_free(state, input);
   THClTensor_free(state, gradOutput);
-
-  return 1;
 }
 
-
-static const struct luaL_Reg clnn_SpatialAveragePooling__ [] = {
-  {"SpatialAveragePooling_updateOutput", clnn_SpatialAveragePooling_updateOutput},
-  {"SpatialAveragePooling_updateGradInput", clnn_SpatialAveragePooling_updateGradInput},
-  {NULL, NULL}
-};
-
-void clnn_SpatialAveragePooling_init(lua_State *L)
-{
-  luaT_pushmetatable(L, "torch.ClTensor");
-  luaT_registeratname(L, clnn_SpatialAveragePooling__, "nn");
-  lua_pop(L,1);
-}
 
 //#undef CL_MAX_THREADS
 
