@@ -26,3 +26,38 @@ TH_API void THNN_ClAbs_updateGradInput(
 //          THClTensor *gradInput,
 //          bool sizeAverage);
 
+TH_API void THNN_ClSpatialConvolutionMM_updateOutput(
+          THClState *state,
+          THClTensor *input,
+          THClTensor *output,
+          THClTensor *weight,
+          THClTensor *bias,
+          THClTensor *columns,
+          THClTensor *ones,
+          int kW, int kH,
+          int dW, int dH,
+          int padW, int padH);
+TH_API void THNN_ClSpatialConvolutionMM_updateGradInput(
+          THClState *state,
+          THClTensor *input,
+          THClTensor *gradOutput,
+          THClTensor *gradInput,
+          THClTensor *weight,
+          THClTensor *bias,
+          THClTensor *columns,
+          THClTensor *ones,
+          int kW, int kH,
+          int dW, int dH,
+          int padW, int padH);
+TH_API void THNN_ClSpatialConvolutionMM_accGradParameters(
+          THClState *state,
+          THClTensor *input,
+          THClTensor *gradOutput,
+          THClTensor *gradWeight,
+          THClTensor *gradBias,
+          THClTensor *columns,
+          THClTensor *ones,
+          int kW, int kH,
+          int dW, int dH,
+          int padW, int padH,
+          float scale);

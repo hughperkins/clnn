@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 """
 This does a first cut port from `../cunn` directory,
 into the `port` subdirectory.
@@ -92,6 +93,7 @@ def process_dir(cunn_dir, port_dir):
     contents = contents.replace('#include "THC', '#include "THCl')
     contents = contents.replace('THC_', 'THCL_')
     contents = contents.replace('THCState', 'THClState')
+    contents = contents.replace('THCudaTensor', 'THClTensor')
     contents = contents.replace('CUTORCH', 'CLTORCH')
     contents = contents.replace('THCBlasState', 'THClBlasState')
     contents = contents.replace('cublasOperation_t', 'clblasTranspose')

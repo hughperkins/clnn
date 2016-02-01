@@ -9,6 +9,7 @@
 #include "templates/TemplatedKernel.h"
 #include "DeviceInfo.h"
 #include "EasyCL.h"
+#include "THCLNN.h"
 
 #include <iostream>
 #include <string>
@@ -126,43 +127,27 @@ void col2im(THClState *state, THClTensor* col, const int channels,
 //  THError("Not implemented");
 }
 
-static int clnn_SpatialConvolutionMM_updateOutput(lua_State *L) {
-  THClState *state = getCltorchState(L);
+void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *input, THClTensor *output, THClTensor *weight, THClTensor *bias, THClTensor *columns, THClTensor *ones, int kW, int kH, int dW, int dH, int padW, int padH) {
+//  THClState *state = getCltorchState(L);
   // Input
-  THClTensor *input = (THClTensor*)luaT_checkudata(L, 2, "torch.ClTensor");
+//  THClTensor *input = (THClTensor*)luaT_checkudata(L, 2, "torch.ClTensor");
 
   // Params:
-  int dW = luaT_getfieldcheckint(L, 1, "dW");
-  int dH = luaT_getfieldcheckint(L, 1, "dH");
-  int kW = luaT_getfieldcheckint(L, 1, "kW");
-  int kH = luaT_getfieldcheckint(L, 1, "kH");
-  int nInputPlane = luaT_getfieldcheckint(L, 1, "nInputPlane");
-  int nOutputPlane = luaT_getfieldcheckint(L, 1, "nOutputPlane");
-  int padW = luaT_getfieldcheckint(L, 1, "padW");
-  int padH = luaT_getfieldcheckint(L, 1, "padH");
+  int nInputPlane = weight->size[1]/(kH*kW);
+  int nOutputPlane = weight->size[0];
 
-//  cout << "dW=" << dW << " dH=" << dH << " kW=" << kW << " kH=" << kH 
-//    << " nInputPlane=" << nInputPlane << " nOutputPlane=" << nOutputPlane
-//   << " padding=" << padding << endl;
-
-  THClTensor *weight = (THClTensor*)luaT_getfieldcheckudata(L, 1, "weight", "torch.ClTensor");
-  THClTensor *bias = (THClTensor*)luaT_getfieldcheckudata(L, 1, "bias", "torch.ClTensor");
-  THClTensor *columns = (THClTensor*)luaT_getfieldcheckudata(L, 1, "finput", "torch.ClTensor");
-  THClTensor *ones = (THClTensor*)luaT_getfieldcheckudata(L, 1, "fgradInput", "torch.ClTensor");
-  THClTensor *output = (THClTensor*)luaT_getfieldcheckudata(L, 1, "output", "torch.ClTensor");
-
-  THAssert(THClTensor_checkGPU(state, 6, input, output, weight,
-                                 bias, columns, ones));
-  luaL_argcheck(L, input->nDimension == 3 || input->nDimension == 4, 2, "3D or 4D (batch mode) tensor is expected");
+//  THAssert(THClTensor_checkGPU(state, 6, input, output, weight,
+//                                 bias, columns, ones));
+//  luaL_argcheck(L, input->nDimension == 3 || input->nDimension == 4, 2, "3D or 4D (batch mode) tensor is expected");
 
   int batch = 1;
   if (input->nDimension == 3) {
-    luaL_argcheck(L, input->size[0] == nInputPlane, 2, "input channels and nInputPlane dont match");
+    THArgCheck(input->size[0] == nInputPlane, 2, "input channels and nInputPlane dont match");
     // Force batch
     batch = 0;
     THClTensor_resize4d(state, input, 1, input->size[0], input->size[1], input->size[2]);
   } else {
-    luaL_argcheck(L, input->size[1] == nInputPlane, 2, "input channels and nInputPlane dont match");
+    THArgCheck(input->size[1] == nInputPlane, 2, "input channels and nInputPlane dont match");
   }
 
   long inputWidth   = input->size[3];
@@ -258,34 +243,19 @@ static int clnn_SpatialConvolutionMM_updateOutput(lua_State *L) {
     THClTensor_resize3d(state, output, nOutputPlane, outputHeight, outputWidth);
     THClTensor_resize3d(state, input, nInputPlane, inputHeight, inputWidth);
   }
-
-  // return output
-  return 1;
 }
 
-static int clnn_SpatialConvolutionMM_updateGradInput(lua_State *L) {
-  THClState *state = getCltorchState(L);
-  // Inputs
-  THClTensor *input = (THClTensor *)luaT_checkudata(L, 2, "torch.ClTensor");
-  THClTensor *gradOutput = (THClTensor *)luaT_checkudata(L, 3, "torch.ClTensor");
-
-  // Params
-  int dW = luaT_getfieldcheckint(L, 1, "dW");
-  int dH = luaT_getfieldcheckint(L, 1, "dH");
-  int kW = luaT_getfieldcheckint(L, 1, "kW");
-  int kH = luaT_getfieldcheckint(L, 1, "kH");
-  int nInputPlane = luaT_getfieldcheckint(L, 1, "nInputPlane");
-  int nOutputPlane = luaT_getfieldcheckint(L, 1, "nOutputPlane");
-  int padW = luaT_getfieldcheckint(L, 1, "padW");
-  int padH = luaT_getfieldcheckint(L, 1, "padH");
-
-  THClTensor *weight = (THClTensor *)luaT_getfieldcheckudata(L, 1, "weight", "torch.ClTensor");
-  THClTensor *gradColumns = (THClTensor*)luaT_getfieldcheckudata(L, 1, "finput", "torch.ClTensor");
-  THClTensor *gradInput = (THClTensor *)luaT_getfieldcheckudata(L, 1, "gradInput", "torch.ClTensor");
+void THNN_ClSpatialConvolutionMM_updateGradInput(THClState *state, THClTensor *input, THClTensor *gradOutput, THClTensor *gradInput, THClTensor *weight, THClTensor *bias, THClTensor *gradColumns, THClTensor *ones, int kW, int kH, int dW, int dH, int padW, int padH) {
 
   THAssert(THClTensor_checkGPU(state, 5, input, gradOutput, weight,
                                  gradColumns, gradInput));
-  luaL_argcheck(L, input->nDimension == 3 || input->nDimension == 4, 2, "3D or 4D (batch mode) tensor is expected");
+  THArgCheck(input->nDimension == 3 || input->nDimension == 4, 2, "3D or 4D (batch mode) tensor is expected");
+  THArgCheck(weight->nDimension == 2, 4, "weight tensor must be 2D (nOutputPlane,nInputPlane*kH*kW)");
+  THArgCheck(weight->size[0] == bias->size[0], 4, "nOutputPlane mismatch in weight and bias");
+
+  // Params
+  int nInputPlane = weight->size[1]/(kW*kH);
+  int nOutputPlane = weight->size[0];
 
   int batch = 1;
   if (input->nDimension == 3) {
@@ -310,22 +280,22 @@ static int clnn_SpatialConvolutionMM_updateGradInput(lua_State *L) {
   THClTensor_resize2d(state, gradColumns, nInputPlane*kW*kH, outputHeight*outputWidth);
 
   // Helpers
-  THClTensor *input_n = THClTensor_newv2(state, input->storage->device);
+  //THClTensor *input_n = THClTensor_newv2(state, input->storage->device);
   THClTensor *gradInput_n = THClTensor_newv2(state, input->storage->device);
   THClTensor *gradOutput_n = THClTensor_newv2(state, input->storage->device);
 
   // For each elt in batch, do:
   for (int elt = 0; elt < batchSize; elt ++) {
     // Matrix mulitply per sample:
-    THClTensor_select(state, input_n, input, 0, elt);
+    //THClTensor_select(state, input_n, input, 0, elt);
     THClTensor_select(state, gradInput_n, gradInput, 0, elt);
     THClTensor_select(state, gradOutput_n, gradOutput, 0, elt);
 
     // M,N,K are dims of matrix A and B
     // (see http://docs.nvidia.com/cuda/clblas/#clblas-lt-t-gt-gemm)
-    long m = weight->size[1];
+    long m = nInputPlane*kW*kH;
     long n = gradColumns->size[1];
-    long k = weight->size[0];
+    long k = nOutputPlane;
 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
     THClBlas_gemm(
@@ -350,7 +320,7 @@ static int clnn_SpatialConvolutionMM_updateGradInput(lua_State *L) {
   }
 
   // Free
-  THClTensor_free(state, input_n);
+  //THClTensor_free(state, input_n);
   THClTensor_free(state, gradInput_n);
   THClTensor_free(state, gradOutput_n);
 
@@ -360,36 +330,19 @@ static int clnn_SpatialConvolutionMM_updateGradInput(lua_State *L) {
     THClTensor_resize3d(state, input, nInputPlane, inputHeight, inputWidth);
     THClTensor_resize3d(state, gradInput, nInputPlane, inputHeight, inputWidth);
   }
-
-  // Return gradInput
-  return 1;
 }
 
-static int clnn_SpatialConvolutionMM_accGradParameters(lua_State *L) {
-  THClState *state = getCltorchState(L);
-  // Inputs
-  THClTensor *input = (THClTensor *)luaT_checkudata(L, 2, "torch.ClTensor");
-  THClTensor *gradOutput = (THClTensor *)luaT_checkudata(L, 3, "torch.ClTensor");
-
-  // Params
-  int dW = luaT_getfieldcheckint(L, 1, "dW");
-  int dH = luaT_getfieldcheckint(L, 1, "dH");
-  int kW = luaT_getfieldcheckint(L, 1, "kW");
-  int kH = luaT_getfieldcheckint(L, 1, "kH");
-  int nInputPlane = luaT_getfieldcheckint(L, 1, "nInputPlane");
-  int nOutputPlane = luaT_getfieldcheckint(L, 1, "nOutputPlane");
-  int padW = luaT_getfieldcheckint(L, 1, "padW");
-  int padH = luaT_getfieldcheckint(L, 1, "padH");
-  float scale = luaL_optnumber(L, 4, 1);
-
-  THClTensor *gradWeight = (THClTensor *)luaT_getfieldcheckudata(L, 1, "gradWeight", "torch.ClTensor");
-  THClTensor *gradBias = (THClTensor *)luaT_getfieldcheckudata(L, 1, "gradBias", "torch.ClTensor");
-  THClTensor *columns = (THClTensor*)luaT_getfieldcheckudata(L, 1, "finput", "torch.ClTensor");
-  THClTensor *ones = (THClTensor*)luaT_getfieldcheckudata(L, 1, "fgradInput", "torch.ClTensor");
+void THNN_ClSpatialConvolutionMM_accGradParameters(THClState *state, THClTensor *input, THClTensor *gradOutput, THClTensor *gradWeight, THClTensor *gradBias, THClTensor *columns, THClTensor *ones, int kW, int kH, int dW, int dH, int padW, int padH, float scale) {
 
   THAssert(THClTensor_checkGPU(state, 6, input, gradOutput, gradWeight,
                                  gradBias, columns, ones));
-  luaL_argcheck(L, input->nDimension == 3 || input->nDimension == 4, 2, "3D or 4D (batch mode) tensor is expected");
+  THArgCheck(input->nDimension == 3 || input->nDimension == 4, 2, "3D or 4D (batch mode) tensor is expected");
+  THArgCheck(gradWeight->nDimension == 2, 4, "gradWeight tensor must be 2D (nOutputPlane,nInputPlane*kH*kW)");
+  THArgCheck(gradWeight->size[0] == gradBias->size[0], 4, "nOutputPlane mismatch in gradWeight and gradBias");
+
+  // Params
+  int nInputPlane = gradWeight->size[1]/(kW*kH);
+  int nOutputPlane = gradWeight->size[0];
 
   int batch = 1;
   if (input->nDimension == 3) {
@@ -438,8 +391,8 @@ static int clnn_SpatialConvolutionMM_accGradParameters(lua_State *L) {
 
     // M,N,K are dims of matrix A and B
     // (see http://docs.nvidia.com/cuda/clblas/#clblas-lt-t-gt-gemm)
-    long m = gradWeight->size[0];
-    long n = gradWeight->size[1];
+    long m = nOutputPlane;
+    long n = nInputPlane*kW*kH;
     long k = columns->size[1];
 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
@@ -482,24 +435,6 @@ static int clnn_SpatialConvolutionMM_accGradParameters(lua_State *L) {
     THClTensor_resize3d(state, gradOutput, nOutputPlane, outputHeight, outputWidth);
     THClTensor_resize3d(state, input, nInputPlane, inputHeight, inputWidth);
   }
-
-  // Return nothing
-  return 0;
-}
-
-static const struct luaL_Reg clnn_SpatialConvolutionMM__ [] = {
-  {"SpatialConvolutionMM_updateOutput", clnn_SpatialConvolutionMM_updateOutput},
-  {"SpatialConvolutionMM_updateGradInput", clnn_SpatialConvolutionMM_updateGradInput},
-  {"SpatialConvolutionMM_accGradParameters", clnn_SpatialConvolutionMM_accGradParameters},
-  {NULL, NULL}
-};
-
-void clnn_SpatialConvolutionMM_init(lua_State *L)
-{
-//  cout << "registering spatialconvolutionmm" << endl;
-  luaT_pushmetatable(L, "torch.ClTensor");
-  luaT_registeratname(L, clnn_SpatialConvolutionMM__, "nn");
-  lua_pop(L,1);
 }
 
 #undef CL_KERNEL_LOOP

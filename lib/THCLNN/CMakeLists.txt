@@ -10,7 +10,7 @@ IF(NOT THCLNN_INSTALL_LIB_SUBDIR)
 ENDIF()
 
 #FILE(GLOB src-cl *.cpp)
-set(src-cl Abs.cpp)
+set(src-cl Abs.cpp SpatialConvolutionMM.cpp)
 
 add_library(THCLNN MODULE ${src-cl})
 
