@@ -1,6 +1,9 @@
 require 'nn'
 require 'cltorch'
 
+nn.Threshold.baseUpdateOutput = nn.Threshold.updateOutput
+nn.Threshold.baseUpdateGradInput = nn.Threshold.updateGradInput
+
 local function floatToString(val)
    local valstring = tostring(val)
    if valstring:find('%.') or valstring:find('e') then
@@ -9,9 +12,11 @@ local function floatToString(val)
    return valstring
 end
 
-function torch.ClTensor.nn.Threshold_updateOutput(self, input)
-   --  print('torch.nn.ReLU
-   --  self.output:map(input, "*out = *in1 > 0.0f ? *in1 : 0.0f")
+function nn.Threshold.updateOutput(self, input)
+   if torch.type(input) ~= 'torch.ClTensor' then
+      return self:baseUpdateOutput(input)
+   end
+
    self.thresholdstring = floatToString(self.threshold)
    self.valstring = floatToString(self.val)
    if self.inplace then
@@ -24,7 +29,11 @@ function torch.ClTensor.nn.Threshold_updateOutput(self, input)
    return self.output
 end
 
-function torch.ClTensor.nn.Threshold_updateGradInput(self, input, gradOutput)
+function nn.Threshold.updateGradInput(self, input, gradOutput)
+   if torch.type(input) ~= 'torch.ClTensor' then
+      return self:baseUpdateGradInput(input, gradOutput)
+   end
+
    local nElement = self.gradInput:nElement()
    self.gradInput:resizeAs(input)
    if self.gradInput:nElement() ~= nElement then
@@ -36,7 +45,6 @@ function torch.ClTensor.nn.Threshold_updateGradInput(self, input, gradOutput)
    else
       self.gradInput:map2(input, gradOutput, "*out = (*in1 > " .. self.thresholdstring .. ") ? *in2 : 0.0f")
    end
-   --  self.gradInput:map2(gradOutput, self.output, "*out = *in2 > 0.0f ? *in1 : 0.0f")
    return self.gradInput
 end
 
