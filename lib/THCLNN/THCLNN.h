@@ -26,18 +26,6 @@ TH_API void THNN_ClELU_updateGradInput(
           THClTensor *output,
           float alpha);
 
-TH_API void THNN_ClMSECriterion_updateOutput(
-          THClState *state,
-          THClTensor *input,
-          THClTensor *target,
-          THClTensor *output,
-          bool sizeAverage);
-TH_API void THNN_ClMSECriterion_updateGradInput(
-          THClState *state,
-          THClTensor *input,
-          THClTensor *target,
-          THClTensor *gradInput,
-          bool sizeAverage);
 TH_API void THNN_ClTanh_updateOutput(
           THClState *state,
           THClTensor *input,
