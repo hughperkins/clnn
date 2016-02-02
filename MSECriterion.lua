@@ -1,12 +1,19 @@
-function torch.ClTensor.nn.MSECriterion_updateOutput(self, input, target)
+require 'nn'
+
+nn.MSECriterion.baseUpdateOutput = nn.MSECriterion.updateOutput
+nn.MSECriterion.baseUpdateGradInput = nn.MSECriterion.updateGradInput
+
+function nn.MSECriterion:updateOutput(input, target)
+   if torch.type(input) ~= 'torch.ClTensor' then
+      return self:baseUpdateOutput(input, target)
+   end
+
    if self.workBuffer == nil then
       self.workBuffer = input:clone()
    end
 
    self.workBuffer:resizeAs(input)
-   self.workBuffer:copy(input)
-   self.workBuffer:csub(target)
-   self.workBuffer:pow(2)
+   self.workBuffer:map2(input, target, "*out = (*in1 - *in2) * (*in1 - *in2)")
    local se = torch.sum(self.workBuffer)
    
    local mse = se
@@ -16,7 +23,11 @@ function torch.ClTensor.nn.MSECriterion_updateOutput(self, input, target)
    return mse
 end
 
-function torch.ClTensor.nn.MSECriterion_updateGradInput(self, input, target)
+function nn.MSECriterion:updateGradInput(input, target)
+   if torch.type(input) ~= 'torch.ClTensor' then
+      return self:baseUpdateGradInput(input, target)
+   end
+
    local norm = 2
    if self.sizeAverage then
       local size = torch.numel(input)

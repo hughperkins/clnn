@@ -40,10 +40,14 @@ function clnntest.mse()
       local ctarget2 = target:cl()
       local cmod2 = nn.MSECriterion(sizeAverage == 1):cl()
       a:reset()
-      local cout2 = cinput2.nn.MSECriterion_updateOutput(cmod,cinput2,ctarget2)
-      local cgin2 = cinput2.nn.MSECriterion_updateGradInput(cmod,cinput2,ctarget2)
+      local cout2 = cmod2:forward(cinput2, ctarget2)
+--      local cout2 = cinput2.nn.MSECriterion_updateOutput(cmod,cinput2,ctarget2)
+      local cgin2 = cmod2:updateGradInput(cinput2, ctarget2)
+--      local cgin2 = cinput2.nn.MSECriterion_updateGradInput(cmod,cinput2,ctarget2)
       cltorch.synchronize()
       tm2.gpu = a:time().real
+--      mytester:asserteq('torch.ClTensor', torch.type(cout2))
+      mytester:asserteq('torch.ClTensor', torch.type(cgin2))
       
       mytester:assertlt(math.abs(fout-cout), precision_forward, 'error on output')
       local gerr = cgin:float() - fgin
@@ -89,10 +93,12 @@ function clnntest.mse_nosizeaverage()
       local ctarget2 = target:cl()
       local cmod2 = nn.MSECriterion(sizeAverage == 0):cl()
       a:reset()
-      local cout2 = cinput2.nn.MSECriterion_updateOutput(cmod,cinput2,ctarget2)
-      local cgin2 = cinput2.nn.MSECriterion_updateGradInput(cmod,cinput2,ctarget2)
+      local cout2 = cmod2:updateOutput(cinput2, ctarget2)
+      local cgin2 = cmod2:updateGradInput(cinput2, ctarget2)
       cltorch.synchronize()
       tm2.gpu = a:time().real
+--      mytester:asserteq('torch.ClTensor', torch.type(cout2))
+      mytester:asserteq('torch.ClTensor', torch.type(cgin2))
       
       mytester:assertlt(math.abs(fout-cout), precision_forward, 'error on output')
       local gerr = cgin:float() - fgin
