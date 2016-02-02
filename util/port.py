@@ -18,6 +18,8 @@ def process_block(block):
     is_cl = True
   if block.find('blockIdx.x') >= 0:
     is_cl = True
+  if block.find('operator()') >= 0:
+    is_cl = False
   if is_cl:
     # kernel method, probably
     block = block.replace('gridDim.x', 'get_num_groups(0)')
@@ -91,6 +93,7 @@ def process_dir(cunn_dir, port_dir):
     contents = contents.replace('CUDA', 'CL')
     contents = contents.replace('Cuda', 'Cl')
     contents = contents.replace('#include "THC', '#include "THCl')
+    contents = contents.replace('THClLNN.h', 'THCLNN.h')
     contents = contents.replace('THC_', 'THCL_')
     contents = contents.replace('THCState', 'THClState')
     contents = contents.replace('THCudaTensor', 'THClTensor')

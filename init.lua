@@ -17,7 +17,6 @@ end
 
 torch.ClTensor.nn = {}
 
-include 'Tanh.lua'
 include 'Pointwise.lua'
 include 'Threshold.lua'
 include 'LogSoftMax.lua'

@@ -10,7 +10,9 @@ IF(NOT THCLNN_INSTALL_LIB_SUBDIR)
 ENDIF()
 
 #FILE(GLOB src-cl *.cpp)
-set(src-cl Abs.cpp SpatialConvolutionMM.cpp ELU.cpp SpatialAveragePooling.cpp SpatialMaxPooling.cpp SoftMax.cpp)
+set(src-cl Abs.cpp SpatialConvolutionMM.cpp ELU.cpp SpatialAveragePooling.cpp SpatialMaxPooling.cpp SoftMax.cpp
+  Tanh.cpp
+)
 
 add_library(THCLNN MODULE ${src-cl})
 
