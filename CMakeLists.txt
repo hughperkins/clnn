@@ -27,7 +27,7 @@ message("Torch_INSTALL_LIB ${Torch_INSTALL_LIB}")
 
 #add_library( clnn SHARED init.cpp )
 
-set(src init.cpp utils.cpp common.cpp
+set(src init.cpp utils.cpp
 )
 set(luasrc init.lua MSECriterion.lua Pointwise.lua Threshold.lua
   LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua THCLNN.lua
