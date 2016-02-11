@@ -121,3 +121,15 @@ TH_API void THNN_ClSoftMax_updateGradInput(
           THClTensor *gradOutput,
           THClTensor *gradInput,
           THClTensor *output);
+
+TH_API void THNN_ClSpatialUpSamplingNearest_updateOutput(
+        THClState *state,
+        THClTensor *input,
+        THClTensor *output,
+        int scale_factor);
+TH_API void THNN_ClSpatialUpSamplingNearest_updateGradInput(
+        THClState *state,
+        THClTensor *input,
+        THClTensor *gradOutput,
+        THClTensor *gradInput,
+        int scale_factor);

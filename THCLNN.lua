@@ -128,6 +128,18 @@ TH_API void THNN_ClSoftMax_updateGradInput(
           THClTensor *gradOutput,
           THClTensor *gradInput,
           THClTensor *output);
+
+TH_API void THNN_ClSpatialUpSamplingNearest_updateOutput(
+      THClState *state,
+      THClTensor *input,
+      THClTensor *output,
+      int scale_factor);
+TH_API void THNN_ClSpatialUpSamplingNearest_updateGradInput(
+      THClState *state,
+      THClTensor *input,
+      THClTensor *gradOutput,
+      THClTensor *gradInput,
+      int scale_factor);
 ]]
 
 local preprocessed = string.gsub(THCLNN_h, 'TH_API ', '')
@@ -154,4 +166,3 @@ THNN.kernels['torch.ClTensor'] = THNN.bind(THCLNN.C, function_names, 'Cl', THCLN
 torch.getmetatable('torch.ClTensor').THNN = THNN.kernels['torch.ClTensor']
 
 return THCLNN
-
