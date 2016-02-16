@@ -29,9 +29,10 @@ message("Torch_INSTALL_LIB ${Torch_INSTALL_LIB}")
 
 set(src init.cpp utils.cpp
 )
-set(luasrc init.lua MSECriterion.lua Pointwise.lua Threshold.lua
+set(luasrc init.lua MSECriterion.lua Pointwise.lua Threshold.lua LookupTable.lua
   LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua THCLNN.lua
   Narrow.lua CMulTable.lua test.lua test/testSpatialMaxPooling.lua test/testSpatialConvolutionMM.lua
+  test/testLookupTable.lua
   test/testMSECriterion.lua test/testSoftMax.lua test/testLogSoftMax.lua test/testSpatialAveragePooling.lua)
 ADD_TORCH_PACKAGE(clnn "${src}" "${luasrc}" )
 

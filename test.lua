@@ -32,6 +32,7 @@ function torch.Tester:assert_sub (condition, message)
    end
 end
 
+include 'testLookupTable.lua'
 include 'testSpatialAveragePooling.lua'
 include 'testLogSoftMax.lua'
 include 'testSoftMax.lua'

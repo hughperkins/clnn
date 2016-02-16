@@ -141,6 +141,10 @@ function mytests.test_relu()
   _testVectorLayer(nn.ReLU(), 4, 4)
 end
 
+function mytests.testLookupTable()
+  _testVectorLayer(nn.LookupTable(), 4, 4)
+end
+
 function mytests.test_LogSoftMax()
   _testVectorLayer(nn.LogSoftMax(), 4 , 4)
 end
