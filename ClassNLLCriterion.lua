@@ -19,6 +19,10 @@ function nn.ClassNLLCriterion:updateOutput(input, target)
    if self.weights then
       error('weights not supported (yet!) in clnn.ClassNLLCriterion.  Please an issue on github, to request this functionality')
    end
+   if input:dim() == 1 then
+      self.output = -input[target]
+      return self.output
+   end
    if input:dim() ~= 2 then
       error('Input to clnn.ClassNLLCriterion should be 2-d tensor')
    end
@@ -37,15 +41,20 @@ function nn.ClassNLLCriterion:updateGradInput(input, target)
    if torch.type(input) ~= 'torch.ClTensor' then
       return self:baseUpdateGradInput(input, target)
    end
+
    self.gradInput:resizeAs(input)
    self.gradInput:zero()
-   
-   local z = -1
-   if self.sizeAverage then
-      z = z / target:size(1)
+
+   if input:dim() == 1 then
+      self.gradInput[target] = -1
+   else
+      local z = -1
+      if self.sizeAverage then
+         z = z / target:size(1)
+      end
+      self.gradInput:scatter(2, target:unfold(1,1,1), z)
    end
-   self.gradInput:scatter(2, target:unfold(1,1,1), z)
-   
+
    return self.gradInput
 end
 
