@@ -21,6 +21,13 @@ function nn.ClassNLLCriterion:updateOutput(input, target)
       error('weights not supported (yet!) in clnn.ClassNLLCriterion.  Please an issue on github, to request this functionality')
    end
 
+   if type(target) == 'number' then
+      self.target[1] = target
+      target = self.target
+   else
+      self.target = target
+   end
+
    if input:dim() == 1 then
       assert(target:dim() == 1, 'target should be 1-d tensor')
       assert(target:size(1) == 1, 'for non-batched input, target should be length 1')
@@ -43,6 +50,13 @@ end
 function nn.ClassNLLCriterion:updateGradInput(input, target)
    if torch.type(input) ~= 'torch.ClTensor' then
       return self:baseUpdateGradInput(input, target)
+   end
+
+   if type(target) == 'number' then
+      self.target[1] = target
+      target = self.target
+   else
+      self.target = target
    end
 
    self.gradInput:resizeAs(input)
