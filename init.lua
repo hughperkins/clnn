@@ -30,4 +30,4 @@ include 'CMulTable.lua'
 
 include 'test.lua'
 
-include 'SpatialUpSamplingNearest.lua'
+--include 'SpatialUpSamplingNearest.lua'
