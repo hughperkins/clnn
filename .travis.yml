@@ -30,6 +30,8 @@ script:
   - luarocks make rocks/clnn-scm-1.rockspec
   - ls ~/torch/install/lib
   - ls ~/torch/install/lib/lua/5.1
+  - otool -L ~/torch/install/lib/lua/5.1/libclnn.so
+  - otool -l ~/torch/install/lib/lua/5.1/libclnn.so | grep RPATH -A2
   - luajit -e "print(package.searchpath('libTHCLNN', package.cpath))"
   - luajit -e 'require "clnn"'
 
