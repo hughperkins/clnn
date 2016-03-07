@@ -30,12 +30,19 @@ message("Torch_INSTALL_LIB ${Torch_INSTALL_LIB}")
 set(src init.cpp utils.cpp
 )
 
+<<<<<<< HEAD
 set(luasrc init.lua MSECriterion.lua Pointwise.lua Threshold.lua LookupTable.lua
   LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua THCLNN.lua
   Narrow.lua CMulTable.lua test.lua test/testSpatialMaxPooling.lua test/testSpatialConvolutionMM.lua
   test/testLookupTable.lua test/testMSECriterion.lua test/testSpatialUpSamplingNearest.lua
   test/testClassNLLCriterion.lua test/testSoftMax.lua test/testLogSoftMax.lua test/testSpatialAveragePooling.lua)
 
+=======
+set(luasrc init.lua MSECriterion.lua Pointwise.lua Threshold.lua
+  LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua THCLNN.lua
+  Narrow.lua CMulTable.lua test.lua test/testSpatialMaxPooling.lua test/testSpatialConvolutionMM.lua test/testSpatialUpSamplingNearest.lua
+  test/testMSECriterion.lua test/testSoftMax.lua test/testLogSoftMax.lua test/testSpatialAveragePooling.lua)
+>>>>>>> 64ebe3541136d24babb387142c09a0424361f162
 ADD_TORCH_PACKAGE(clnn "${src}" "${luasrc}" )
 
 if(DEV_RUN_COG)
