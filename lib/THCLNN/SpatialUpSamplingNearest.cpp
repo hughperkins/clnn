@@ -139,7 +139,7 @@ void THNN_ClSpatialUpSamplingNearest_updateGradInput(THClState *state, THClTenso
     kernel = kernelBuilder.buildKernel(uniqueName, "SpatialUpSamplingNearest.cl",
       SpatialUpSamplingNearest_getKernelTemplate(), "downscale");
   }
-
+  std::cout << gradInput << std::endl;
   THClKernels k(state, kernel);
   k.in(gradInput);
   k.in(gradOutput);
@@ -150,7 +150,7 @@ void THNN_ClSpatialUpSamplingNearest_updateGradInput(THClState *state, THClTenso
   k.in((int)d3);
 
   k.run(GET_BLOCKS(state, count), GET_CL_NUM_THREADS(state));
-
+  std::cout << gradOutput << std::endl;
   // kernel:
   // TODO: kernel
   /* downscale<<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (gradInput_data, gradOutput_data, no_elements,
