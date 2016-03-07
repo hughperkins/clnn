@@ -11,7 +11,7 @@ ENDIF()
 
 #FILE(GLOB src-cl *.cpp)
 set(src-cl Abs.cpp SpatialConvolutionMM.cpp ELU.cpp SpatialAveragePooling.cpp SpatialMaxPooling.cpp
-  SoftMax.cpp Tanh.cpp common.cpp
+  SoftMax.cpp Tanh.cpp common.cpp SpatialUpSamplingNearest.cpp
 )
 
 add_library(THCLNN MODULE ${src-cl})
@@ -21,4 +21,3 @@ TARGET_LINK_LIBRARIES(THCLNN THCl TH EasyCL)
 
 INSTALL(TARGETS THCLNN
   LIBRARY DESTINATION ${THCLNN_INSTALL_LIB_SUBDIR})
-

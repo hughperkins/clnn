@@ -11,7 +11,7 @@ SET(CMAKE_CXX_FLAGS "-std=c++0x -Wall")
 
 execute_process( COMMAND git log -n 1 --pretty=%h OUTPUT_VARIABLE git_commit OUTPUT_STRIP_TRAILING_WHITESPACE)
 #execute_process( COMMAND echo string commit="${git_commit}" > ${CMAKE_CURRENT_SOURCE_DIR}/commit.h )
-file(GENERATE OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/clnn_commit_generated.h 
+file(GENERATE OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/clnn_commit_generated.h
   CONTENT "const char *clnn_commit=\"${git_commit}\";\n"
 )
 
@@ -29,11 +29,13 @@ message("Torch_INSTALL_LIB ${Torch_INSTALL_LIB}")
 
 set(src init.cpp utils.cpp
 )
+
 set(luasrc init.lua MSECriterion.lua Pointwise.lua Threshold.lua LookupTable.lua
   LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua THCLNN.lua
   Narrow.lua CMulTable.lua test.lua test/testSpatialMaxPooling.lua test/testSpatialConvolutionMM.lua
-  test/testLookupTable.lua test/testMSECriterion.lua
+  test/testLookupTable.lua test/testMSECriterion.lua test/testSpatialUpSamplingNearest.lua
   test/testClassNLLCriterion.lua test/testSoftMax.lua test/testLogSoftMax.lua test/testSpatialAveragePooling.lua)
+
 ADD_TORCH_PACKAGE(clnn "${src}" "${luasrc}" )
 
 if(DEV_RUN_COG)
