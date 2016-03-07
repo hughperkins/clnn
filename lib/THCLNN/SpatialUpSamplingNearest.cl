@@ -45,15 +45,11 @@ kernel void upscale(global float *input_data, int input_offset, global float *ou
   ii += get_local_id(1) + get_local_size(1) * (get_local_size(0) * get_num_groups(0)) * get_group_id(1);
   if (ii >= no_elements) return;
   int ipidx = translate_idx(ii, d1, d2, d3, scale_factor);
-<<<<<<< HEAD
   //output[ii]=input[ipidx];
   if(get_global_id(0) == 0) { // only one thread enters this, ever
     output[0] = 123; // some visible value, check anything is happening at all
     //output[1] = input[ipidx]; // find out what is in b[0]
     }
-=======
-  output[ii]=input[ipidx];
->>>>>>> 64ebe3541136d24babb387142c09a0424361f162
 }
 
 /*
@@ -71,11 +67,7 @@ kernel void downscale(global float *gradInput_data_data, int gradInput_data_offs
   for (int i=0; i < scale_factor; i++){
     for(int j=0; j < scale_factor; j++){
       int ipidx = translate_idx_inv(ii, d1, d2, d3, scale_factor, i, j);
-<<<<<<< HEAD
       //gradInput_data[ii] += gradOutput_data[ipidx];
-=======
-      gradInput_data[ii] += gradOutput_data[ipidx];
->>>>>>> 64ebe3541136d24babb387142c09a0424361f162
     }
   }
 }

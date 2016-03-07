@@ -47,20 +47,18 @@ void THNN_ClSpatialUpSamplingNearest_updateOutput(THClState *state, THClTensor *
   int d3;
 
   if (input->nDimension == 3) {
-<<<<<<< HEAD
+
     std::cout << input->size[0] << ' ' << input->size[1] << ' ' << input->size[2] << std::endl;
     std::cout << output->size[0] << ' ' << output->size[1] << ' ' << output->size[2] << std::endl;
-=======
->>>>>>> 64ebe3541136d24babb387142c09a0424361f162
+
     d1 = output->size[0];
     d2 = output->size[1];
     d3 = output->size[2];
   } else {
-<<<<<<< HEAD
+
     std::cout << output->size[0] << ' ' << output->size[1] << ' ' << output->size[2] << ' ' << output->size[3] << std::endl;
     std::cout << input->size[0] << ' ' << input->size[1] << ' ' << input->size[2] << ' ' << input->size[3] << std::endl;
-=======
->>>>>>> 64ebe3541136d24babb387142c09a0424361f162
+
     d1 = output->size[1];
     d2 = output->size[2];
     d3 = output->size[3];
@@ -81,11 +79,10 @@ void THNN_ClSpatialUpSamplingNearest_updateOutput(THClState *state, THClTensor *
       SpatialUpSamplingNearest_getKernelTemplate(), "upscale");
   }
 
-<<<<<<< HEAD
+
   std::cout << output->size << std::endl;
   std::cout << input << std::endl;
-=======
->>>>>>> 64ebe3541136d24babb387142c09a0424361f162
+
   THClKernels k(state, kernel);
   k.in(input);
   k.in(output);
@@ -96,11 +93,7 @@ void THNN_ClSpatialUpSamplingNearest_updateOutput(THClState *state, THClTensor *
   k.in((int)d3);
 
   k.run(GET_BLOCKS(state, count), GET_CL_NUM_THREADS(state));
-<<<<<<< HEAD
   std::cout << output << std::endl;
-=======
-
->>>>>>> 64ebe3541136d24babb387142c09a0424361f162
   // kernel:
   //upscale<blocks, threads, 0, THClState_getCurrentStream(state)> (input_data, output_data, no_elements, scale_factor, d1, d2, d3);
 
@@ -240,15 +233,11 @@ std::string SpatialUpSamplingNearest_getKernelTemplate() {
   "  ii += get_local_id(1) + get_local_size(1) * (get_local_size(0) * get_num_groups(0)) * get_group_id(1);\n"
   "  if (ii >= no_elements) return;\n"
   "  int ipidx = translate_idx(ii, d1, d2, d3, scale_factor);\n"
-<<<<<<< HEAD
   "  //output[ii]=input[ipidx];\n"
   "  if(get_global_id(0) == 0) { // only one thread enters this, ever\n"
   "    output[0] = 123; // some visible value, check anything is happening at all\n"
   "    //output[1] = input[ipidx]; // find out what is in b[0]\n"
   "  }\n"
-=======
-  "  output[ii]=input[ipidx];\n"
->>>>>>> 64ebe3541136d24babb387142c09a0424361f162
   "}\n"
   "\n"
   "/*\n"
@@ -266,11 +255,7 @@ std::string SpatialUpSamplingNearest_getKernelTemplate() {
   "  for (int i=0; i < scale_factor; i++){\n"
   "    for(int j=0; j < scale_factor; j++){\n"
   "      int ipidx = translate_idx_inv(ii, d1, d2, d3, scale_factor, i, j);\n"
-<<<<<<< HEAD
   "      //gradInput_data[ii] += gradOutput_data[ipidx];\n"
-=======
-  "      gradInput_data[ii] += gradOutput_data[ipidx];\n"
->>>>>>> 64ebe3541136d24babb387142c09a0424361f162
   "    }\n"
   "  }\n"
   "}\n"
