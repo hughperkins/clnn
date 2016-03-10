@@ -739,10 +739,6 @@ function clnntest.Sum_backward()
    tm.gpu = a:time().real
 
    local error = rescl:float() - groundgrad
-<<<<<<< HEAD
-
-   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
-=======
 
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
 end
@@ -776,7 +772,6 @@ function clnntest.ClassNLLCriterionMultipleTarget()
 
    local gerr = cgin:float() - fgin
    mytester:assertlt(gerr:abs():max(), precision_forward * 3, 'error on gradInput')
->>>>>>> 64ebe3541136d24babb387142c09a0424361f162
 end
 
 function clnntest.CMul_forward_batch()
@@ -2212,8 +2207,6 @@ function x_clnntest.l1cost()
 end
 
 
-<<<<<<< HEAD
-=======
 function x_clnntest.ClassNLLCriterionSingleTarget()
    local size = math.random(3000,5000)
    local input = torch.randn(size)
@@ -2244,7 +2237,6 @@ function x_clnntest.ClassNLLCriterionSingleTarget()
    mytester:assertlt(gerr:abs():max(), precision_forward, 'error on gradInput')
 end
 
->>>>>>> 64ebe3541136d24babb387142c09a0424361f162
 function x_clnntest.TemporalMaxPooling()
    local input = torch.rand(16, 18, 3)
    local settings = {{2, 2}, {3, 3}, {4, 2}, {2, 4}, {3, 5}}

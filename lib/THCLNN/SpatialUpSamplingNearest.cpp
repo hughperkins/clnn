@@ -35,6 +35,7 @@ void THNN_ClSpatialUpSamplingNearest_updateOutput(THClState *state, THClTensor *
   THAssert(THClTensor_checkGPU(state, 2, input, output));
 
   input = THClTensor_newContiguous(state, input);
+  output = THClTensor_newContiguous(state, output);
   // This is for allocating output Tensor
   long no_elements = 1;
   for(int i = 0; i < input->nDimension; i++){
@@ -45,19 +46,12 @@ void THNN_ClSpatialUpSamplingNearest_updateOutput(THClState *state, THClTensor *
   int d1;
   int d2;
   int d3;
-
   if (input->nDimension == 3) {
-
-    std::cout << input->size[0] << ' ' << input->size[1] << ' ' << input->size[2] << std::endl;
-    std::cout << output->size[0] << ' ' << output->size[1] << ' ' << output->size[2] << std::endl;
 
     d1 = output->size[0];
     d2 = output->size[1];
     d3 = output->size[2];
   } else {
-
-    std::cout << output->size[0] << ' ' << output->size[1] << ' ' << output->size[2] << ' ' << output->size[3] << std::endl;
-    std::cout << input->size[0] << ' ' << input->size[1] << ' ' << input->size[2] << ' ' << input->size[3] << std::endl;
 
     d1 = output->size[1];
     d2 = output->size[2];
@@ -80,12 +74,10 @@ void THNN_ClSpatialUpSamplingNearest_updateOutput(THClState *state, THClTensor *
   }
 
 
-  std::cout << output->size << std::endl;
-  std::cout << input << std::endl;
 
   THClKernels k(state, kernel);
   k.in(input);
-  k.in(output);
+  k.out(output);
   k.in((int)no_elements);
   k.in((int)scale_factor);
   k.in((int)d1);
@@ -93,14 +85,15 @@ void THNN_ClSpatialUpSamplingNearest_updateOutput(THClState *state, THClTensor *
   k.in((int)d3);
 
   k.run(GET_BLOCKS(state, count), GET_CL_NUM_THREADS(state));
-  std::cout << output << std::endl;
   // kernel:
   //upscale<blocks, threads, 0, THClState_getCurrentStream(state)> (input_data, output_data, no_elements, scale_factor, d1, d2, d3);
 
   // check for errors
 
   // final cut:
+  cl->finish();
   THClTensor_free(state, input);
+  THClTensor_wrapper(state, output)->copyToHost();
 
 }
 
@@ -113,6 +106,9 @@ void THNN_ClSpatialUpSamplingNearest_updateGradInput(THClState *state, THClTenso
 
   //float *gradInput_data = THClTensor_data(state, gradInput);
   //float *gradOutput_data = THClTensor_data(state, gradOutput);
+
+  gradInput = THClTensor_newContiguous(state, gradInput);
+  gradOutput = THClTensor_newContiguous(state, gradOutput);
 
   long no_elements = 1;
   for(int i = 0; i < gradInput->nDimension; i++){
@@ -145,9 +141,9 @@ void THNN_ClSpatialUpSamplingNearest_updateGradInput(THClState *state, THClTenso
     kernel = kernelBuilder.buildKernel(uniqueName, "SpatialUpSamplingNearest.cl",
       SpatialUpSamplingNearest_getKernelTemplate(), "downscale");
   }
-  std::cout << gradInput << std::endl;
+  //std::cout << gradInput << std::endl;
   THClKernels k(state, kernel);
-  k.in(gradInput);
+  k.out(gradInput);
   k.in(gradOutput);
   k.in((int)no_elements);
   k.in((int)scale_factor);
@@ -156,13 +152,16 @@ void THNN_ClSpatialUpSamplingNearest_updateGradInput(THClState *state, THClTenso
   k.in((int)d3);
 
   k.run(GET_BLOCKS(state, count), GET_CL_NUM_THREADS(state));
-  std::cout << gradOutput << std::endl;
+  //std::cout << gradOutput << std::endl;
   // kernel:
   // TODO: kernel
   /* downscale<<<blocks, threads, 0, THClState_getCurrentStream(state)>>> (gradInput_data, gradOutput_data, no_elements,
     scale_factor, d1, d2, d3);
   */
   // check for errors
+  cl->finish();
+  THClTensor_free(state, gradOutput);
+  THClTensor_wrapper(state, gradInput)->copyToHost();
 
 }
 /*
@@ -223,7 +222,7 @@ std::string SpatialUpSamplingNearest_getKernelTemplate() {
   "\n"
   "}\n"
   "\n"
-  "kernel void upscale(global float *input_data, int input_offset, global float *output_data, int output_offset, long no_elements,\n"
+  "kernel void upscale(global float* input_data, int input_offset, global float* output_data, int output_offset, long no_elements,\n"
   "                        int scale_factor, int d1, int d2, int d3)\n"
   "{\n"
   "  global float *input = input_data + input_offset;\n"
@@ -233,17 +232,13 @@ std::string SpatialUpSamplingNearest_getKernelTemplate() {
   "  ii += get_local_id(1) + get_local_size(1) * (get_local_size(0) * get_num_groups(0)) * get_group_id(1);\n"
   "  if (ii >= no_elements) return;\n"
   "  int ipidx = translate_idx(ii, d1, d2, d3, scale_factor);\n"
-  "  //output[ii]=input[ipidx];\n"
-  "  if(get_global_id(0) == 0) { // only one thread enters this, ever\n"
-  "    output[0] = 123; // some visible value, check anything is happening at all\n"
-  "    //output[1] = input[ipidx]; // find out what is in b[0]\n"
-  "  }\n"
+  "  output[ii]=input[ipidx];\n"
   "}\n"
   "\n"
   "/*\n"
   " * Description:\n"
   " */\n"
-  "kernel void downscale(global float *gradInput_data_data, int gradInput_data_offset, global float *gradOutput_data_data, int gradOutput_data_offset, long no_elements,\n"
+  "kernel void downscale(global float* gradInput_data_data, int gradInput_data_offset, global float* gradOutput_data_data, int gradOutput_data_offset, long no_elements,\n"
   "                              int scale_factor, int d1, int d2, int d3)\n"
   "{\n"
   "  global float *gradInput_data = gradInput_data_data + gradInput_data_offset;\n"
@@ -255,7 +250,7 @@ std::string SpatialUpSamplingNearest_getKernelTemplate() {
   "  for (int i=0; i < scale_factor; i++){\n"
   "    for(int j=0; j < scale_factor; j++){\n"
   "      int ipidx = translate_idx_inv(ii, d1, d2, d3, scale_factor, i, j);\n"
-  "      //gradInput_data[ii] += gradOutput_data[ipidx];\n"
+  "      gradInput_data[ii] += gradOutput_data[ipidx];\n"
   "    }\n"
   "  }\n"
   "}\n"

@@ -84,8 +84,6 @@ function clnntest.SpatialMaxPooling_forward()
 
    local error = rescl:float() - groundtruth
    mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
-   local error_ind = gconv.indices:float() - sconv.indices
-   mytester:asserteq(error_ind:max(), 0, 'error on indices (forward) ')
 end
 
 function clnntest.SpatialUpSamplingNearest_backward()
