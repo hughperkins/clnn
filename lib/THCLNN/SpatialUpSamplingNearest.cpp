@@ -91,9 +91,7 @@ void THNN_ClSpatialUpSamplingNearest_updateOutput(THClState *state, THClTensor *
   // check for errors
 
   // final cut:
-  cl->finish();
   THClTensor_free(state, input);
-  THClTensor_wrapper(state, output)->copyToHost();
 
 }
 
@@ -159,9 +157,7 @@ void THNN_ClSpatialUpSamplingNearest_updateGradInput(THClState *state, THClTenso
     scale_factor, d1, d2, d3);
   */
   // check for errors
-  cl->finish();
   THClTensor_free(state, gradOutput);
-  THClTensor_wrapper(state, gradInput)->copyToHost();
 
 }
 /*
