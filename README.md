@@ -122,9 +122,9 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 * 31st April:
   * Re-applied:
     * 10th March:
-      * @pawni (Nick Pawlowski) added SpatialUpSamplingNearest.  Thank you Nick
+      * [@pawni](https://github.com/pawni) (Nick Pawlowski) added SpatialUpSamplingNearest.  Thank you Nick
     * 20th February:
-      * @gloine (Jaehyung Lee) added support for non-batched input to ClassNLLCriterion.  Thank you Jaehyung
+      * [@gloine](https://github.com/gloine) (Jaehyung Lee) added support for non-batched input to ClassNLLCriterion.  Thank you Jaehyung
 * 30th April:
   * rolled back to as-of 21st February, prior to lots of THNN changes in upstream Torch
   * additionally, installation procedure is now to use a specific torch distro, for stability
