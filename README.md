@@ -86,7 +86,12 @@ Please see https://github.com/soumith/convnet-benchmarks#imagenet-winners-benchm
   * [nn](https://github.com/torch/nn)
   * [cltorch](https://github.com/hughperkins/cltorch)
 * have updated, right now, cltorch, to latest version, eg `luarocks install cltorch`
-  * any weird build issues on clnn, or seg faults etc, please verify cltorch is latest version before raising issue
+  * any weird build issues on clnn, or seg faults etc, please verify torch, cltorch and nn is latest version before raising issue, ie do:
+```
+luarocks install torch
+luarocks install nn
+luarocks install cltorch
+```
 * have an OpenCL-enabled GPU device available, and appropriate OpenCL-enabled drivers installed
 
 ### Procedure
