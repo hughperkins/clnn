@@ -51,11 +51,11 @@ kernel void upscale(global float *input_data, int input_offset, global float *ou
 /*
  * Description:
  */
-kernel void downscale(global float *gradInput_data_data, int gradInput_data_offset, global float *gradOutput_data_data, int gradOutput_data_offset, long no_elements,
+kernel void downscale(global float *gradInput_data, int gradInput_offset, global float *gradOutput_data, int gradOutput_offset, int no_elements,
                               int scale_factor, int d1, int d2, int d3)
 {
-  global float *gradInput_data = gradInput_data_data + gradInput_data_offset;
-  global float *gradOutput_data = gradOutput_data_data + gradOutput_data_offset;
+  global float *gradInput = gradInput_data + gradInput_offset;
+  global float *gradOutput = gradOutput_data + gradOutput_offset;
   // output offset:
   long ii = get_local_id(0) + get_local_size(0) * get_group_id(0);
   ii += get_local_id(1) + get_local_size(1) * (get_local_size(0) * get_num_groups(0)) * get_group_id(1);
@@ -63,7 +63,7 @@ kernel void downscale(global float *gradInput_data_data, int gradInput_data_offs
   for (int i=0; i < scale_factor; i++){
     for(int j=0; j < scale_factor; j++){
       int ipidx = translate_idx_inv(ii, d1, d2, d3, scale_factor, i, j);
-      gradInput_data[ii] += gradOutput_data[ipidx];
+      gradInput[ii] += gradOutput[ipidx];
     }
   }
 }
