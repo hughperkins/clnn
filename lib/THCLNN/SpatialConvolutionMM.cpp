@@ -442,9 +442,9 @@ void THNN_ClSpatialConvolutionMM_accGradParameters(THClState *state, THClTensor 
 std::string SpatialConvolutionMM_getKernelTemplate() {
   // [[[cog
   // import stringify
-  // stringify.write_kernel( "kernel", "SpatialConvolutionMM.cl" )
+  // stringify.write_kernel( "kernel", "lib/THCLNN/SpatialConvolutionMM.cl" )
   // ]]]
-  // generated using cog, from SpatialConvolutionMM.cl:
+  // generated using cog, from lib/THCLNN/SpatialConvolutionMM.cl:
   const char * kernelSource =  
   "// from SpatialConvolutionMM.cu:\n"
   "\n"

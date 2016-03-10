@@ -35,7 +35,7 @@
 
 }
 
-kernel void upscale(global float *input_data, int input_offset, global float *output_data, int output_offset, long no_elements,
+kernel void upscale(global float *input_data, int input_offset, global float *output_data, int output_offset, int no_elements,
                         int scale_factor, int d1, int d2, int d3)
 {
   global float *input = input_data + input_offset;
