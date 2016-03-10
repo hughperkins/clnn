@@ -143,6 +143,10 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 ## Recent changes
 
+* 10th March:
+  * @pawni (Nick Pawlowski) added SpatialUpSamplingNearest.  Thank you Nick
+* 20th February:
+  * @gloine (Jaehyung Lee) added support for non-batched input to ClassNLLCriterion.  Thank you Jaehyung
 * 1st Feb:
   * merged/ported THNN phase 3.  Any weird build issues, please update both `nn` and `clnn`.
 * 2nd January, 2016:
