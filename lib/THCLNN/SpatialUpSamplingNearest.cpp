@@ -177,10 +177,10 @@ void clnn_SpatialUpSamplingNearest_init(lua_State *L)
 std::string SpatialUpSamplingNearest_getKernelTemplate() {
   // [[[cog
   // import stringify
-  // stringify.write_kernel( "kernel", "SpatialUpSamplingNearest.cl" )
+  // stringify.write_kernel( "kernel", "lib/THCLNN/SpatialUpSamplingNearest.cl" )
   // ]]]
-  // generated using cog, from SpatialUpSamplingNearest.cl:
-  const char * kernelSource =
+  // generated using cog, from lib/THCLNN/SpatialUpSamplingNearest.cl:
+  const char * kernelSource =  
   "// from SpatialUpSamplingNearest.cu:\n"
   "\n"
   "/*__device__*/ int translate_idx(int ii, int d1, int d2, int d3, int scale_factor)\n"
@@ -218,7 +218,7 @@ std::string SpatialUpSamplingNearest_getKernelTemplate() {
   "\n"
   "}\n"
   "\n"
-  "kernel void upscale(global float* input_data, int input_offset, global float* output_data, int output_offset, long no_elements,\n"
+  "kernel void upscale(global float *input_data, int input_offset, global float *output_data, int output_offset, int no_elements,\n"
   "                        int scale_factor, int d1, int d2, int d3)\n"
   "{\n"
   "  global float *input = input_data + input_offset;\n"
@@ -234,7 +234,7 @@ std::string SpatialUpSamplingNearest_getKernelTemplate() {
   "/*\n"
   " * Description:\n"
   " */\n"
-  "kernel void downscale(global float* gradInput_data_data, int gradInput_data_offset, global float* gradOutput_data_data, int gradOutput_data_offset, long no_elements,\n"
+  "kernel void downscale(global float *gradInput_data_data, int gradInput_data_offset, global float *gradOutput_data_data, int gradOutput_data_offset, long no_elements,\n"
   "                              int scale_factor, int d1, int d2, int d3)\n"
   "{\n"
   "  global float *gradInput_data = gradInput_data_data + gradInput_data_offset;\n"

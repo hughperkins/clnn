@@ -211,9 +211,9 @@ void THNN_ClSpatialMaxPooling_updateGradInput(THClState *state, THClTensor *inpu
 std::string SpatialMaxPooling_getKernelTemplate() {
   // [[[cog
   // import stringify
-  // stringify.write_kernel( "kernel", "SpatialMaxPooling.cl" )
+  // stringify.write_kernel( "kernel", "lib/THCLNN/SpatialMaxPooling.cl" )
   // ]]]
-  // generated using cog, from SpatialMaxPooling.cl:
+  // generated using cog, from lib/THCLNN/SpatialMaxPooling.cl:
   const char * kernelSource =  
   "// from SpatialMaxPooling.cu:\n"
   "\n"

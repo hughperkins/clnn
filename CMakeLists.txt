@@ -23,7 +23,7 @@ add_definitions(-DUSE_CLEW)
 INCLUDE_DIRECTORIES("${Torch_INSTALL_INCLUDE}/THCl")
 INCLUDE_DIRECTORIES("${Torch_INSTALL_INCLUDE}/easycl")
 LINK_DIRECTORIES("${Torch_INSTALL_LIB}")
-message("Torch_INSTALL_LIB ${Torch_INSTALL_LIB}")
+#message("Torch_INSTALL_LIB ${Torch_INSTALL_LIB}")
 
 #add_library( clnn SHARED init.cpp )
 
@@ -41,7 +41,7 @@ ADD_TORCH_PACKAGE(clnn "${src}" "${luasrc}" )
 if(DEV_RUN_COG)
     add_custom_target(
         cog_clnn
-        python ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cogapp/cog.py -q -I ${CMAKE_CURRENT_SOURCE_DIR}/cog-batteries -r ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/*.h
+        python ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cogapp/cog.py -q -I ${CMAKE_CURRENT_SOURCE_DIR}/cog-batteries -r ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/*.h ${CMAKE_CURRENT_SOURCE_DIR}/lib/THCLNN/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/lib/THCLNN/*.h
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
     add_dependencies( clnn cog_clnn )
