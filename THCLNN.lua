@@ -26,14 +26,16 @@ TH_API void THNN_ClELU_updateOutput(
           THClState *state,
           THClTensor *input,
           THClTensor *output,
-          float alpha);
+          float alpha,
+          bool inplace);
 TH_API void THNN_ClELU_updateGradInput(
           THClState *state,
           THClTensor *input,
           THClTensor *gradOutput,
           THClTensor *gradInput,
           THClTensor *output,
-          float alpha);
+          float alpha,
+          bool inplace);
 TH_API void THNN_ClTanh_updateOutput(
           THClState *state,
           THClTensor *input,

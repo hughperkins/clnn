@@ -32,6 +32,9 @@ function torch.Tester:assert_sub (condition, message)
    end
 end
 
+include 'testhelpers.lua'
+
+include 'testELU.lua'
 include 'testClassNLLCriterion.lua'
 include 'testLookupTable.lua'
 include 'testSpatialAveragePooling.lua'
@@ -42,42 +45,7 @@ include 'testSpatialMaxPooling.lua'
 include 'testSpatialConvolutionMM.lua'
 include 'testSpatialUpSamplingNearest.lua'
 
-local function pointwise_transposed(proto_module, name, max_error)
-   max_error = max_error or 1e-7
-   local tm = {}
-   local title = name .. '.transposed'
-   times[title] = tm
-
-   local input = torch.Tensor(11, 19):uniform(-1, 1)
-   if name == 'Sqrt' then
-      input:uniform(0.1, 1)
-   end
-   local inputCl = input:clone():cl()
-
-   local cl_module = proto_module:clone():cl()
-
-   -- transpose the inputs and DON'T make contiguous
-   input = input:transpose(1, 2)
-   inputCl = inputCl:transpose(1, 2)
-
-   local output = proto_module:forward(input)
-   local outputCl = cl_module:forward(inputCl)
-
-   local error = outputCl:float() - output
-   mytester:assertlt(error:abs():max(), max_error, 'error on state (forward) ')
-
-   local gradOutput = torch.Tensor(11, 19):uniform(-1, 1)
-   local gradOutputCl = gradOutput:clone():cl()
-
-   gradOutput = gradOutput:transpose(1, 2)
-   gradOutputCl = gradOutputCl:transpose(1, 2)
-
-   local gradInput = proto_module:backward(input, gradOutput)
-   local gradInputCl = cl_module:backward(inputCl, gradOutputCl)
-
-   local error = gradInputCl:float() - gradInput
-   mytester:assertlt(error:abs():max(), max_error, 'error on state (backward) ')
-end
+local pointwise_transposed = clnn._testhelpers.pointwise_transposed
 
 function clnntest.Tanh_forward()
    local size = math.random(1,100)
@@ -142,78 +110,6 @@ function clnntest.Tanh_backward()
    local error = rescl:float() - groundgrad
 
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
-end
-
-function clnntest.ELU_forward()
-   torch.manualSeed(123)
-   local size = math.random(1,100)
-
-   local tm = {}
-   local title = string.format('ELU forward %d -> %d', size, size)
-   times[title] = tm
-
-   local input = torch.randn(size)
-   local sconv = nn.ELU()
-   local groundtruth = sconv:forward(input)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundtruth = sconv:forward(input)
-   end
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   local gconv = nn.ELU():cl()
-   local rescuda = gconv:forward(input)
-   a:reset()
-   for i = 1,nloop do
-      rescuda = gconv:forward(input)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local error = rescuda:float() - groundtruth
-   mytester:assertlt(error:abs():max(), precision_forward, 'error on state (forward) ')
-end
-
-function clnntest.ELU_backward()
-   torch.manualSeed(123)
-   local size = math.random(1,100)
-
-   local tm = {}
-   local title = string.format('ELU.backward %d -> %d', size, size)
-   times[title] = tm
-
-   local input = torch.randn(size)
-   local gradOutput = torch.randn(size)
-   local sconv = nn.ELU()
-   sconv:forward(input)
-   local groundgrad = sconv:backward(input, gradOutput)
-   local a = torch.Timer()
-   for i = 1,nloop do
-      groundgrad = sconv:backward(input, gradOutput)
-   end
-   tm.cpu = a:time().real
-
-   input = input:cl()
-   gradOutput = gradOutput:cl()
-   local gconv = sconv:clone():cl()
-   gconv:forward(input)
-   local rescuda = gconv:backward(input, gradOutput)
-   a:reset()
-   for i = 1,nloop do
-      rescuda = gconv:backward(input, gradOutput)
-   end
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   local error = rescuda:float() - groundgrad
-
-   mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
-end
-
-clnntest.ELU_transposed = function()
-   torch.manualSeed(123)
-      pointwise_transposed(nn.ELU(), 'ELU', 1.5e-7)
 end
 
 function clnntest.Abs_forward()
