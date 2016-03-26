@@ -84,9 +84,11 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
     long k_ = 1;
 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
+//    cout << "THCLBlas_Gemm('t', 'n', " << n_ << ", " << m_ << " ," << k_ << ", 1, ones, " << k_ << ", bias, " << k_
+//       << ", 0, output_n, " << n_ << ");" << endl;
     THClBlas_gemm(
         state,
-        't', 'n',
+        'n', 'n',
         n_, m_, k_,
         1,
         ones, k_,
@@ -111,6 +113,8 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
     long k = nInputPlane*kH*kW;
 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
+//    cout << "THCLBlas_Gemm('n', 'n', " << n << ", " << m << " ," << k << ", 1, columns, " << n << ", weight, " << k
+//       << ", 1, output_n, " << n << ");" << endl;
     THClBlas_gemm(
         state,
         'n', 'n',
