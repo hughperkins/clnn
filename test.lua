@@ -34,6 +34,7 @@ end
 
 include 'testhelpers.lua'
 
+include 'testTemporalConvolution2.lua'
 include 'testELU.lua'
 include 'testClassNLLCriterion.lua'
 include 'testLookupTable.lua'
