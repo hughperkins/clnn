@@ -31,10 +31,10 @@ set(src init.cpp utils.cpp
 )
 
 set(luasrc init.lua MSECriterion.lua Pointwise.lua Threshold.lua LookupTable.lua
-  LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua THCLNN.lua
+  LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua THCLNN.lua TemporalConvolution2.lua
   Narrow.lua CMulTable.lua test.lua test/testSpatialMaxPooling.lua test/testSpatialConvolutionMM.lua
   test/testLookupTable.lua test/testMSECriterion.lua test/testSpatialUpSamplingNearest.lua
-  test/testELU.lua test/testhelpers.lua
+  test/testELU.lua test/testhelpers.lua test/testTemporalConvolution2.lua
   test/testClassNLLCriterion.lua test/testSoftMax.lua test/testLogSoftMax.lua test/testSpatialAveragePooling.lua)
 
 ADD_TORCH_PACKAGE(clnn "${src}" "${luasrc}" )

@@ -17,6 +17,8 @@ end
 
 torch.ClTensor.nn = {}
 
+include 'TemporalConvolution2.lua'
+
 include 'LookupTable.lua'
 include 'Pointwise.lua'
 include 'Threshold.lua'
