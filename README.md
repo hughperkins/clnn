@@ -24,6 +24,8 @@ These mostly 'just work', since based on underlying tensor methods, already impl
 * nn.SpatialConvolutionMM
 * nn.SpatialMaxPooling (including `ceil` mode)
 * nn.SpatialAveragePooling
+* nn.TemporalConvolution2  This is specific to clnn.  It works on cpu and cuda too, not just on OpenCL.  It is API-compatible with TemporalConvolution,
+and faster than TemporalConvolution, on both CUDA and OpenCL.
 
 ### Transfer function layers
 
@@ -148,6 +150,8 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 ## Recent changes
 
+* 26th March:
+  * add TemporalConvolution2: same API and usage as TemporalConvolution, but faster on GPUs
 * 10th March:
   * [@pawni](https://github.com/pawni) (Nick Pawlowski) added SpatialUpSamplingNearest.  Thank you Nick
 * 20th February:
