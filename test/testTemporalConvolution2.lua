@@ -55,6 +55,73 @@ function clnntest.TemporalConvolution2_forward()  -- check forward 'by hand', th
   mytester:assertlt((output:float() - ourOut):abs():max(), 0.0001)
 end
 
-function clnntest.TemporalConvolution2_backward()
+function clnntest.TemporalConvolution2_backward_gradInput()
+  torch.manualSeed(123)
+  local batchSize = 5
+  local inFeatures = 6
+  local outFeatures = 7
+  local sentenceLength = 10
+  local kernelSize = 3
+  local input = torch.ClTensor(batchSize, sentenceLength, inFeatures):uniform()
+  local net = nn.TemporalConvolution2(inFeatures, outFeatures, kernelSize)
+  net:cl()
+  local params, gradParams = net:getParameters()
+
+  local target = torch.ClTensor(batchSize, sentenceLength - 2, outFeatures):uniform()
+  local crit = nn.MSECriterion()
+  crit:cl()
+
+  function opfunc(collapsedInput)
+    net:evaluate()
+    local out = net:forward(input)
+    local loss = crit:forward(out, target)
+    local gradOutput = crit:backward(out, target)
+    local gradInput = net:backward(input, gradOutput)
+    return loss, gradInput:view(-1):double()
+  end
+
+  local eps = 1e-2
+  local d, c, c_est = optim.checkgrad(opfunc, input:view(-1), eps)
+--  local comp = torch.FloatTensor(c:size(1), 2)
+--  comp:narrow(2,1,1):copy(c)
+--  comp:narrow(2,2,1):copy(c_est)
+--  print('comp', comp)
+--  print('d', d)
+  mytester:assertlt(math.abs(d), 0.001)
+end
+
+function clnntest.TemporalConvolution2_backward_gradParams()
+  local batchSize = 5
+  local inFeatures = 6
+  local outFeatures = 7
+  local sentenceLength = 10
+  local kernelSize = 3
+  local input = torch.ClTensor(batchSize, sentenceLength, inFeatures):uniform()
+  local net = nn.TemporalConvolution2(inFeatures, outFeatures, kernelSize)
+  net:cl()
+  local params, gradParams = net:getParameters()
+
+  local target = torch.ClTensor(batchSize, sentenceLength - 2, outFeatures):uniform()
+  local crit = nn.MSECriterion()
+  crit:cl()
+
+  function opfunc(params)
+    net:evaluate()
+    gradParams:zero()
+    local out = net:forward(input)
+    local loss = crit:forward(out, target)
+    local gradOutput = crit:backward(out, target)
+    local gradInput = net:backward(input, gradOutput)
+    return loss, gradParams:double()
+  end
+
+  local eps = 1e-2
+  local d, c, c_est = optim.checkgrad(opfunc, params, eps)
+--  local comp = torch.FloatTensor(c:size(1), 2)
+--  comp:narrow(2,1,1):copy(c)
+--  comp:narrow(2,2,1):copy(c_est)
+--  print('comp', comp)
+--  print('d', d)
+  mytester:assertlt(math.abs(d), 0.001)
 end
 
