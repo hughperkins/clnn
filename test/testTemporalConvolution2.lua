@@ -9,10 +9,10 @@ local precision_backward = 1e-3
 require 'optim'
 
 function clnntest.TemporalConvolution2_forward()  -- check forward 'by hand', then use optim for backward
-  local batchSize = 1
-  local inFeatures = 1
+  local batchSize = 5
+  local inFeatures = 6
   local outFeatures = 7
-  local sentenceLength = 3
+  local sentenceLength = 10
   local kernelSize = 3
 --  local stride = 1
   local input = torch.ClTensor(batchSize, sentenceLength, inFeatures):uniform()
@@ -23,8 +23,8 @@ function clnntest.TemporalConvolution2_forward()  -- check forward 'by hand', th
   net.bias:zero()  -- simplify test for now...
   local output = net:forward(input)
   -- calc 'by hand' to check
-  print('weights:size()', weights:size())
-  print('output:size()', output:size())
+--  print('weights:size()', weights:size())
+--  print('output:size()', output:size())
   local outLength = sentenceLength - math.floor(kernelSize / 2) * 2
   local ourOut = torch.FloatTensor(batchSize, outLength, outFeatures):zero()
   -- each batch item is independent, calculated separately from others
@@ -46,12 +46,12 @@ function clnntest.TemporalConvolution2_forward()  -- check forward 'by hand', th
       end
     end
   end
-  print('output[1]')
-  print(output[1])
-  print('ourOut[1]')
-  print(ourOut[1])
-  print('output[1] - ourOut[1]')
-  print(output[1]:float() - ourOut[1])
+--  print('output[1]')
+--  print(output[1])
+--  print('ourOut[1]')
+--  print(ourOut[1])
+--  print('output[1] - ourOut[1]')
+--  print(output[1]:float() - ourOut[1])
   mytester:assertlt((output:float() - ourOut):abs():max(), 0.0001)
 end
 

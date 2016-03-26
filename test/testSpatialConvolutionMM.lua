@@ -10,10 +10,10 @@ function clnntest.SpatialConvolutionMM_forward_1d_byhand()
   -- do a 1d convolution, as per clnntest.TemporalConvolution2_forward(), but directly on
   -- SpatialConvolutionMM
 
-  local batchSize = 1
-  local inFeatures = 1
+  local batchSize = 5
+  local inFeatures = 6
   local outFeatures = 7
-  local sentenceLength = 3
+  local sentenceLength = 10
   local kernelSize = 3
   local net = nn.SpatialConvolutionMM(inFeatures, outFeatures, 1, kernelSize)
   net:cl()
@@ -23,10 +23,10 @@ function clnntest.SpatialConvolutionMM_forward_1d_byhand()
   local input = torch.FloatTensor(batchSize, inFeatures, sentenceLength, 1):uniform()
   input = input:cl()
   local output = net:forward(input)
-  print('weights:size()', weights:size())
+--  print('weights:size()', weights:size())
   weights = weights:view(torch.LongStorage({outFeatures, inFeatures, kernelSize}))
-  print('weights:size()', weights:size())
-  print('output:size()', output:size())
+--  print('weights:size()', weights:size())
+--  print('output:size()', output:size())
   local outLength = sentenceLength - math.floor(kernelSize / 2) * 2
   local ourOut = torch.FloatTensor(batchSize, outFeatures, outLength, 1):zero()
 
@@ -48,12 +48,12 @@ function clnntest.SpatialConvolutionMM_forward_1d_byhand()
       end
     end
   end
-  print('output[1]')
-  print(output[1])
-  print('ourOut[1]')
-  print(ourOut[1])
-  print('output[1] - ourOut[1]')
-  print(output[1]:float() - ourOut[1])
+--  print('output[1]')
+--  print(output[1])
+--  print('ourOut[1]')
+--  print(ourOut[1])
+--  print('output[1] - ourOut[1]')
+--  print(output[1]:float() - ourOut[1])
   mytester:assertlt((output:float() - ourOut):abs():max(), 0.0001)
 end
 
