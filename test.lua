@@ -1,4 +1,4 @@
-local clnntest = {}
+local clnntest = torch.TestSuite()
 local precision_forward = 1e-4
 local precision_backward = 1e-2
 local nloop = 1
@@ -638,37 +638,6 @@ function clnntest.Sum_backward()
    local error = rescl:float() - groundgrad
 
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
-end
-
-function clnntest.ClassNLLCriterionMultipleTarget()
-   local size = 3000
-   local input = torch.randn(size, size)
-   local target = torch.randperm(size)
-   local mod = nn.ClassNLLCriterion()
-
-   local tm = {}
-   local title = string.format('ClassNLLCriterionMultiTarget %d ',size)
-   times[title] = tm
-
-   local a = torch.Timer()
-   local fout = mod:forward(input, target)
-   local fgin = mod:backward(input, target):clone()
-   tm.cpu = a:time().real
-
-   local cinput = input:cl()
-   local ctarget = target:cl()
-   local cmod = nn.ClassNLLCriterion():cl()
-   a:reset()
-   local cout = cmod:forward(cinput,ctarget)
-   local cgin = cmod:backward(cinput,ctarget)
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   mytester:assertlt(
-      math.abs(fout-cout), precision_forward, 'error on output')
-
-   local gerr = cgin:float() - fgin
-   mytester:assertlt(gerr:abs():max(), precision_forward * 3, 'error on gradInput')
 end
 
 function clnntest.CMul_forward_batch()
@@ -2510,8 +2479,8 @@ local function setUp()
    initSeed(123456, false)
 end
 
-for k,v in pairs(clnntest) do
-   clnntest[k] = function()
+for k,v in pairs(clnntest.__tests) do
+   clnntest.__tests[k] = function()
       setUp()
       v()
    end
@@ -2538,19 +2507,19 @@ function nn.testcl(tests, print_timing, n_loop, seed)
    -- initSeed(seed)
    mytester = torch.Tester()
    local mytests = clnntest
-   if os.getenv('TESTS') ~= nil then
-      mytests = {}
-      for name, test in pairs(clnntest) do
-         if name == os.getenv('TESTS') then
-            table.insert(mytests, test)
-         end
-      end
-   elseif os.getenv('LIST') ~= nil then
-      for name, test in pairs(clnntest) do
-         print(name)
-      end
-      os.exit(0)
-   end
+--   if os.getenv('TESTS') ~= nil then
+--      mytests = {}
+--      for name, test in pairs(clnntest) do
+--         if name == os.getenv('TESTS') then
+--            table.insert(mytests, test)
+--         end
+--      end
+--   elseif os.getenv('LIST') ~= nil then
+--      for name, test in pairs(clnntest) do
+--         print(name)
+--      end
+--      os.exit(0)
+--   end
    mytester:add(mytests)
    mytester:run(tests)
    torch.setdefaulttensortype(oldtype)
