@@ -119,6 +119,10 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 ## Recent changes
 
+* 31st April:
+  * reapplied:
+    * 9th April:
+      * fixed a regression on BatchNormalization and SpatialBatchNormalization, and added tests for these
 * 30th April:
   * rolled back to as-of 21st February, prior to lots of THNN changes in upstream Torch
   * additionally, installation procedure is now to use a specific torch distro, for stability
