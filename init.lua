@@ -17,6 +17,8 @@ end
 
 torch.ClTensor.nn = {}
 
+include 'BatchNormalization.lua'
+--include 'SpatialBatchNormalization.lua'
 include 'TemporalConvolution2.lua'
 
 include 'LookupTable.lua'

@@ -34,7 +34,8 @@ set(luasrc init.lua MSECriterion.lua Pointwise.lua Threshold.lua LookupTable.lua
   LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua THCLNN.lua TemporalConvolution2.lua
   Narrow.lua CMulTable.lua test.lua test/testSpatialMaxPooling.lua test/testSpatialConvolutionMM.lua
   test/testLookupTable.lua test/testMSECriterion.lua test/testSpatialUpSamplingNearest.lua
-  test/testELU.lua test/testhelpers.lua test/testTemporalConvolution2.lua
+  test/testELU.lua test/testhelpers.lua test/testTemporalConvolution2.lua test/testBatchNormalization.lua
+  BatchNormalization.lua SpatialBatchNormalization.lua
   test/testClassNLLCriterion.lua test/testSoftMax.lua test/testLogSoftMax.lua test/testSpatialAveragePooling.lua)
 
 ADD_TORCH_PACKAGE(clnn "${src}" "${luasrc}" )
