@@ -3,6 +3,7 @@ require 'nn'
 local BN = nn.BatchNormalization
 
 nn.BatchNormalization.baseUpdateOutput = nn.BatchNormalization.updateOutput
+nn.BatchNormalization.baseBackward = nn.BatchNormalization.backward
 nn.BatchNormalization.baseUpdateGradInput = nn.BatchNormalization.updateGradInput
 nn.BatchNormalization.baseAccGradParameters = nn.BatchNormalization.accGradParameters
 nn.BatchNormalization.baseAccUpdateGradParameters = nn.BatchNormalization.accUpdateGradParameters
@@ -18,12 +19,12 @@ function BN:updateOutput(input)
 
    -- buffers that are reused
    self.buffer = self.buffer or input.new()
---   self.buffer2 = self.buffer2 or input.new()
+   self.buffer2 = self.buffer2 or input.new()
    self.centered = self.centered or input.new()
    self.centered:resizeAs(input)
 ----   self.invstd = self.invstd or input.new()
---   self.normalized = self.normalized or input.new()
---   self.normalized:resizeAs(input)
+   self.normalized = self.normalized or input.new()
+   self.normalized:resizeAs(input)
 
    self.output:resizeAs(input)
    self.gradInput:resizeAs(input)
@@ -77,7 +78,7 @@ function BN:updateOutput(input)
       -- divide standard-deviation + eps
       self.buffer:repeatTensor(self.save_std, nBatch, 1)
       self.output:cmul(self.centered, self.buffer)
-  --      self.normalized:copy(self.output)
+      self.normalized:copy(self.output)
    end
 
    if self.affine then
@@ -89,6 +90,16 @@ function BN:updateOutput(input)
    end
 
    return self.output
+end
+
+function BN:backward(input, gradOutput, scale)
+   if torch.type(input) ~= 'torch.ClTensor' then
+      return self:baseBackward(input, gradOutput, scale)
+   end
+
+   local gradInput = self:updateGradInput(input, gradOutput)
+   self:accGradParameters(input, gradOutput, scale)
+   return gradInput
 end
 
 function BN:updateGradInput(input, gradOutput)
@@ -105,13 +116,13 @@ function BN:updateGradInput(input, gradOutput)
    self.buffer:mean(self.gradInput, 1)
    self.gradInput:repeatTensor(self.buffer, nBatch, 1)
    self.gradInput:cmul(self.centered):mul(-1)
-   self.buffer:repeatTensor(self.std, nBatch, 1)
+   self.buffer:repeatTensor(self.save_std, nBatch, 1)
    self.gradInput:cmul(self.buffer):cmul(self.buffer)
 
    self.buffer:mean(gradOutput, 1)
    self.buffer:repeatTensor(self.buffer, nBatch, 1)
    self.gradInput:add(gradOutput):add(-1, self.buffer)
-   self.buffer:repeatTensor(self.std, nBatch, 1)
+   self.buffer:repeatTensor(self.save_std, nBatch, 1)
    self.gradInput:cmul(self.buffer)
 
    if self.affine then
