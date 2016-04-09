@@ -39,10 +39,6 @@ function BN:updateOutput(input)
    self.save_std = self.save_std or input.new()
    self.save_std:resizeAs(self.running_var)
 
---   if self.running_std == nil then
---     self.running_std = self.running_var:clone()
---     self.running_std:fill(1)
---   end
    if self.train == false then
       self.buffer:repeatTensor(self.running_mean, nBatch, 1)
       self.output:add(input, -1, self.buffer)         --  x - E(x)
@@ -58,8 +54,6 @@ function BN:updateOutput(input)
       local n = nBatch
       -- calculate mean over mini-batch
       self.mean:mean(input, 1)                        -- E(x) = expectation of x.
-      -- we calculate a mean for entire batch, and then broadcast it out to the size of the batch
---      self.mean:repeatTensor(self.mean, nBatch, 1)
 
       -- self.centered = input - mean(input)
       self.buffer:repeatTensor(self.mean, nBatch, 1)
