@@ -15,6 +15,9 @@ local x_clnntest = {} -- assign to this to exclude from tests
 
 -- ======= Working tests go in this section ====================================
 
+local jac = nn.Jacobian
+local sjac = nn.SparseJacobian
+
 clnn._test = {}
 clnn._test.clnntest = clnntest
 clnn._test.x_clnntest = x_clnntest
@@ -22,6 +25,8 @@ clnn._test.times = times
 clnn._test.nloop = nloop
 clnn._test.precision_forward = precision_forward
 clnn._test.precision_backward = precision_backward
+clnn._test.jac = jac
+clnn._test.sjac = sjac
 
 -- hack tester, so it doesnt eat our assert stacktraces, where we are using a helper method
 function torch.Tester:assert_sub (condition, message)
@@ -32,6 +37,7 @@ function torch.Tester:assert_sub (condition, message)
    end
 end
 
+include 'testBatchNormalization.lua'
 include 'testClassNLLCriterion.lua'
 include 'testLookupTable.lua'
 include 'testSpatialAveragePooling.lua'
