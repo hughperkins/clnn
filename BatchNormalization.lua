@@ -47,12 +47,9 @@ function BN:updateOutput(input)
       self.buffer:add(self.running_var, self.eps):sqrt():cinv()
       self.buffer:repeatTensor(self.buffer, nBatch, 1)
       self.output:cmul(self.buffer)
-
---      mean = THTensor_(get1d)(running_mean, f);
---      invstd = 1 / sqrt(THTensor_(get1d)(running_var, f) + eps);
-
    else -- training mode
       local n = nBatch
+--      local n = input:nElement() / nBatch
       -- calculate mean over mini-batch
       self.mean:mean(input, 1)                        -- E(x) = expectation of x.
 
