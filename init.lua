@@ -29,7 +29,7 @@ end
 torch.ClTensor.nn = {}
 
 include 'BatchNormalization.lua'
---include 'SpatialBatchNormalization.lua'
+include 'SpatialBatchNormalization.lua'
 include 'LookupTable.lua'
 include 'Pointwise.lua'
 include 'Threshold.lua'
