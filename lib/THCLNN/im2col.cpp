@@ -93,6 +93,62 @@ void im2col(THClState *state, THClTensor* im,
   k.run(GET_BLOCKS(state, num_kernels), getNumThreads(state));
 }
 
+void im2col_batched(THClState *state, THClTensor* im,
+    const int nInputPlane,
+    const int inW, const int inH,
+    const int kW, const int kH,
+    const int dW, const int dH, 
+    const int padW, const int padH,
+    int numImages, int imageIdx,
+    THClTensor* col) {
+  cout << "im2col" << endl;
+  cout << "nInputPlane " << nInputPlane << " inW=" << inW << " inH=" << inH << endl;
+  cout << "im" << endl;
+  THClDebug_printSize(state, im);
+  cout << "col" << endl;
+  THClDebug_printSize(state, col);
+
+  // We are going to launch nInputPlane * height_col * width_col kernels, each
+  // kernel responsible for copying a single-channel grid.
+//  int width_col = (width + 2 * padW - ksize_w) / dW + 1;
+//  int height_col = (height + 2 * padH - ksize_h) / dH + 1;
+  // seems like height_col and width_col are just output width/height?
+  int outW  = (inW + 2*padW - kW) / dW + 1;
+  int outH = (inH + 2*padH - kH) / dH + 1;
+
+  int num_kernels = nInputPlane * outH * outW;
+
+  std::string uniqueName = "SpatialConvolutionMM::im2col_batched";
+  EasyCL *cl = im->storage->cl;
+  CLKernel *kernel = 0;
+  if(cl->kernelExists(uniqueName)) {
+    kernel = cl->getKernel(uniqueName);
+  } else {
+    TemplatedKernel kernelBuilder(cl);
+    kernel = kernelBuilder.buildKernel(uniqueName, "SpatialConvolutionMM.cl",
+      getKernelTemplate(), "im2col_kernel_batched");
+  }
+
+  THClKernels k(state, kernel);
+  k.in(num_kernels);
+  k.in(im);
+  k.in(inW);
+  k.in(inH);
+  k.in(kW);
+  k.in(kH);
+  k.in(dW);
+  k.in(dH);
+  k.in(padW);
+  k.in(padH);
+  k.in(outW);
+  k.in(outH);
+  k.in(numImages);
+  k.in(imageIdx);
+  k.out(col);
+
+  k.run(GET_BLOCKS(state, num_kernels), getNumThreads(state));
+}
+
 void col2im(THClState *state, THClTensor* col,
     const int nInputPlane,
     const int inW, const int inH,
@@ -194,35 +250,38 @@ std::string getKernelTemplate() {
   "// \"OpenCL caffe: Accelerating and enabling a cross platform machine\" by Junli Gu et al\n"
   "// imageIndex will control where in columns, the image is copied, and columns will have in fact\n"
   "// numimages *\n"
-  "//kernel void im2col_grouped_kernel(const int n, const global float* im_data, int im_offset,\n"
-  "//    const int height, const int width, const int ksize_h, const int ksize_w, const int pad_h,\n"
-  "//    const int pad_w, const int dH, const int dW, const int height_col, const int width_col,\n"
-  "//    global float* col_data, int col_offset, int numImages, int imageIndex) {\n"
-  "//  global const float *data_im = im_data + im_offset;\n"
-  "//  global float *data_col = col_data + col_offset;\n"
+  "kernel void im2col_kernel_batched(const int n, const global float* im_data, int im_offset,\n"
+  "    const int inW, const int inH,\n"
+  "     const int kW, const int kH,\n"
+  "    const int dW, const int dH,\n"
+  "    const int padW, const int padH,\n"
+  "    const int outW, const int outH,\n"
+  "    const int numImages, const int imageIdx,\n"
+  "    global float* col_data, int col_offset) {\n"
+  "  global const float *data_im = im_data + im_offset;\n"
+  "  global float *data_col = col_data + col_offset + imageIdx * outH * outW;\n"
   "\n"
-  "//  CL_KERNEL_LOOP(index, n) {\n"
-  "//    int w_out = index % width_col;\n"
-  "//    index /= width_col;\n"
-  "//    int h_out = index % height_col;\n"
-  "//    int channel_in = index / height_col;\n"
-  "//    int channel_out = channel_in * ksize_h * ksize_w;\n"
-  "//    int h_in = h_out * dH - pad_h;\n"
-  "//    int w_in = w_out * dW - pad_w;\n"
-  "//    data_col += (channel_out * height_col + h_out) * width_col + w_out;\n"
-  "//    data_im += (channel_in * height + h_in) * width + w_in;\n"
-  "//    for (int i = 0; i < ksize_h; ++i) {\n"
-  "//      for (int j = 0; j < ksize_w; ++j) {\n"
-  "//        int h = h_in + i;\n"
-  "//        int w = w_in + j;\n"
-  "//        *data_col = (h >= 0 && w >= 0 && h < height && w < width) ?\n"
-  "//          data_im[i * width + j] : 0;\n"
-  "//        data_col += height_col * width_col;\n"
-  "//      }\n"
-  "//    }\n"
-  "//  }\n"
-  "//}\n"
-  "\n"
+  "  CL_KERNEL_LOOP(index, n) {\n"
+  "    int w_out = index % outW;\n"
+  "    index /= outW;\n"
+  "    int h_out = index % outH;\n"
+  "    int channel_in = index / outH;\n"
+  "    int channel_out = channel_in * kW * kH;\n"
+  "    int w_in = w_out * dW - padW;\n"
+  "    int h_in = h_out * dH - padH;\n"
+  "    data_col += (channel_out * outH + h_out) * outW + w_out;\n"
+  "    data_im += (channel_in * inH + h_in) * inW + w_in;\n"
+  "    for (int i = 0; i < kH; ++i) {\n"
+  "      for (int j = 0; j < kW; ++j) {\n"
+  "        int h = h_in + i;\n"
+  "        int w = w_in + j;\n"
+  "        *data_col = (h >= 0 && w >= 0 && h < inH && w < inW) ?\n"
+  "          data_im[i * inW + j] : 0;\n"
+  "        data_col += outH * outW * numImages;\n"
+  "      }\n"
+  "    }\n"
+  "  }\n"
+  "}\n"
   "kernel void col2im_kernel(const int n, global const float* col_data, int col_offset,\n"
   "    const int inW, const int inH,\n"
   "    const int kW, const int kH,\n"

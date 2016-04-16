@@ -46,35 +46,38 @@ kernel void im2col_kernel(const int n, const global float* im_data, int im_offse
 // "OpenCL caffe: Accelerating and enabling a cross platform machine" by Junli Gu et al
 // imageIndex will control where in columns, the image is copied, and columns will have in fact
 // numimages *
-//kernel void im2col_grouped_kernel(const int n, const global float* im_data, int im_offset,
-//    const int height, const int width, const int ksize_h, const int ksize_w, const int pad_h,
-//    const int pad_w, const int dH, const int dW, const int height_col, const int width_col,
-//    global float* col_data, int col_offset, int numImages, int imageIndex) {
-//  global const float *data_im = im_data + im_offset;
-//  global float *data_col = col_data + col_offset;
+kernel void im2col_kernel_batched(const int n, const global float* im_data, int im_offset,
+    const int inW, const int inH,
+     const int kW, const int kH, 
+    const int dW, const int dH,
+    const int padW, const int padH,
+    const int outW, const int outH,
+    const int numImages, const int imageIdx,
+    global float* col_data, int col_offset) {
+  global const float *data_im = im_data + im_offset;
+  global float *data_col = col_data + col_offset + imageIdx * outH * outW;
 
-//  CL_KERNEL_LOOP(index, n) {
-//    int w_out = index % width_col;
-//    index /= width_col;
-//    int h_out = index % height_col;
-//    int channel_in = index / height_col;
-//    int channel_out = channel_in * ksize_h * ksize_w;
-//    int h_in = h_out * dH - pad_h;
-//    int w_in = w_out * dW - pad_w;
-//    data_col += (channel_out * height_col + h_out) * width_col + w_out;
-//    data_im += (channel_in * height + h_in) * width + w_in;
-//    for (int i = 0; i < ksize_h; ++i) {
-//      for (int j = 0; j < ksize_w; ++j) {
-//        int h = h_in + i;
-//        int w = w_in + j;
-//        *data_col = (h >= 0 && w >= 0 && h < height && w < width) ?
-//          data_im[i * width + j] : 0;
-//        data_col += height_col * width_col;
-//      }
-//    }
-//  }
-//}
-
+  CL_KERNEL_LOOP(index, n) {
+    int w_out = index % outW;
+    index /= outW;
+    int h_out = index % outH;
+    int channel_in = index / outH;
+    int channel_out = channel_in * kW * kH;
+    int w_in = w_out * dW - padW;
+    int h_in = h_out * dH - padH;
+    data_col += (channel_out * outH + h_out) * outW + w_out;
+    data_im += (channel_in * inH + h_in) * inW + w_in;
+    for (int i = 0; i < kH; ++i) {
+      for (int j = 0; j < kW; ++j) {
+        int h = h_in + i;
+        int w = w_in + j;
+        *data_col = (h >= 0 && w >= 0 && h < inH && w < inW) ?
+          data_im[i * inW + j] : 0;
+        data_col += outH * outW * numImages;
+      }
+    }
+  }
+}
 kernel void col2im_kernel(const int n, global const float* col_data, int col_offset,
     const int inW, const int inH,
     const int kW, const int kH,
