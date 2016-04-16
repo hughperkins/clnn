@@ -94,12 +94,11 @@ local outH = 13
 --0.27404594421387
 --0.27145791053772
 
-for b=1,3 do
-
   local columns = torch.ClTensor(groupSize, outPlanes, kW * kH * inPlanes)
   local weights = torch.ClTensor(kW * kH * inPlanes, outW * outH)
   local output = torch.ClTensor(groupSize, outPlanes, outW * outH)
 
+for b=1,3 do
   cltorch.synchronize()
   sys.tic()
   for it=1,10  do
@@ -109,11 +108,13 @@ for b=1,3 do
   end
   cltorch.synchronize()
   print(sys.toc())
+end
 
   local columns = torch.ClTensor(groupSize * outPlanes, kW * kH * inPlanes)
   local weights = torch.ClTensor(kW * kH * inPlanes, outW * outH)
   local output = torch.ClTensor(groupSize * outPlanes, outW * outH)
 
+for b=1,3 do
   cltorch.synchronize()
   sys.tic()
   for it=1,10  do
@@ -121,6 +122,6 @@ for b=1,3 do
   end
   cltorch.synchronize()
   print(sys.toc())
---  print('output:size()', output:size())
 end
+--  print('output:size()', output:size())
 
