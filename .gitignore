@@ -42,3 +42,11 @@
 *~
 *~.lua
 
+# images
+*.svg
+*.dot
+
+# data
+*.t7
+*.zip
+
