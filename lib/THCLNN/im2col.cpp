@@ -104,9 +104,9 @@ void im2col_batched(THClState *state, THClTensor* im,
 //  cout << "im2col" << endl;
 //  cout << "nInputPlane " << nInputPlane << " inW=" << inW << " inH=" << inH << endl;
 //  cout << "im" << endl;
-  THClDebug_printSize(state, im);
+//  THClDebug_printSize(state, im);
 //  cout << "col" << endl;
-  THClDebug_printSize(state, col);
+//  THClDebug_printSize(state, col);
 
   // We are going to launch nInputPlane * height_col * width_col kernels, each
   // kernel responsible for copying a single-channel grid.

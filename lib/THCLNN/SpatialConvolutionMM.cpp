@@ -76,54 +76,55 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
   THClTensor *input_n = THClTensor_newv2(state, input->storage->device);
   THClTensor *output_n = THClTensor_newv2(state, input->storage->device);
 
-//  int numGroups = (batchSize + desiredGroupSize - 1) / desiredGroupSize;
+  int numGroups = (batchSize + desiredGroupSize - 1) / desiredGroupSize;
 //  cout << "numGroups: " << numGroups << endl;
-//  for(int g=0; g < numGroups; g++) {
+  for(int g=0; g < numGroups; g++) {
 //    cout << "group g=" << g << endl;
-////  for (int elt = 0; elt < batchSize; elt += desiredGroupSize) {
+//  for (int elt = 0; elt < batchSize; elt += desiredGroupSize) {
 //    int thisGroupSize = desiredGroupSize;
-//    int eltStart = g * desiredGroupSize;
-//    int eltEnd = eltStart + desiredGroupSize; // we will exclude this value in iteration
-//    int thisGroupSize = eltEnd - eltStart;
-//    if(g == numGroups - 1) {
-//      thisGroupSize = batchSize - eltStart;
-//      eltEnd = eltStart + thisGroupSize;
-//    }
+    int eltStart = g * desiredGroupSize;
+    int eltEnd = eltStart + desiredGroupSize; // we will exclude this value in iteration
+    int thisGroupSize = eltEnd - eltStart;
+    if(g == numGroups - 1) {
+      thisGroupSize = batchSize - eltStart;
+      eltEnd = eltStart + thisGroupSize;
+    }
 
-  for(int elt=0; elt < batchSize; elt++) {
-//    THClTensor_resize1d(state, ones, thisGroupSize * outH * outW);
-    THClTensor_resize1d(state, ones, outH * outW);
+//  for(int elt=0; elt < batchSize; elt++) {
+    THClTensor_resize1d(state, ones, thisGroupSize * outH * outW);
+////    THClTensor_resize1d(state, ones, outH * outW);
     // no need to fill with 1s, since thisGroupSize <= desiredGroupSize, and we already filled that many
     // 1s
 
     // Resize temporary columns
-//    THClTensor_resize2d(state, columns, nInputPlane*kW*kH, thisGroupSize * outH*outW);
-    THClTensor_resize2d(state, columns, nInputPlane*kW*kH, outH*outW);
+    THClTensor_resize2d(state, columns, nInputPlane*kW*kH, thisGroupSize * outH*outW);
+//    THClTensor_resize2d(state, columns, nInputPlane*kW*kH, outH*outW);
 
     // weights should already be ok, but we need to run im2col, into columns
-//    for(int elt = eltStart; elt < eltEnd; elt++) {
+    for(int elt = eltStart; elt < eltEnd; elt++) {
 //      cout << "elt=" << elt << endl;
       // Extract columns:
       THClTensor_select(state, input_n, input, 0, elt);
-      im2col(
+      im2col_batched(
         state,
   //      THClState_getCurrentStream(state),
         input_n,
         nInputPlane, inW, inH, kW, kH, dW, dH, padW, padH,
+        thisGroupSize, elt - eltStart,
         columns
       );
-//    }
+    }
 
 //    cout << "elt=" << elt << " thisGroupSize=" << thisGroupSize << endl;
 
     // Matrix mulitply per output:
-    THClTensor_select(state, output_n, output, 0, elt);
+    THClTensor_narrow(state, output_n, output, 0, eltStart, thisGroupSize);
 
     // Do Bias first:
     // M,N,K are dims of matrix A and B
     // (see http://docs.nvidia.com/cuda/clblas/#clblas-lt-t-gt-gemm)
     long m_ = nOutputPlane;
-    long n_ = outW * outH;
+    long n_ = outW * outH * thisGroupSize;
     long k_ = 1;
 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
@@ -144,7 +145,7 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
     // M,N,K are dims of matrix A and B
     // (see http://docs.nvidia.com/cuda/clblas/#clblas-lt-t-gt-gemm)
     long m = nOutputPlane;
-    long n = columns->size[1];
+    long n = outW * outH * thisGroupSize;
     long k = nInputPlane*kH*kW;
 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
