@@ -47,12 +47,12 @@ void im2col(THClState *state, THClTensor* im,
     const int dW, const int dH, 
     const int padW, const int padH,
     THClTensor* col) {
-  cout << "im2col" << endl;
-  cout << "nInputPlane " << nInputPlane << " inW=" << inW << " inH=" << inH << endl;
-  cout << "im" << endl;
-  THClDebug_printSize(state, im);
-  cout << "col" << endl;
-  THClDebug_printSize(state, col);
+//  cout << "im2col" << endl;
+//  cout << "nInputPlane " << nInputPlane << " inW=" << inW << " inH=" << inH << endl;
+//  cout << "im" << endl;
+//  THClDebug_printSize(state, im);
+//  cout << "col" << endl;
+//  THClDebug_printSize(state, col);
 
   // We are going to launch nInputPlane * height_col * width_col kernels, each
   // kernel responsible for copying a single-channel grid.
@@ -101,11 +101,11 @@ void im2col_batched(THClState *state, THClTensor* im,
     const int padW, const int padH,
     int numImages, int imageIdx,
     THClTensor* col) {
-  cout << "im2col" << endl;
-  cout << "nInputPlane " << nInputPlane << " inW=" << inW << " inH=" << inH << endl;
-  cout << "im" << endl;
+//  cout << "im2col" << endl;
+//  cout << "nInputPlane " << nInputPlane << " inW=" << inW << " inH=" << inH << endl;
+//  cout << "im" << endl;
   THClDebug_printSize(state, im);
-  cout << "col" << endl;
+//  cout << "col" << endl;
   THClDebug_printSize(state, col);
 
   // We are going to launch nInputPlane * height_col * width_col kernels, each

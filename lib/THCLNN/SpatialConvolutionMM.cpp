@@ -315,7 +315,7 @@ void THNN_ClSpatialConvolutionMM_accGradParameters(THClState *state, THClTensor 
       state,
 //      THClState_getCurrentStream(state),
       input_n,
-      nInputPlane, inW, inH, kW, kH, padW, padH, dW, dH,
+      nInputPlane, inW, inH, kW, kH, dW, dH, padW, padH,
       columns
     );
 
