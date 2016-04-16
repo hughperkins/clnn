@@ -97,7 +97,8 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
     // 1s
 
     // Resize temporary columns
-    THClTensor_resize2d(state, columns, nInputPlane*kW*kH, thisGroupSize * outH*outW);
+//    THClTensor_resize2d(state, columns, nInputPlane*kW*kH, thisGroupSize * outH*outW);
+    THClTensor_resize2d(state, columns, nInputPlane*kW*kH, outH*outW);
 
     // weights should already be ok, but we need to run im2col, into columns
 //    for(int elt = eltStart; elt < eltEnd; elt++) {
@@ -241,6 +242,7 @@ void THNN_ClSpatialConvolutionMM_updateGradInput(THClState *state, THClTensor *i
       state,
 //      THClState_getCurrentStream(state),
       gradColumns,
+      nInputPlane,
       inW, inH, kW, kH, dW, dH, padW, padH,
       gradInput_n
     );

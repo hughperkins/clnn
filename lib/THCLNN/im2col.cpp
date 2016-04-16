@@ -11,6 +11,10 @@
 #include "DeviceInfo.h"
 #include "EasyCL.h"
 #include "im2col.h"
+#include "THClDebug.h"
+
+#include <iostream>
+using namespace std;
 
 static std::string getKernelTemplate();
 
@@ -36,21 +40,29 @@ inline int GET_BLOCKS(THClState *state, const int N) {
 // weight is [outplanes][inplanes * kH * kW]
 // output is [outPlanes][outH][outW]
 // (but might be transposed a bit)
-void im2col(THClState *state, THClTensor* im, const int channels,
+void im2col(THClState *state, THClTensor* im,
+    const int nInputPlane,
     const int inW, const int inH,
     const int kW, const int kH,
     const int dW, const int dH, 
     const int padW, const int padH,
     THClTensor* col) {
-  // We are going to launch channels * height_col * width_col kernels, each
+  cout << "im2col" << endl;
+  cout << "nInputPlane " << nInputPlane << " inW=" << inW << " inH=" << inH << endl;
+  cout << "im" << endl;
+  THClDebug_printSize(state, im);
+  cout << "col" << endl;
+  THClDebug_printSize(state, col);
+
+  // We are going to launch nInputPlane * height_col * width_col kernels, each
   // kernel responsible for copying a single-channel grid.
 //  int width_col = (width + 2 * padW - ksize_w) / dW + 1;
 //  int height_col = (height + 2 * padH - ksize_h) / dH + 1;
   // seems like height_col and width_col are just output width/height?
-  long outW  = (inputWidth + 2*padW - kW) / dW + 1;
-  long outH = (inputHeight + 2*padH - kH) / dH + 1;
+  int outW  = (inW + 2*padW - kW) / dW + 1;
+  int outH = (inH + 2*padH - kH) / dH + 1;
 
-  int num_kernels = channels * height_col * width_col;
+  int num_kernels = nInputPlane * outH * outW;
 
   std::string uniqueName = "SpatialConvolutionMM::im2col";
   EasyCL *cl = im->storage->cl;
@@ -82,6 +94,7 @@ void im2col(THClState *state, THClTensor* im, const int channels,
 }
 
 void col2im(THClState *state, THClTensor* col,
+    const int nInputPlane,
     const int inW, const int inH,
     const int kW, const int kH,
     const int dW, const int dH,
@@ -89,7 +102,7 @@ void col2im(THClState *state, THClTensor* col,
     THClTensor* im) {
   int outW = (inW + 2 * padW - kW) / dW + 1;
   int outH = (inH + 2 * padH - kH) / dH + 1;
-  int num_kernels = channels * height * width;
+  int num_kernels = nInputPlane * inH * inW;
   // To avoid involving atomic operations, we will launch one kernel per
   // bottom dimension, and then in the kernel add up the top dimensions.
 
