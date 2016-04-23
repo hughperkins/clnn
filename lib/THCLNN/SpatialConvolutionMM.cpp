@@ -11,6 +11,7 @@
 #include "EasyCL.h"
 #include "THCLNN.h"
 #include "im2col.h"
+#include "THClDebug.h"
 
 #include <iostream>
 #include <string>
@@ -55,7 +56,7 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
   // output will have 16 times more rows
   // columns will have 16 times more columns, ie thisGroupSize * outH * outW
   // so.... easiest thing will be to run im2col thisGroupSize times, once for each image
-  int desiredGroupSize = 1;
+  int desiredGroupSize = 16;
 
   // Batch size + input planes
   long batchSize = input->size[0];
@@ -77,7 +78,7 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
   THClTensor *output_n = THClTensor_newv2(state, input->storage->device);
 
   int numGroups = (batchSize + desiredGroupSize - 1) / desiredGroupSize;
-//  cout << "numGroups: " << numGroups << endl;
+  cout << "numGroups: " << numGroups << endl;
   for(int g=0; g < numGroups; g++) {
 //    cout << "group g=" << g << endl;
 //  for (int elt = 0; elt < batchSize; elt += desiredGroupSize) {
@@ -89,6 +90,9 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
       thisGroupSize = batchSize - eltStart;
       eltEnd = eltStart + thisGroupSize;
     }
+//    if(g == 0) {
+//      cout << "thisGroupSize " << thisGroupSize << " eltStart=" << eltStart << " eltEnd=" << eltEnd << endl;
+//    }
 
 //  for(int elt=0; elt < batchSize; elt++) {
     THClTensor_resize1d(state, ones, thisGroupSize * outH * outW);
@@ -104,7 +108,10 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
     for(int elt = eltStart; elt < eltEnd; elt++) {
 //      cout << "elt=" << elt << endl;
       // Extract columns:
+//       cout << "
       THClTensor_select(state, input_n, input, 0, elt);
+//      THClDebug_printTensor(state, input_n);
+//    cout << "line 115" << endl;
       im2col_batched(
         state,
   //      THClState_getCurrentStream(state),
@@ -113,6 +120,8 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
         thisGroupSize, elt - eltStart,
         columns
       );
+      cout << "elt=" << elt << endl;
+      THClDebug_printTensor(state, columns);
     }
 
 //    cout << "elt=" << elt << " thisGroupSize=" << thisGroupSize << endl;
@@ -130,16 +139,20 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
 //    cout << "THCLBlas_Gemm('t', 'n', " << n_ << ", " << m_ << " ," << k_ << ", 1, ones, " << k_ << ", bias, " << k_
 //       << ", 0, output_n, " << n_ << ");" << endl;
+    cout << "line 143" << endl;
     THClBlas_gemm(
         state,
-        'n', 'n',
-        n_, m_, k_,
+         'r',
+        't', 't',
+        nOutputPlane, outW * outH * thisGroupSize, 1,
         1,
-        ones, k_,
-        bias, k_,
+        bias, nOutputPlane,
+        ones, 1,
         0,
         output_n, n_
     );
+//    cout << "output_n after bias" << endl;
+//    THClDebug_printTensor(state, output_n);
 
 
     // M,N,K are dims of matrix A and B
@@ -151,16 +164,29 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
 //    cout << "THCLBlas_Gemm('n', 'n', " << n << ", " << m << " ," << k << ", 1, columns, " << n << ", weight, " << k
 //       << ", 1, output_n, " << n << ");" << endl;
+    cout << "line 167" << endl;
+//    cout << "m=" << m << " n=" << n << " k=" << k << endl;
+    THClDebug_printSize("weight", state, weight);
+    THClDebug_printSize("columns", state, columns);
+//    cout << "numelements columns=" << THClTensor_nElement(state, columns) << endl;
+    THClDebug_printSize("output_n", state, output_n);
     THClBlas_gemm(
         state,
+        'r',
         'n', 'n',
-        n, m, k,
+        nOutputPlane, outW * outH * thisGroupSize, nInputPlane*kH*kW,
         1,
-        columns, n,
-        weight, k,
+        weight, nInputPlane*kH*kW,
+        columns, outW * outH * thisGroupSize,
         1,
         output_n, n
     );
+//weight: outPlanes, inPlanes * kW * kH
+//columns: inPlanes * kW * kH, outW * outH
+//output: outPlanes, outW * outH
+
+//    cout << "output_n" << endl;
+//    THClDebug_printTensor(state, output_n);
   }
 
   // Free
@@ -229,6 +255,7 @@ void THNN_ClSpatialConvolutionMM_updateGradInput(THClState *state, THClTensor *i
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
     THClBlas_gemm(
         state,
+        'c',
         'n', 't',
         n, m, k,
         1,
@@ -329,6 +356,7 @@ void THNN_ClSpatialConvolutionMM_accGradParameters(THClState *state, THClTensor 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
     THClBlas_gemm(
         state,
+        'c',
         't', 'n',
         n, m, k,
         scale,

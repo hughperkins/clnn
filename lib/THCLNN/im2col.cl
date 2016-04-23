@@ -47,6 +47,7 @@ kernel void im2col_kernel(const int n, const global float* im_data, int im_offse
 // imageIndex will control where in columns, the image is copied, and columns will have in fact
 // numimages *
 kernel void im2col_kernel_batched(const int n, const global float* im_data, int im_offset,
+    const int nInputPlane,
     const int inW, const int inH,
      const int kW, const int kH, 
     const int dW, const int dH,
@@ -55,7 +56,9 @@ kernel void im2col_kernel_batched(const int n, const global float* im_data, int 
     const int numImages, const int imageIdx,
     global float* col_data, int col_offset) {
   global const float *data_im = im_data + im_offset;
-  global float *data_col = col_data + col_offset + imageIdx * outH * outW;
+//  global float *data_col = col_data + col_offset + imageIdx * outH * outW;
+//if( get_local_id(0) == 2) {
+  global float *data_col = col_data + col_offset; // + imageIdx * outH*outW;
 
   CL_KERNEL_LOOP(index, n) {
     int w_out = index % outW;
@@ -65,7 +68,8 @@ kernel void im2col_kernel_batched(const int n, const global float* im_data, int 
     int channel_out = channel_in * kW * kH;
     int w_in = w_out * dW - padW;
     int h_in = h_out * dH - padH;
-    data_col += (channel_out * outH + h_out) * outW + w_out;
+//    data_col += (imageIdx * outH * outW + channel_out * outH * numImages + h_out) * outW + w_out;
+    data_col += imageIdx * outH * outW + channel_out * outH * outW * numImages + h_out * outW + w_out;
     data_im += (channel_in * inH + h_in) * inW + w_in;
     for (int i = 0; i < kH; ++i) {
       for (int j = 0; j < kW; ++j) {
@@ -73,10 +77,12 @@ kernel void im2col_kernel_batched(const int n, const global float* im_data, int 
         int w = w_in + j;
         *data_col = (h >= 0 && w >= 0 && h < inH && w < inW) ?
           data_im[i * inW + j] : 0;
-        data_col += outH * outW * numImages;
+//          data_col += 5;
+        data_col += numImages * outH * outW;
       }
     }
   }
+//   }
 }
 kernel void col2im_kernel(const int n, global const float* col_data, int col_offset,
     const int inW, const int inH,

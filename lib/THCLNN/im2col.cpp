@@ -115,6 +115,8 @@ void im2col_batched(THClState *state, THClTensor* im,
   // seems like height_col and width_col are just output width/height?
   int outW  = (inW + 2*padW - kW) / dW + 1;
   int outH = (inH + 2*padH - kH) / dH + 1;
+  cout << "outW=" << outW << " outH=" << outH << " kW=" << kW << " kH=" << kH << " nInputPlane=" << nInputPlane <<  endl;
+      cout << "nInputPlane=" << nInputPlane << " numImages=" << numImages << " imageIdx=" << imageIdx << endl;
 
   int num_kernels = nInputPlane * outH * outW;
 
@@ -132,6 +134,7 @@ void im2col_batched(THClState *state, THClTensor* im,
   THClKernels k(state, kernel);
   k.in(num_kernels);
   k.in(im);
+  k.in(nInputPlane);
   k.in(inW);
   k.in(inH);
   k.in(kW);
@@ -251,6 +254,7 @@ std::string getKernelTemplate() {
   "// imageIndex will control where in columns, the image is copied, and columns will have in fact\n"
   "// numimages *\n"
   "kernel void im2col_kernel_batched(const int n, const global float* im_data, int im_offset,\n"
+  "    const int nInputPlane,\n"
   "    const int inW, const int inH,\n"
   "     const int kW, const int kH,\n"
   "    const int dW, const int dH,\n"
@@ -259,7 +263,9 @@ std::string getKernelTemplate() {
   "    const int numImages, const int imageIdx,\n"
   "    global float* col_data, int col_offset) {\n"
   "  global const float *data_im = im_data + im_offset;\n"
-  "  global float *data_col = col_data + col_offset + imageIdx * outH * outW;\n"
+  "//  global float *data_col = col_data + col_offset + imageIdx * outH * outW;\n"
+  "//if( get_local_id(0) == 2) {\n"
+  "  global float *data_col = col_data + col_offset; // + imageIdx * outH*outW;\n"
   "\n"
   "  CL_KERNEL_LOOP(index, n) {\n"
   "    int w_out = index % outW;\n"
@@ -269,7 +275,8 @@ std::string getKernelTemplate() {
   "    int channel_out = channel_in * kW * kH;\n"
   "    int w_in = w_out * dW - padW;\n"
   "    int h_in = h_out * dH - padH;\n"
-  "    data_col += (channel_out * outH + h_out) * outW + w_out;\n"
+  "//    data_col += (imageIdx * outH * outW + channel_out * outH * numImages + h_out) * outW + w_out;\n"
+  "    data_col += imageIdx * outH * outW + channel_out * outH * outW * numImages + h_out * outW + w_out;\n"
   "    data_im += (channel_in * inH + h_in) * inW + w_in;\n"
   "    for (int i = 0; i < kH; ++i) {\n"
   "      for (int j = 0; j < kW; ++j) {\n"
@@ -277,10 +284,12 @@ std::string getKernelTemplate() {
   "        int w = w_in + j;\n"
   "        *data_col = (h >= 0 && w >= 0 && h < inH && w < inW) ?\n"
   "          data_im[i * inW + j] : 0;\n"
-  "        data_col += outH * outW * numImages;\n"
+  "//          data_col += 5;\n"
+  "        data_col += numImages * outH * outW;\n"
   "      }\n"
   "    }\n"
   "  }\n"
+  "//   }\n"
   "}\n"
   "kernel void col2im_kernel(const int n, global const float* col_data, int col_offset,\n"
   "    const int inW, const int inH,\n"
