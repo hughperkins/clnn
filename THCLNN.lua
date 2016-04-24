@@ -7,7 +7,7 @@ local THCLNN = {}
 
 -- load libTHCLNN
 local libthclnn_searchpath = package.searchpath('libTHCLNN', package.cpath)
-print('libthclnn_searchpath', libthclnn_searchpath)
+--print('libthclnn_searchpath', libthclnn_searchpath)
 THCLNN.C = ffi.load(libthclnn_searchpath)
 
 local THCLNN_h = [[
@@ -163,6 +163,7 @@ end
 
 -- build function table
 local function_names = extract_function_names(THCLNN_h)
+--print('function_names', function_names)
 
 THNN.kernels['torch.ClTensor'] = THNN.bind(THCLNN.C, function_names, 'Cl', THCLNN.getState)
 torch.getmetatable('torch.ClTensor').THNN = THNN.kernels['torch.ClTensor']

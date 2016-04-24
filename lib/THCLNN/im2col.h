@@ -1,7 +1,35 @@
-void im2col(THClState *state, THClTensor* im, const int channels,
-    const int height, const int width, const int ksize_h, const int ksize_w, const int pad_h,
-    const int pad_w, const int stride_h, const int stride_w, THClTensor* col);
-void col2im(THClState *state, THClTensor* col, const int channels,
-    const int height, const int width, const int patch_h, const int patch_w, const int pad_h,
-    const int pad_w, const int stride_h, const int stride_w, THClTensor* im);
+#pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void im2col(THClState *state, THClTensor* im,
+    const int nInputPlane,
+    const int inW, const int inH,
+    const int kW, const int kH,
+    const int dW, const int dH,
+    const int padW, const int padH,
+    THClTensor* col);
+
+void im2col_batched(THClState *state, THClTensor* im,
+    const int nInputPlane,
+    const int inW, const int inH,
+    const int kW, const int kH,
+    const int dW, const int dH,
+    const int padW, const int padH,
+    int numImages, int imageIdx,
+    THClTensor* col);
+
+void col2im(THClState *state, THClTensor* col,
+    const int nInputPlane,
+    const int inW, const int inH,
+    const int kW, const int kH,
+    const int dW, const int dH,
+    const int padW, const int padH,
+    THClTensor* im);
+
+#ifdef __cplusplus
+}
+#endif
 
