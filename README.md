@@ -151,7 +151,7 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 ## Recent changes
 
 * 24th April:
-  * add batched SGEMM, as per Junli Gu et al's "OpenCL caffe: Accelerating and enabling a cross platform machine" [http://www.iwocl.org/attend/sessions/](http://www.iwocl.org/attend/sessions/)
+  * added batched SGEMM, as per Junli Gu et al's "OpenCL caffe: Accelerating and enabling a cross platform machine" [http://www.iwocl.org/attend/sessions/](http://www.iwocl.org/attend/sessions/)
     * this gives a quite impressive speedup on alexnet layers
     * for now, I've only added for forward propagation, I need to add to backprop too
 * 9th April:
