@@ -80,11 +80,7 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
     nOutputPlane, outW * outH * desiredGroupSize); // this should be persisted somehow
 
   int numGroups = (batchSize + desiredGroupSize - 1) / desiredGroupSize;
-//  cout << "numGroups: " << numGroups << endl;
   for(int g=0; g < numGroups; g++) {
-//    cout << "group g=" << g << endl;
-//  for (int elt = 0; elt < batchSize; elt += desiredGroupSize) {
-//    int thisGroupSize = desiredGroupSize;
     int eltStart = g * desiredGroupSize;
     int eltEnd = eltStart + desiredGroupSize; // we will exclude this value in iteration
     int thisGroupSize = eltEnd - eltStart;
@@ -92,54 +88,29 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
       thisGroupSize = batchSize - eltStart;
       eltEnd = eltStart + thisGroupSize;
     }
-//    if(g == 0) {
-//      cout << "thisGroupSize " << thisGroupSize << " eltStart=" << eltStart << " eltEnd=" << eltEnd << endl;
-//    }
 
-//  for(int elt=0; elt < batchSize; elt++) {
     THClTensor_resize1d(state, ones, thisGroupSize * outH * outW);
     // no need to fill with 1s, since thisGroupSize <= desiredGroupSize, and we already filled that many
     // 1s
     THClTensor_resize2d(state, outputBatch, nOutputPlane, thisGroupSize * outH * outW);
-////    THClTensor_resize1d(state, ones, outH * outW);
 
     // Resize temporary columns
     THClTensor_resize2d(state, columns, nInputPlane*kW*kH, thisGroupSize * outH*outW);
-//    THClTensor_resize2d(state, columns, nInputPlane*kW*kH, outH*outW);
 
     // weights should already be ok, but we need to run im2col, into columns
     for(int elt = eltStart; elt < eltEnd; elt++) {
-//      cout << "elt=" << elt << endl;
       // Extract columns:
-//       cout << "
       THClTensor_select(state, input_n, input, 0, elt);
-//      THClDebug_printTensor(state, input_n);
-//    cout << "line 115" << endl;
       im2col_batched(
         state,
-  //      THClState_getCurrentStream(state),
         input_n,
         nInputPlane, inW, inH, kW, kH, dW, dH, padW, padH,
         thisGroupSize, elt - eltStart,
         columns
       );
-//      cout << "elt=" << elt << endl;
-//      THClDebug_printTensor(state, columns);
     }
 
-//    cout << "elt=" << elt << " thisGroupSize=" << thisGroupSize << endl;
-
     // Do Bias first:
-    // M,N,K are dims of matrix A and B
-    // (see http://docs.nvidia.com/cuda/clblas/#clblas-lt-t-gt-gemm)
-//    long m_ = nOutputPlane;
-//    long n_ = outW * outH * thisGroupSize;
-//    long k_ = 1;
-
-    // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
-//    cout << "THCLBlas_Gemm('t', 'n', " << n_ << ", " << m_ << " ," << k_ << ", 1, ones, " << k_ << ", bias, " << k_
-//       << ", 0, output_n, " << n_ << ");" << endl;
-//    cout << "line 143" << endl;
     THClBlas_gemm2(
         state,
          'r',
@@ -151,25 +122,7 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
         0,
         outputBatch, outW * outH * thisGroupSize
     );
-//    cout << "output_n after bias" << endl;
-//    THClDebug_printTensor(state, output_n);
 
-
-    // M,N,K are dims of matrix A and B
-    // (see http://docs.nvidia.com/cuda/clblas/#clblas-lt-t-gt-gemm)
-//    long m = nOutputPlane;
-//    long n = outW * outH * thisGroupSize;
-//    long k = nInputPlane*kH*kW;
-
-    // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
-//    cout << "THCLBlas_Gemm('n', 'n', " << n << ", " << m << " ," << k << ", 1, columns, " << n << ", weight, " << k
-//       << ", 1, output_n, " << n << ");" << endl;
-//    cout << "line 167" << endl;
-//    cout << "m=" << m << " n=" << n << " k=" << k << endl;
-//    THClDebug_printSize("weight", state, weight);
-//    THClDebug_printSize("columns", state, columns);
-//    cout << "numelements columns=" << THClTensor_nElement(state, columns) << endl;
-//    THClDebug_printSize("output_n", state, output_n);
     THClBlas_gemm2(
         state,
         'r',
@@ -181,15 +134,10 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
         1,
         outputBatch, outW * outH * thisGroupSize
     );
-//    cout << "outputBatch" << endl;
-//    THClDebug_printTensor(state, outputBatch);
 
     // copy from outputBatch to output_n
-
-    // Matrix mulitply per output:
     THClTensor_narrow(state, output_n, output, 0, eltStart, thisGroupSize);
     for(int image=0; image < thisGroupSize; image++) {
-//      cout << "image " << image << "/" << thisGroupSize << endl;
       THClTensor *src = THClTensor_newWithStorage2d(state, input->storage->device,
         THClTensor_storage(state, outputBatch), THClTensor_storageOffset(state, outputBatch) +
           image * outW * outH,
@@ -197,36 +145,14 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
         outW * outH, 1);
       THClTensor *dest = THClTensor_newNarrow(state, output_n,
         0, image, 1);
-//      cout << "src" << endl;
-//      THClDebug_printTensor(state, src);
-//      cout << "dest" << endl;
-//      THClDebug_printSize(state, dest);
       THClTensor_copyCl(state, dest, src);
       THClTensor_free(state, src);
       THClTensor_free(state, dest);
     }
 
-//    THClBlas_gemm(
-//        state,
-//        'r',
-//        't', 't',
-//        outW * outH * thisGroupSize, nOutputPlane, nInputPlane*kH*kW,
-//        1,
-//        columns, outW * outH * thisGroupSize,
-//        weight, nInputPlane*kH*kW,
-//        1,
-//        output_n, nOutputPlane
-//    );
-
 //weight: outPlanes, inPlanes * kW * kH
 //columns: inPlanes * kW * kH, outW * outH
 //output: outPlanes, outW * outH
-
-//    cout << "output_n" << endl;
-//    THClDebug_printTensor(state, output_n);
-//    THClTensor *outmatrix_n = THClTensor_newWithStorage2d(state, 0, THClTensor_storage(state, output_n), THClTensor_storageOffset(state, output_n),
-//                                nOutputPlane, outW * outH * thisGroupSize,
-//                                outW * outH * thisGroupSize, 1);
   }
 
   // Free
