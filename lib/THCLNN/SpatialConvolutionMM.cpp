@@ -167,13 +167,13 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
   }
 }
 
-void THNN_ClSpatialConvolutionMM_updateGradInput(THClState *state, THClTensor *input, THClTensor *gradOutput, THClTensor *gradInput, THClTensor *weight, THClTensor *bias, THClTensor *gradColumns, THClTensor *ones, int kW, int kH, int dW, int dH, int padW, int padH) {
+void THNN_ClSpatialConvolutionMM_updateGradInput(THClState *state, THClTensor *input, THClTensor *gradOutput, THClTensor *gradInput, THClTensor *weight, THClTensor *gradColumns, THClTensor *ones, int kW, int kH, int dW, int dH, int padW, int padH) {
 
   THAssert(THClTensor_checkGPU(state, 5, input, gradOutput, weight,
                                  gradColumns, gradInput));
   THArgCheck(input->nDimension == 3 || input->nDimension == 4, 2, "3D or 4D (batch mode) tensor is expected");
   THArgCheck(weight->nDimension == 2, 4, "weight tensor must be 2D (nOutputPlane,nInputPlane*kH*kW)");
-  THArgCheck(weight->size[0] == bias->size[0], 4, "nOutputPlane mismatch in weight and bias");
+//  THArgCheck(weight->size[0] == bias->size[0], 4, "nOutputPlane mismatch in weight and bias");
   THArgCheck(kW > 0 && kH > 0, 9, "kernel size should be greater than zero");
   THArgCheck(dW > 0 && dH > 0, 11, "stride should be greater than zero");
 
