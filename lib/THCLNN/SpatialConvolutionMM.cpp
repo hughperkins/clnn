@@ -91,7 +91,7 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
       eltEnd = eltStart + thisGroupSize;
     }
 //    if(g == 0) {
-//      cout << "thisGroupSize " << thisGroupSize << " eltStart=" << eltStart << " eltEnd=" << eltEnd << endl;
+      cout << "thisGroupSize " << thisGroupSize << " eltStart=" << eltStart << " eltEnd=" << eltEnd << endl;
 //    }
 
 //  for(int elt=0; elt < batchSize; elt++) {
@@ -120,8 +120,8 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
         thisGroupSize, elt - eltStart,
         columns
       );
-      cout << "elt=" << elt << endl;
-      THClDebug_printTensor(state, columns);
+//      cout << "elt=" << elt << endl;
+//      THClDebug_printTensor(state, columns);
     }
 
 //    cout << "elt=" << elt << " thisGroupSize=" << thisGroupSize << endl;
@@ -139,7 +139,7 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
 //    cout << "THCLBlas_Gemm('t', 'n', " << n_ << ", " << m_ << " ," << k_ << ", 1, ones, " << k_ << ", bias, " << k_
 //       << ", 0, output_n, " << n_ << ");" << endl;
-    cout << "line 143" << endl;
+//    cout << "line 143" << endl;
     THClBlas_gemm(
         state,
          'r',
@@ -164,23 +164,35 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
 //    cout << "THCLBlas_Gemm('n', 'n', " << n << ", " << m << " ," << k << ", 1, columns, " << n << ", weight, " << k
 //       << ", 1, output_n, " << n << ");" << endl;
-    cout << "line 167" << endl;
+//    cout << "line 167" << endl;
 //    cout << "m=" << m << " n=" << n << " k=" << k << endl;
-    THClDebug_printSize("weight", state, weight);
-    THClDebug_printSize("columns", state, columns);
+//    THClDebug_printSize("weight", state, weight);
+//    THClDebug_printSize("columns", state, columns);
 //    cout << "numelements columns=" << THClTensor_nElement(state, columns) << endl;
-    THClDebug_printSize("output_n", state, output_n);
+//    THClDebug_printSize("output_n", state, output_n);
+//    THClBlas_gemm(
+//        state,
+//        'r',
+//        'n', 'n',
+//        nOutputPlane, outW * outH * thisGroupSize, nInputPlane*kH*kW,
+//        1,
+//        weight, nInputPlane*kH*kW,
+//        columns, outW * outH * thisGroupSize,
+//        1,
+//        output_n, n
+//    );
     THClBlas_gemm(
         state,
         'r',
-        'n', 'n',
-        nOutputPlane, outW * outH * thisGroupSize, nInputPlane*kH*kW,
+        't', 't',
+        outW * outH * thisGroupSize, nOutputPlane, nInputPlane*kH*kW,
         1,
-        weight, nInputPlane*kH*kW,
         columns, outW * outH * thisGroupSize,
+        weight, nInputPlane*kH*kW,
         1,
         output_n, n
     );
+
 //weight: outPlanes, inPlanes * kW * kH
 //columns: inPlanes * kW * kH, outW * outH
 //output: outPlanes, outW * outH

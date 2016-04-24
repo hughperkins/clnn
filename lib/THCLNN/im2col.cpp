@@ -115,8 +115,8 @@ void im2col_batched(THClState *state, THClTensor* im,
   // seems like height_col and width_col are just output width/height?
   int outW  = (inW + 2*padW - kW) / dW + 1;
   int outH = (inH + 2*padH - kH) / dH + 1;
-  cout << "outW=" << outW << " outH=" << outH << " kW=" << kW << " kH=" << kH << " nInputPlane=" << nInputPlane <<  endl;
-      cout << "nInputPlane=" << nInputPlane << " numImages=" << numImages << " imageIdx=" << imageIdx << endl;
+//  cout << "outW=" << outW << " outH=" << outH << " kW=" << kW << " kH=" << kH << " nInputPlane=" << nInputPlane <<  endl;
+//      cout << "nInputPlane=" << nInputPlane << " numImages=" << numImages << " imageIdx=" << imageIdx << endl;
 
   int num_kernels = nInputPlane * outH * outW;
 
