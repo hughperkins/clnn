@@ -172,12 +172,14 @@ function test_forward_all()
 end
 
 function test_gradinput_all()
---  test_gradinput_geom({batchSize=2, nInputPlane=1, nOutputPlane=2, kW=1, kH=1, dW=1, dH=1, padW=0, padH=0, inW=1, inH=1})
---  test_gradinput_geom({batchSize=2, nInputPlane=1, nOutputPlane=1, kW=1, kH=1, dW=1, dH=1, padW=0, padH=0, inW=1, inH=1})
+  test_gradinput_geom({batchSize=2, nInputPlane=1, nOutputPlane=2, kW=1, kH=1, dW=1, dH=1, padW=0, padH=0, inW=1, inH=1})
+  test_gradinput_geom({batchSize=2, nInputPlane=1, nOutputPlane=1, kW=1, kH=1, dW=1, dH=1, padW=0, padH=0, inW=1, inH=1})
   test_gradinput_geom({batchSize=2, nInputPlane=1, nOutputPlane=2, kW=1, kH=1, dW=1, dH=1, padW=0, padH=0, inW=2, inH=1})
---  test_gradinput_geom({batchSize=2, nInputPlane=1, nOutputPlane=2, kW=1, kH=1, dW=1, dH=1, padW=0, padH=0, inW=2, inH=3})
+  test_gradinput_geom({batchSize=2, nInputPlane=1, nOutputPlane=2, kW=1, kH=1, dW=1, dH=1, padW=0, padH=0, inW=2, inH=3})
+  test_gradinput_geom({batchSize=2, nInputPlane=1, nOutputPlane=1, kW=3, kH=1, dW=1, dH=1, padW=0, padH=0, inW=3, inH=1})
 --  test_gradinput_geom({batchSize=2, nInputPlane=1, nOutputPlane=2, kW=1, kH=1, dW=1, dH=1, padW=0, padH=0, inW=5, inH=5})
 --  test_gradinput_geom({batchSize=2, nInputPlane=1, nOutputPlane=2, kW=3, kH=1, dW=1, dH=1, padW=0, padH=0, inW=5, inH=5})
+
 --  test_gradinput_geom({batchSize=2, nInputPlane=1, nOutputPlane=2, kW=3, kH=3, dW=1, dH=1, padW=0, padH=0, inW=5, inH=5})
 --  test_gradinput_geom({batchSize=2, nInputPlane=2, nOutputPlane=2, kW=3, kH=3, dW=1, dH=1, padW=0, padH=0, inW=5, inH=5})
 
