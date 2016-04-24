@@ -76,6 +76,8 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
   // Helpers
   THClTensor *input_n = THClTensor_newv2(state, input->storage->device);
   THClTensor *output_n = THClTensor_newv2(state, input->storage->device);
+  THClTensor *outputBatch = THClTensor_newWithSize2d(state, input->storage->device,
+    nOutputPlane, outW * outH * desiredGroupSize); // this should be persisted somehow
 
   int numGroups = (batchSize + desiredGroupSize - 1) / desiredGroupSize;
   cout << "numGroups: " << numGroups << endl;
@@ -96,9 +98,10 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
 
 //  for(int elt=0; elt < batchSize; elt++) {
     THClTensor_resize1d(state, ones, thisGroupSize * outH * outW);
-////    THClTensor_resize1d(state, ones, outH * outW);
     // no need to fill with 1s, since thisGroupSize <= desiredGroupSize, and we already filled that many
     // 1s
+    THClTensor_resize2d(state, outputBatch, nOutputPlane, thisGroupSize * outH * outW);
+////    THClTensor_resize1d(state, ones, outH * outW);
 
     // Resize temporary columns
     THClTensor_resize2d(state, columns, nInputPlane*kW*kH, thisGroupSize * outH*outW);
@@ -126,9 +129,6 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
 
 //    cout << "elt=" << elt << " thisGroupSize=" << thisGroupSize << endl;
 
-    // Matrix mulitply per output:
-    THClTensor_narrow(state, output_n, output, 0, eltStart, thisGroupSize);
-
     // Do Bias first:
     // M,N,K are dims of matrix A and B
     // (see http://docs.nvidia.com/cuda/clblas/#clblas-lt-t-gt-gemm)
@@ -149,7 +149,7 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
         bias, nOutputPlane,
         ones, 1,
         0,
-        output_n, n_
+        outputBatch, n_
     );
 //    cout << "output_n after bias" << endl;
 //    THClDebug_printTensor(state, output_n);
@@ -170,28 +170,53 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
 //    THClDebug_printSize("columns", state, columns);
 //    cout << "numelements columns=" << THClTensor_nElement(state, columns) << endl;
 //    THClDebug_printSize("output_n", state, output_n);
-//    THClBlas_gemm(
-//        state,
-//        'r',
-//        'n', 'n',
-//        nOutputPlane, outW * outH * thisGroupSize, nInputPlane*kH*kW,
-//        1,
-//        weight, nInputPlane*kH*kW,
-//        columns, outW * outH * thisGroupSize,
-//        1,
-//        output_n, n
-//    );
     THClBlas_gemm(
         state,
         'r',
-        't', 't',
-        outW * outH * thisGroupSize, nOutputPlane, nInputPlane*kH*kW,
+        'n', 'n',
+        nOutputPlane, outW * outH * thisGroupSize, nInputPlane*kH*kW,
         1,
-        columns, outW * outH * thisGroupSize,
         weight, nInputPlane*kH*kW,
+        columns, outW * outH * thisGroupSize,
         1,
-        output_n, n
+        outputBatch, n
     );
+//    cout << "outputBatch" << endl;
+//    THClDebug_printTensor(state, outputBatch);
+
+    // copy from outputBatch to output_n
+
+    // Matrix mulitply per output:
+    THClTensor_narrow(state, output_n, output, 0, eltStart, thisGroupSize);
+    for(int image=0; image < thisGroupSize; image++) {
+//      cout << "image " << image << "/" << thisGroupSize << endl;
+      THClTensor *src = THClTensor_newWithStorage2d(state, input->storage->device,
+        THClTensor_storage(state, outputBatch), THClTensor_storageOffset(state, outputBatch) +
+          image * outW * outH,
+        nOutputPlane, outW * outH * thisGroupSize,
+        outW * outH, 1);
+      THClTensor *dest = THClTensor_newNarrow(state, output_n,
+        0, image, 1);
+//      cout << "src" << endl;
+//      THClDebug_printTensor(state, src);
+//      cout << "dest" << endl;
+//      THClDebug_printSize(state, dest);
+      THClTensor_copyCl(state, dest, src);
+      THClTensor_free(state, src);
+      THClTensor_free(state, dest);
+    }
+
+//    THClBlas_gemm(
+//        state,
+//        'r',
+//        't', 't',
+//        outW * outH * thisGroupSize, nOutputPlane, nInputPlane*kH*kW,
+//        1,
+//        columns, outW * outH * thisGroupSize,
+//        weight, nInputPlane*kH*kW,
+//        1,
+//        output_n, nOutputPlane
+//    );
 
 //weight: outPlanes, inPlanes * kW * kH
 //columns: inPlanes * kW * kH, outW * outH
@@ -199,10 +224,14 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
 
 //    cout << "output_n" << endl;
 //    THClDebug_printTensor(state, output_n);
+//    THClTensor *outmatrix_n = THClTensor_newWithStorage2d(state, 0, THClTensor_storage(state, output_n), THClTensor_storageOffset(state, output_n),
+//                                nOutputPlane, outW * outH * thisGroupSize,
+//                                outW * outH * thisGroupSize, 1);
   }
 
   // Free
   THClTensor_free(state, input_n);
+  THClTensor_free(state, outputBatch);
   THClTensor_free(state, output_n);
 
   // Resize output
