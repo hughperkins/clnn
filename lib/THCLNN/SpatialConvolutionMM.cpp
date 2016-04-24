@@ -140,7 +140,7 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
 //    cout << "THCLBlas_Gemm('t', 'n', " << n_ << ", " << m_ << " ," << k_ << ", 1, ones, " << k_ << ", bias, " << k_
 //       << ", 0, output_n, " << n_ << ");" << endl;
 //    cout << "line 143" << endl;
-    THClBlas_gemm(
+    THClBlas_gemm2(
         state,
          'r',
         't', 't',
@@ -170,7 +170,7 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
 //    THClDebug_printSize("columns", state, columns);
 //    cout << "numelements columns=" << THClTensor_nElement(state, columns) << endl;
 //    THClDebug_printSize("output_n", state, output_n);
-    THClBlas_gemm(
+    THClBlas_gemm2(
         state,
         'r',
         'n', 'n',
@@ -294,7 +294,7 @@ void THNN_ClSpatialConvolutionMM_updateGradInput(THClState *state, THClTensor *i
     long k = nOutputPlane;
 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
-    THClBlas_gemm(
+    THClBlas_gemm2(
         state,
         'c',
         'n', 't',
@@ -395,7 +395,7 @@ void THNN_ClSpatialConvolutionMM_accGradParameters(THClState *state, THClTensor 
     long k = columns->size[1];
 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
-    THClBlas_gemm(
+    THClBlas_gemm2(
         state,
         'c',
         't', 'n',
