@@ -52,13 +52,17 @@ function test_conv_geom(geometry)
   local padH = geometry.padH
   local inW = geometry.inW
   local inH = geometry.inH
+  local biased = geometry.biased
 --  print(geometry, geometry)
   print('geometry batchSize=' .. batchSize .. ' nInputPlane=' .. nInputPlane .. ' nOutputPlane=' .. nOutputPlane ..
         ' kW=' .. kW .. ' kH=' .. kH .. ' dW=' .. dW .. 'dH=' .. dH .. ' padW=' .. padW .. ' padH=' .. padH ..
-        ' inW=' .. inW .. ' inH=' .. inH)
+        ' inW=' .. inW .. ' inH=' .. inH .. ' biased=' .. tostring(biased))
   local net = nn.SpatialConvolutionMM(nInputPlane,nOutputPlane,kW,kH,dW,dH,padW,padH):cl()
   --net.weight:fill(0)
-  net.bias:fill(0)
+  if biased == false or biased == 0 or biased == nil then
+--    print('zeroing bias')
+    net.bias:fill(0)
+  end
   --net.weight[1][1] = 1
 --  print('net.weight:size()', net.weight:size())
   local input = torch.ClTensor(batchSize,nInputPlane,inH,inW):uniform()
@@ -104,6 +108,10 @@ function test_conv_all()
   test_conv_geom({batchSize=31, nInputPlane=16, nOutputPlane=32, kW=3, kH=3, dW=1, dH=1, padW=0, padH=0, inW=24, inH=37})
   test_conv_geom({batchSize=31, nInputPlane=16, nOutputPlane=32, kW=3, kH=3, dW=1, dH=1, padW=1, padH=1, inW=24, inH=37})
   test_conv_geom({batchSize=31, nInputPlane=64, nOutputPlane=128, kW=3, kH=3, dW=1, dH=1, padW=1, padH=1, inW=24, inH=37})
+
+  test_conv_geom({batchSize=2, nInputPlane=1, nOutputPlane=2, kW=1, kH=1, dW=1, dH=1, padW=0, padH=0, inW=1, inH=1, biased=true})
+  test_conv_geom({batchSize=2, nInputPlane=1, nOutputPlane=1, kW=1, kH=1, dW=1, dH=1, padW=0, padH=0, inW=1, inH=1, biased=true})
+  test_conv_geom({batchSize=31, nInputPlane=64, nOutputPlane=128, kW=3, kH=3, dW=1, dH=1, padW=1, padH=1, inW=24, inH=37, biased=true})
 end
 
 test_conv_all()
