@@ -215,22 +215,29 @@ void THNN_ClSpatialConvolutionMM_updateGradInput(THClState *state, THClTensor *i
 
     // M,N,K are dims of matrix A and B
     // (see http://docs.nvidia.com/cuda/clblas/#clblas-lt-t-gt-gemm)
-    long m = nInputPlane*kW*kH;
-    long n = gradColumns->size[1];
-    long k = nOutputPlane;
+//    long m = nInputPlane*kW*kH;
+//    long n = outH*outW;
+//    long k = nOutputPlane;
 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
     THClBlas_gemm2(
         state,
-        'c',
-        'n', 't',
-        n, m, k,
+        'r',
+        't', 'n',
+        nInputPlane*kW*kH, outH*outW, nOutputPlane,
         1,
-        gradOutput_n, n,
-        weight, m,
+        weight, nInputPlane*kW*kH,
+        gradOutput_n, outH*outW,
         0,
-        gradColumns, n
+        gradColumns, outH*outW
     );
+//    cout << "gradColumns" << endl;
+//    THClDebug_printTensor(state, gradColumns);
+
+//weight: nOutputPlane, nInputPlane * kW * kH
+// weight:t() nInputPlane * kW * kH, nOutputPlane
+//output: nOutputPlane, outW * outH
+//columns: nInputPlane * kW * kH, outW * outH
 
     // Unpack columns back into input:
     col2im(
