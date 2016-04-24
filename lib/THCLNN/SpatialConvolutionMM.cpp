@@ -194,6 +194,8 @@ void THNN_ClSpatialConvolutionMM_updateGradInput(THClState *state, THClTensor *i
   long outW  = (inW + 2*padW - kW) / dW + 1;
   long outH = (inH + 2*padH - kH) / dH + 1;
 
+  int desiredGroupSize = 16;
+
   // Batch size + input planes
   long batchSize = input->size[0];
 
@@ -201,54 +203,94 @@ void THNN_ClSpatialConvolutionMM_updateGradInput(THClState *state, THClTensor *i
   THClTensor_resize4d(state, gradInput, batchSize, nInputPlane, inH, inW);
 
   // Resize temporary columns
-  THClTensor_resize2d(state, gradColumns, nInputPlane*kW*kH, outH*outW);
+  THClTensor_resize2d(state, gradColumns, nInputPlane*kW*kH, desiredGroupSize*outH*outW);
 
   // Helpers
   THClTensor *gradInput_n = THClTensor_newv2(state, input->storage->device);
   THClTensor *gradOutput_n = THClTensor_newv2(state, input->storage->device);
+  THClTensor *gradOutputBatch = THClTensor_newWithSize2d(state, input->storage->device,
+    nOutputPlane, outW * outH * desiredGroupSize); // this should be persisted somehow
 
-  // For each elt in batch, do:
-  for (int elt = 0; elt < batchSize; elt ++) {
-    // Matrix mulitply per sample:
-    THClTensor_select(state, gradInput_n, gradInput, 0, elt);
-    THClTensor_select(state, gradOutput_n, gradOutput, 0, elt);
+  int numGroups = (batchSize + desiredGroupSize - 1) / desiredGroupSize;
+  for(int g=0; g < numGroups; g++) {
+    int eltStart = g * desiredGroupSize;
+    int eltEnd = eltStart + desiredGroupSize; // we will exclude this value in iteration
+    int thisGroupSize = eltEnd - eltStart;
+    if(g == numGroups - 1) {
+      thisGroupSize = batchSize - eltStart;
+      eltEnd = eltStart + thisGroupSize;
+    }
 
-    // M,N,K are dims of matrix A and B
-    // (see http://docs.nvidia.com/cuda/clblas/#clblas-lt-t-gt-gemm)
-//    long m = nInputPlane*kW*kH;
-//    long n = outH*outW;
-//    long k = nOutputPlane;
+    THClTensor_resize2d(state, gradColumns, nInputPlane*kW*kH, thisGroupSize*outH*outW);
+    THClTensor_resize2d(state, gradOutputBatch, nOutputPlane, thisGroupSize * outH * outW);
+    // copy each sample's gradOutput into gradOutputBatch
+    THClTensor_narrow(state, gradOutput_n, gradOutput, 0, eltStart, thisGroupSize);
+    cout << "gradOutput_n" << endl;
+    THClDebug_printTensor(state, gradOutput_n);
+    for(int image=0; image < thisGroupSize; image++) {
+      THClTensor *src = THClTensor_newNarrow(state, gradOutput_n,
+        0, image, 1);
+      THClTensor *dest = THClTensor_newWithStorage2d(state, input->storage->device,
+        THClTensor_storage(state, gradOutputBatch), THClTensor_storageOffset(state, gradOutputBatch) +
+          image * outW * outH,
+        nOutputPlane, outW * outH * thisGroupSize,
+        outW * outH, 1);
+      THClTensor_copyCl(state, dest, src);
+      THClTensor_free(state, src);
+      THClTensor_free(state, dest);
+    }
+    cout << "gradOutputBatch" << endl;
+    THClDebug_printTensor(state, gradOutputBatch);
 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
     THClBlas_gemm2(
         state,
         'r',
         't', 'n',
-        nInputPlane*kW*kH, outH*outW, nOutputPlane,
+        nInputPlane*kW*kH, thisGroupSize*outH*outW, nOutputPlane,
         1,
         weight, nInputPlane*kW*kH,
-        gradOutput_n, outH*outW,
+        gradOutputBatch, thisGroupSize*outH*outW,
         0,
-        gradColumns, outH*outW
+        gradColumns, thisGroupSize*outH*outW
     );
-//    cout << "gradColumns" << endl;
-//    THClDebug_printTensor(state, gradColumns);
+    cout << "gradColumns" << endl;
+    THClDebug_printTensor(state, gradColumns);
 
-//weight: nOutputPlane, nInputPlane * kW * kH
-// weight:t() nInputPlane * kW * kH, nOutputPlane
-//output: nOutputPlane, outW * outH
-//columns: nInputPlane * kW * kH, outW * outH
-
-    // Unpack columns back into input:
-    col2im(
-      state,
-//      THClState_getCurrentStream(state),
-      gradColumns,
-      nInputPlane,
-      inW, inH, kW, kH, dW, dH, padW, padH,
-      gradInput_n
-    );
+    // Unpack columns back into gradInput:
+    for(int elt = eltStart; elt < eltEnd; elt++) {
+      // Extract columns:
+      THClTensor_select(state, gradInput_n, gradInput, 0, elt);
+      cout << "elt=" << elt << endl;
+      cout << "gradColumns" << endl;
+      THClDebug_printTensor(state, gradColumns);
+      col2im_batched(
+        state,
+  //      THClState_getCurrentStream(state),
+        gradColumns,
+        nInputPlane,
+        inW, inH, kW, kH, dW, dH, padW, padH,
+        thisGroupSize, elt - eltStart,
+        gradInput_n
+      );
+      cout << "gradInput_n" << endl;
+      THClDebug_printTensor(state, gradInput_n);
+    }
   }
+
+//  // For each elt in batch, do:
+//  for (int elt = 0; elt < batchSize; elt ++) {
+//    // Matrix mulitply per sample:
+//    THClTensor_select(state, gradInput_n, gradInput, 0, elt);
+//    THClTensor_select(state, gradOutput_n, gradOutput, 0, elt);
+
+
+////weight: nOutputPlane, nInputPlane * kW * kH
+//// weight:t() nInputPlane * kW * kH, nOutputPlane
+////output: nOutputPlane, outW * outH
+////columns: nInputPlane * kW * kH, outW * outH
+
+//  }
 
   // Free
   THClTensor_free(state, gradInput_n);

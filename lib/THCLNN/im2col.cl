@@ -40,50 +40,6 @@ kernel void im2col_kernel(const int n, const global float* im_data, int im_offse
   }
 }
 
-// Kernel for fast unfold+copy
-// (borrowed from Caffe: https://github.com/BVLC/caffe/blob/master/src/caffe/layers/conv_layer.cu)
-// adapted for use with groups, as described in
-// "OpenCL caffe: Accelerating and enabling a cross platform machine" by Junli Gu et al
-// imageIndex will control where in columns, the image is copied, and columns will have in fact
-// numimages *
-kernel void im2col_kernel_batched(const int n, const global float* im_data, int im_offset,
-    const int nInputPlane,
-    const int inW, const int inH,
-     const int kW, const int kH, 
-    const int dW, const int dH,
-    const int padW, const int padH,
-    const int outW, const int outH,
-    const int numImages, const int imageIdx,
-    global float* col_data, int col_offset) {
-  global const float *data_im = im_data + im_offset;
-//  global float *data_col = col_data + col_offset + imageIdx * outH * outW;
-//if( get_local_id(0) == 2) {
-  global float *data_col = col_data + col_offset; // + imageIdx * outH*outW;
-
-  CL_KERNEL_LOOP(index, n) {
-    int w_out = index % outW;
-    index /= outW;
-    int h_out = index % outH;
-    int channel_in = index / outH;
-    int channel_out = channel_in * kW * kH;
-    int w_in = w_out * dW - padW;
-    int h_in = h_out * dH - padH;
-//    data_col += (imageIdx * outH * outW + channel_out * outH * numImages + h_out) * outW + w_out;
-    data_col += imageIdx * outH * outW + channel_out * outH * outW * numImages + h_out * outW + w_out;
-    data_im += (channel_in * inH + h_in) * inW + w_in;
-    for (int i = 0; i < kH; ++i) {
-      for (int j = 0; j < kW; ++j) {
-        int h = h_in + i;
-        int w = w_in + j;
-        *data_col = (h >= 0 && w >= 0 && h < inH && w < inW) ?
-          data_im[i * inW + j] : 0;
-//          data_col += 5;
-        data_col += numImages * outH * outW;
-      }
-    }
-  }
-//   }
-}
 kernel void col2im_kernel(const int n, global const float* col_data, int col_offset,
     const int inW, const int inH,
     const int kW, const int kH,
@@ -124,5 +80,83 @@ kernel void col2im_kernel(const int n, global const float* col_data, int col_off
     }
     data_im[index] = val;
   }
+}
+// Kernel for fast unfold+copy
+// (borrowed from Caffe: https://github.com/BVLC/caffe/blob/master/src/caffe/layers/conv_layer.cu)
+// adapted for use with groups, as described in
+// "OpenCL caffe: Accelerating and enabling a cross platform machine" by Junli Gu et al
+// imageIndex will control where in columns, the image is copied, and columns will have in fact
+// numimages *
+kernel void im2col_kernel_batched(const int n, const global float* im_data, int im_offset,
+    const int nInputPlane,
+    const int inW, const int inH,
+     const int kW, const int kH, 
+    const int dW, const int dH,
+    const int padW, const int padH,
+    const int outW, const int outH,
+    const int numImages, const int imageIdx,
+    global float* col_data, int col_offset) {
+  global const float *data_im = im_data + im_offset;
+//if( get_local_id(0) == 2) {
+  global float *data_col = col_data + col_offset;
+
+  CL_KERNEL_LOOP(index, n) {
+    int w_out = index % outW;
+    index /= outW;
+    int h_out = index % outH;
+    int channel_in = index / outH;
+    int channel_out = channel_in * kW * kH;
+    int w_in = w_out * dW - padW;
+    int h_in = h_out * dH - padH;
+//    data_col += (imageIdx * outH * outW + channel_out * outH * numImages + h_out) * outW + w_out;
+    data_col += imageIdx * outH * outW + channel_out * outH * outW * numImages + h_out * outW + w_out;
+    data_im += (channel_in * inH + h_in) * inW + w_in;
+    for (int i = 0; i < kH; ++i) {
+      for (int j = 0; j < kW; ++j) {
+        int h = h_in + i;
+        int w = w_in + j;
+        *data_col = (h >= 0 && w >= 0 && h < inH && w < inW) ?
+          data_im[i * inW + j] : 0;
+//          data_col += 5;
+        data_col += numImages * outH * outW;
+      }
+    }
+  }
+//   }
+}
+// copy one single image out of col into im (col has many images, im just has one)
+kernel void col2im_kernel_batched(const int n, global const float* col_data, int col_offset,
+    const int inW, const int inH,
+    const int kW, const int kH,
+    const int dW, const int dH,
+    const int padW, const int padH,
+    const int outW, const int outH,
+    const int numImages, const int imageIdx,
+    global float* im_data, int im_offset) {
+  global float *data_im = im_data + im_offset;
+  global const float *data_col = col_data + col_offset;
+
+//if(get_local_id(0) == 0) {
+  CL_KERNEL_LOOP(index, n) {
+    float val = 0;
+    int w = index % inW + padW;
+    int h = (index / inW) % inH + padH;
+    int c = index / (inW * inH);
+    // compute the start and end of the output
+    int in_w_start = (w < kW) ? 0 : (w - kW) / dW + 1;
+    int in_w_end = min(w / dW + 1, outW);
+    int in_h_start = (h < kH) ? 0 : (h - kH) / dH + 1;
+    int in_h_end = min(h / dH + 1, outH);
+    int offset = imageIdx * outH * outW + (c * kH * kW + h * kW + w) * outH * outW;
+    int in_h_coeff = (1 - dH * kW * outH) * outW;
+    int in_w_coeff = (1 - dW * outH * outW);
+    for (int in_h = in_h_start; in_h < in_h_end; in_h++) {
+      for (int in_w = in_w_start; in_w < in_w_end; in_w++) {
+        val += data_col[offset + in_h * in_h_coeff + in_w * in_w_coeff];
+      }
+    }
+    data_im[index] = val;
+  }
+//}
 }
 

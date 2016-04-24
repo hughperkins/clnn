@@ -93,6 +93,50 @@ void im2col(THClState *state, THClTensor* im,
   k.run(GET_BLOCKS(state, num_kernels), getNumThreads(state));
 }
 
+void col2im(THClState *state, THClTensor* col,
+    const int nInputPlane,
+    const int inW, const int inH,
+    const int kW, const int kH,
+    const int dW, const int dH,
+    const int padW, const int padH,
+    THClTensor* im) {
+  int outW = (inW + 2 * padW - kW) / dW + 1;
+  int outH = (inH + 2 * padH - kH) / dH + 1;
+  int num_kernels = nInputPlane * inH * inW;
+  // To avoid involving atomic operations, we will launch one kernel per
+  // bottom dimension, and then in the kernel add up the top dimensions.
+
+  EasyCL *cl = im->storage->cl;
+  std::string uniqueName = "SpatialConvolutionMM::col2im";
+  CLKernel *kernel = 0;
+  if(cl->kernelExists(uniqueName)) {
+    kernel = cl->getKernel(uniqueName);
+  } else {
+    TemplatedKernel kernelBuilder(cl);
+    kernel = kernelBuilder.buildKernel(uniqueName, "SpatialConvolutionMM.cl",
+      getKernelTemplate(), "col2im_kernel");
+  }
+
+  THClKernels k(state, kernel);
+  k.in(num_kernels);
+  k.in(col);
+  k.in(inW);
+  k.in(inH);
+
+  k.in(kW);
+  k.in(kH);
+  k.in(dW);
+  k.in(dH);
+  k.in(padW);
+  k.in(padH);
+
+  k.in(outW);
+  k.in(outH);
+  k.out(im);
+
+  k.run(GET_BLOCKS(state, num_kernels), getNumThreads(state));
+}
+
 void im2col_batched(THClState *state, THClTensor* im,
     const int nInputPlane,
     const int inW, const int inH,
@@ -152,12 +196,13 @@ void im2col_batched(THClState *state, THClTensor* im,
   k.run(GET_BLOCKS(state, num_kernels), getNumThreads(state));
 }
 
-void col2im(THClState *state, THClTensor* col,
+void col2im_batched(THClState *state, THClTensor* col,
     const int nInputPlane,
     const int inW, const int inH,
     const int kW, const int kH,
     const int dW, const int dH,
     const int padW, const int padH,
+    int numImages, int imageIdx,
     THClTensor* im) {
   int outW = (inW + 2 * padW - kW) / dW + 1;
   int outH = (inH + 2 * padH - kH) / dH + 1;
@@ -166,14 +211,14 @@ void col2im(THClState *state, THClTensor* col,
   // bottom dimension, and then in the kernel add up the top dimensions.
 
   EasyCL *cl = im->storage->cl;
-  std::string uniqueName = "SpatialConvolutionMM::col2im";
+  std::string uniqueName = "SpatialConvolutionMM::col2im_batched";
   CLKernel *kernel = 0;
   if(cl->kernelExists(uniqueName)) {
     kernel = cl->getKernel(uniqueName);
   } else {
     TemplatedKernel kernelBuilder(cl);
     kernel = kernelBuilder.buildKernel(uniqueName, "SpatialConvolutionMM.cl",
-      getKernelTemplate(), "col2im_kernel");
+      getKernelTemplate(), "col2im_kernel_batched");
   }
 
   THClKernels k(state, kernel);
@@ -191,12 +236,14 @@ void col2im(THClState *state, THClTensor* col,
 
   k.in(outW);
   k.in(outH);
+  k.in(numImages);
+  k.in(imageIdx);
   k.out(im);
 
   k.run(GET_BLOCKS(state, num_kernels), getNumThreads(state));
 }
 
-#undef CL_KERNEL_LOOP
+//#undef CL_KERNEL_LOOP
 
 std::string getKernelTemplate() {
   // [[[cog
@@ -247,50 +294,6 @@ std::string getKernelTemplate() {
   "  }\n"
   "}\n"
   "\n"
-  "// Kernel for fast unfold+copy\n"
-  "// (borrowed from Caffe: https://github.com/BVLC/caffe/blob/master/src/caffe/layers/conv_layer.cu)\n"
-  "// adapted for use with groups, as described in\n"
-  "// \"OpenCL caffe: Accelerating and enabling a cross platform machine\" by Junli Gu et al\n"
-  "// imageIndex will control where in columns, the image is copied, and columns will have in fact\n"
-  "// numimages *\n"
-  "kernel void im2col_kernel_batched(const int n, const global float* im_data, int im_offset,\n"
-  "    const int nInputPlane,\n"
-  "    const int inW, const int inH,\n"
-  "     const int kW, const int kH,\n"
-  "    const int dW, const int dH,\n"
-  "    const int padW, const int padH,\n"
-  "    const int outW, const int outH,\n"
-  "    const int numImages, const int imageIdx,\n"
-  "    global float* col_data, int col_offset) {\n"
-  "  global const float *data_im = im_data + im_offset;\n"
-  "//  global float *data_col = col_data + col_offset + imageIdx * outH * outW;\n"
-  "//if( get_local_id(0) == 2) {\n"
-  "  global float *data_col = col_data + col_offset; // + imageIdx * outH*outW;\n"
-  "\n"
-  "  CL_KERNEL_LOOP(index, n) {\n"
-  "    int w_out = index % outW;\n"
-  "    index /= outW;\n"
-  "    int h_out = index % outH;\n"
-  "    int channel_in = index / outH;\n"
-  "    int channel_out = channel_in * kW * kH;\n"
-  "    int w_in = w_out * dW - padW;\n"
-  "    int h_in = h_out * dH - padH;\n"
-  "//    data_col += (imageIdx * outH * outW + channel_out * outH * numImages + h_out) * outW + w_out;\n"
-  "    data_col += imageIdx * outH * outW + channel_out * outH * outW * numImages + h_out * outW + w_out;\n"
-  "    data_im += (channel_in * inH + h_in) * inW + w_in;\n"
-  "    for (int i = 0; i < kH; ++i) {\n"
-  "      for (int j = 0; j < kW; ++j) {\n"
-  "        int h = h_in + i;\n"
-  "        int w = w_in + j;\n"
-  "        *data_col = (h >= 0 && w >= 0 && h < inH && w < inW) ?\n"
-  "          data_im[i * inW + j] : 0;\n"
-  "//          data_col += 5;\n"
-  "        data_col += numImages * outH * outW;\n"
-  "      }\n"
-  "    }\n"
-  "  }\n"
-  "//   }\n"
-  "}\n"
   "kernel void col2im_kernel(const int n, global const float* col_data, int col_offset,\n"
   "    const int inW, const int inH,\n"
   "    const int kW, const int kH,\n"
@@ -331,6 +334,84 @@ std::string getKernelTemplate() {
   "    }\n"
   "    data_im[index] = val;\n"
   "  }\n"
+  "}\n"
+  "// Kernel for fast unfold+copy\n"
+  "// (borrowed from Caffe: https://github.com/BVLC/caffe/blob/master/src/caffe/layers/conv_layer.cu)\n"
+  "// adapted for use with groups, as described in\n"
+  "// \"OpenCL caffe: Accelerating and enabling a cross platform machine\" by Junli Gu et al\n"
+  "// imageIndex will control where in columns, the image is copied, and columns will have in fact\n"
+  "// numimages *\n"
+  "kernel void im2col_kernel_batched(const int n, const global float* im_data, int im_offset,\n"
+  "    const int nInputPlane,\n"
+  "    const int inW, const int inH,\n"
+  "     const int kW, const int kH,\n"
+  "    const int dW, const int dH,\n"
+  "    const int padW, const int padH,\n"
+  "    const int outW, const int outH,\n"
+  "    const int numImages, const int imageIdx,\n"
+  "    global float* col_data, int col_offset) {\n"
+  "  global const float *data_im = im_data + im_offset;\n"
+  "//if( get_local_id(0) == 2) {\n"
+  "  global float *data_col = col_data + col_offset;\n"
+  "\n"
+  "  CL_KERNEL_LOOP(index, n) {\n"
+  "    int w_out = index % outW;\n"
+  "    index /= outW;\n"
+  "    int h_out = index % outH;\n"
+  "    int channel_in = index / outH;\n"
+  "    int channel_out = channel_in * kW * kH;\n"
+  "    int w_in = w_out * dW - padW;\n"
+  "    int h_in = h_out * dH - padH;\n"
+  "//    data_col += (imageIdx * outH * outW + channel_out * outH * numImages + h_out) * outW + w_out;\n"
+  "    data_col += imageIdx * outH * outW + channel_out * outH * outW * numImages + h_out * outW + w_out;\n"
+  "    data_im += (channel_in * inH + h_in) * inW + w_in;\n"
+  "    for (int i = 0; i < kH; ++i) {\n"
+  "      for (int j = 0; j < kW; ++j) {\n"
+  "        int h = h_in + i;\n"
+  "        int w = w_in + j;\n"
+  "        *data_col = (h >= 0 && w >= 0 && h < inH && w < inW) ?\n"
+  "          data_im[i * inW + j] : 0;\n"
+  "//          data_col += 5;\n"
+  "        data_col += numImages * outH * outW;\n"
+  "      }\n"
+  "    }\n"
+  "  }\n"
+  "//   }\n"
+  "}\n"
+  "// copy one single image out of col into im (col has many images, im just has one)\n"
+  "kernel void col2im_kernel_batched(const int n, global const float* col_data, int col_offset,\n"
+  "    const int inW, const int inH,\n"
+  "    const int kW, const int kH,\n"
+  "    const int dW, const int dH,\n"
+  "    const int padW, const int padH,\n"
+  "    const int outW, const int outH,\n"
+  "    const int numImages, const int imageIdx,\n"
+  "    global float* im_data, int im_offset) {\n"
+  "  global float *data_im = im_data + im_offset;\n"
+  "  global const float *data_col = col_data + col_offset;\n"
+  "\n"
+  "//if(get_local_id(0) == 0) {\n"
+  "  CL_KERNEL_LOOP(index, n) {\n"
+  "    float val = 0;\n"
+  "    int w = index % inW + padW;\n"
+  "    int h = (index / inW) % inH + padH;\n"
+  "    int c = index / (inW * inH);\n"
+  "    // compute the start and end of the output\n"
+  "    int in_w_start = (w < kW) ? 0 : (w - kW) / dW + 1;\n"
+  "    int in_w_end = min(w / dW + 1, outW);\n"
+  "    int in_h_start = (h < kH) ? 0 : (h - kH) / dH + 1;\n"
+  "    int in_h_end = min(h / dH + 1, outH);\n"
+  "    int offset = imageIdx * outH * outW + (c * kH * kW + h * kW + w) * outH * outW;\n"
+  "    int in_h_coeff = (1 - dH * kW * outH) * outW;\n"
+  "    int in_w_coeff = (1 - dW * outH * outW);\n"
+  "    for (int in_h = in_h_start; in_h < in_h_end; in_h++) {\n"
+  "      for (int in_w = in_w_start; in_w < in_w_end; in_w++) {\n"
+  "        val += data_col[offset + in_h * in_h_coeff + in_w * in_w_coeff];\n"
+  "      }\n"
+  "    }\n"
+  "    data_im[index] = val;\n"
+  "  }\n"
+  "//}\n"
   "}\n"
   "\n"
   "";

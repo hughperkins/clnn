@@ -29,6 +29,15 @@ void col2im(THClState *state, THClTensor* col,
     const int padW, const int padH,
     THClTensor* im);
 
+void col2im_batched(THClState *state, THClTensor* col,
+    const int nInputPlane,
+    const int inW, const int inH,
+    const int kW, const int kH,
+    const int dW, const int dH,
+    const int padW, const int padH,
+    int numImages, int imageIdx,
+    THClTensor* im);
+
 #ifdef __cplusplus
 }
 #endif
