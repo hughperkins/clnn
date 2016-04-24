@@ -80,7 +80,7 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
     nOutputPlane, outW * outH * desiredGroupSize); // this should be persisted somehow
 
   int numGroups = (batchSize + desiredGroupSize - 1) / desiredGroupSize;
-  cout << "numGroups: " << numGroups << endl;
+//  cout << "numGroups: " << numGroups << endl;
   for(int g=0; g < numGroups; g++) {
 //    cout << "group g=" << g << endl;
 //  for (int elt = 0; elt < batchSize; elt += desiredGroupSize) {
@@ -93,7 +93,7 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
       eltEnd = eltStart + thisGroupSize;
     }
 //    if(g == 0) {
-      cout << "thisGroupSize " << thisGroupSize << " eltStart=" << eltStart << " eltEnd=" << eltEnd << endl;
+//      cout << "thisGroupSize " << thisGroupSize << " eltStart=" << eltStart << " eltEnd=" << eltEnd << endl;
 //    }
 
 //  for(int elt=0; elt < batchSize; elt++) {
@@ -132,9 +132,9 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
     // Do Bias first:
     // M,N,K are dims of matrix A and B
     // (see http://docs.nvidia.com/cuda/clblas/#clblas-lt-t-gt-gemm)
-    long m_ = nOutputPlane;
-    long n_ = outW * outH * thisGroupSize;
-    long k_ = 1;
+//    long m_ = nOutputPlane;
+//    long n_ = outW * outH * thisGroupSize;
+//    long k_ = 1;
 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
 //    cout << "THCLBlas_Gemm('t', 'n', " << n_ << ", " << m_ << " ," << k_ << ", 1, ones, " << k_ << ", bias, " << k_
@@ -149,7 +149,7 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
         bias, nOutputPlane,
         ones, 1,
         0,
-        outputBatch, n_
+        outputBatch, outW * outH * thisGroupSize
     );
 //    cout << "output_n after bias" << endl;
 //    THClDebug_printTensor(state, output_n);
@@ -157,9 +157,9 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
 
     // M,N,K are dims of matrix A and B
     // (see http://docs.nvidia.com/cuda/clblas/#clblas-lt-t-gt-gemm)
-    long m = nOutputPlane;
-    long n = outW * outH * thisGroupSize;
-    long k = nInputPlane*kH*kW;
+//    long m = nOutputPlane;
+//    long n = outW * outH * thisGroupSize;
+//    long k = nInputPlane*kH*kW;
 
     // Do GEMM (note: this is a bit confusing because gemm assumes column-major matrices)
 //    cout << "THCLBlas_Gemm('n', 'n', " << n << ", " << m << " ," << k << ", 1, columns, " << n << ", weight, " << k
@@ -179,7 +179,7 @@ void THNN_ClSpatialConvolutionMM_updateOutput(THClState *state, THClTensor *inpu
         weight, nInputPlane*kH*kW,
         columns, outW * outH * thisGroupSize,
         1,
-        outputBatch, n
+        outputBatch, outW * outH * thisGroupSize
     );
 //    cout << "outputBatch" << endl;
 //    THClDebug_printTensor(state, outputBatch);
