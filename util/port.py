@@ -46,8 +46,6 @@ def port_filename(cu_filename):
     clfilename = clfilename.replace('THCU', 'THCL')
   else:
     clfilename = clfilename.replace('THC', 'THCl')
-  if cu_filename == 'im2col.h':
-    clfilename = 'im2col.cl'
   return clfilename
 
 def process_dir(cunn_dir, port_dir):
@@ -84,8 +82,6 @@ def process_dir(cunn_dir, port_dir):
     if suffix == '.cu':
       suffix = '.cpp'
     if suffix == '.c':
-      suffix = '.cpp'
-    if filename == 'im2col.h':
       suffix = '.cpp'
     filename = '{base}{suffix}'.format(
       base=base_name,

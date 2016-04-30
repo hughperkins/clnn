@@ -162,9 +162,9 @@ void THNN_ClSoftMax_updateGradInput(THClState *state, THClTensor *input, THClTen
 static std::string getKernelTemplate() {
   // [[[cog
   // import stringify
-  // stringify.write_kernel( "kernel", "lib/THCLNN/SoftMax.cl" )
+  // stringify.write_kernel( "kernel", "SoftMax.cl" )
   // ]]]
-  // generated using cog, from lib/THCLNN/SoftMax.cl:
+  // generated using cog, from SoftMax.cl:
   const char * kernelSource =  
   "// from SoftMax.cu:\n"
   "\n"

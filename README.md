@@ -24,8 +24,6 @@ These mostly 'just work', since based on underlying tensor methods, already impl
 * nn.SpatialConvolutionMM
 * nn.SpatialMaxPooling (including `ceil` mode)
 * nn.SpatialAveragePooling
-* nn.TemporalConvolution2  This is specific to clnn.  It works on cpu and cuda too, not just on OpenCL.  It is API-compatible with TemporalConvolution,
-and faster than TemporalConvolution, on both CUDA and OpenCL.
 
 ### Transfer function layers
 
@@ -88,12 +86,7 @@ Please see https://github.com/soumith/convnet-benchmarks#imagenet-winners-benchm
   * [nn](https://github.com/torch/nn)
   * [cltorch](https://github.com/hughperkins/cltorch)
 * have updated, right now, cltorch, to latest version, eg `luarocks install cltorch`
-  * any weird build issues on clnn, or seg faults etc, please verify torch, cltorch and nn is latest version before raising issue, ie do:
-```
-luarocks install torch
-luarocks install nn
-luarocks install cltorch
-```
+  * any weird build issues on clnn, or seg faults etc, please verify cltorch is latest version before raising issue
 * have an OpenCL-enabled GPU device available, and appropriate OpenCL-enabled drivers installed
 
 ### Procedure
@@ -150,18 +143,6 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 
 ## Recent changes
 
-* 24th April:
-  * added batched SGEMM, as per Junli Gu et al's "OpenCL caffe: Accelerating and enabling a cross platform machine" [http://www.iwocl.org/attend/sessions/](http://www.iwocl.org/attend/sessions/)
-    * this gives a quite impressive speedup on alexnet layers
-    * for now, I've only added for forward propagation, I need to add to backprop too
-* 9th April:
-  * fixed a regression on BatchNormalization and SpatialBatchNormalization, and added tests for these
-* 26th March:
-  * add TemporalConvolution2: same API and usage as TemporalConvolution, but faster on GPUs
-* 10th March:
-  * [@pawni](https://github.com/pawni) (Nick Pawlowski) added SpatialUpSamplingNearest.  Thank you Nick
-* 20th February:
-  * [@gloine](https://github.com/gloine) (Jaehyung Lee) added support for non-batched input to ClassNLLCriterion.  Thank you Jaehyung
 * 1st Feb:
   * merged/ported THNN phase 3.  Any weird build issues, please update both `nn` and `clnn`.
 * 2nd January, 2016:

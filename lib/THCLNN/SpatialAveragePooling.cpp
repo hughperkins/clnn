@@ -227,9 +227,9 @@ void THNN_ClSpatialAveragePooling_updateGradInput(THClState *state, THClTensor *
 static std::string getKernelTemplate() {
   // [[[cog
   // import stringify
-  // stringify.write_kernel( "kernel", "lib/THCLNN/SpatialAveragePooling.cl" )
+  // stringify.write_kernel( "kernel", "SpatialAveragePooling.cl" )
   // ]]]
-  // generated using cog, from lib/THCLNN/SpatialAveragePooling.cl:
+  // generated using cog, from SpatialAveragePooling.cl:
   const char * kernelSource =  
   "// from SpatialAveragePooling.cu:\n"
   "\n"

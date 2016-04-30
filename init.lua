@@ -17,10 +17,6 @@ end
 
 torch.ClTensor.nn = {}
 
-include 'BatchNormalization.lua'
-include 'SpatialBatchNormalization.lua'
-include 'TemporalConvolution2.lua'
-
 include 'LookupTable.lua'
 include 'Pointwise.lua'
 include 'Threshold.lua'
@@ -35,4 +31,3 @@ include 'CMulTable.lua'
 
 include 'test.lua'
 
---include 'SpatialUpSamplingNearest.lua'

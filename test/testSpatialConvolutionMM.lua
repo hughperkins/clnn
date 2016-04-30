@@ -6,57 +6,6 @@ local nloop = _test.nloop
 local precision_forward = 1e-4
 local precision_backward = 1e-2
 
-function clnntest.SpatialConvolutionMM_forward_1d_byhand()
-  -- do a 1d convolution, as per clnntest.TemporalConvolution2_forward(), but directly on
-  -- SpatialConvolutionMM
-
-  local batchSize = 5
-  local inFeatures = 6
-  local outFeatures = 7
-  local sentenceLength = 10
-  local kernelSize = 3
-  local net = nn.SpatialConvolutionMM(inFeatures, outFeatures, 1, kernelSize)
-  net:cl()
-  local weights = net.weight
-  weights:uniform(-1, 1)
-  net.bias:zero()  -- to simplify test
-  local input = torch.FloatTensor(batchSize, inFeatures, sentenceLength, 1):uniform()
-  input = input:cl()
-  local output = net:forward(input)
---  print('weights:size()', weights:size())
-  weights = weights:view(torch.LongStorage({outFeatures, inFeatures, kernelSize}))
---  print('weights:size()', weights:size())
---  print('output:size()', output:size())
-  local outLength = sentenceLength - math.floor(kernelSize / 2) * 2
-  local ourOut = torch.FloatTensor(batchSize, outFeatures, outLength, 1):zero()
-
-  for b=1,batchSize do
-    -- each output feature is independnet from other outputs
-    for outFeature=1,outFeatures do
-      -- each output point along outS dimensino is indepdnent from other outputs
-      for outS=1,outLength do
-        local sum = 0
-        -- convolve is sum over kernel size, and over the input features
-        for k=1,kernelSize do
-          local inS = outS + (k - 1)
-          for inFeature=1,inFeatures do
-            local weight = weights[outFeature][inFeature][k]
-            sum = sum + weight * input[b][inFeature][inS][1]
-          end
-        end
-        ourOut[b][outFeature][outS][1] = sum
-      end
-    end
-  end
---  print('output[1]')
---  print(output[1])
---  print('ourOut[1]')
---  print(ourOut[1])
---  print('output[1] - ourOut[1]')
---  print(output[1]:float() - ourOut[1])
-  mytester:assertlt((output:float() - ourOut):abs():max(), 0.0001)
-end
-
 function clnntest.SpatialConvolutionMM_forward_single()
    torch.manualSeed(123)
    local from = math.random(1,32)

@@ -25,12 +25,9 @@ public:
   }
 };
 
-void THNN_ClELU_updateOutput(THClState *state, THClTensor *input, THClTensor *output, float alpha, bool inplace)
+void THNN_ClELU_updateOutput(THClState *state, THClTensor *input, THClTensor *output, float alpha)
 {
   THAssert(THClTensor_checkGPU(state, 2, input, output));
-  if(inplace) {
-    THError("inplace should be false for now, in ELU.  If you need inplace true, please raise an issue");
-  }
   THClTensor_resizeAs(state, output, input);
   ELUupdateOutput_functor func(alpha);
   THClTensor_pointwiseApply2(state, output, input, &func);
@@ -55,12 +52,9 @@ public:
 };
 
 void THNN_ClELU_updateGradInput(THClState *state, THClTensor *input, THClTensor *gradOutput, 
-  THClTensor *gradInput, THClTensor *output, float alpha, bool inplace)
+  THClTensor *gradInput, THClTensor *output, float alpha)
 {
   THAssert(THClTensor_checkGPU(state, 3, output, gradOutput, gradInput));
-  if(inplace) {
-    THError("inplace should be false for now, in ELU.  If you need inplace true, please raise an issue");
-  }
   THClTensor_resizeAs(state, gradInput, output);
   ELUupdateGradInput_functor func(alpha);
   THClTensor_pointwiseApply3(state, gradInput, output, gradOutput, &func);

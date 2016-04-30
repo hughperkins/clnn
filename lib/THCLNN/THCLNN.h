@@ -17,16 +17,14 @@ TH_API void THNN_ClELU_updateOutput(
           THClState *state,
           THClTensor *input,
           THClTensor *output,
-          float alpha,
-          bool inplace);
+          float alpha);
 TH_API void THNN_ClELU_updateGradInput(
           THClState *state,
           THClTensor *input,
           THClTensor *gradOutput,
           THClTensor *gradInput,
           THClTensor *output,
-          float alpha,
-          bool inplace);
+          float alpha);
 
 TH_API void THNN_ClTanh_updateOutput(
           THClState *state,
@@ -56,6 +54,7 @@ TH_API void THNN_ClSpatialConvolutionMM_updateGradInput(
           THClTensor *gradOutput,
           THClTensor *gradInput,
           THClTensor *weight,
+          THClTensor *bias,
           THClTensor *columns,
           THClTensor *ones,
           int kW, int kH,
@@ -122,15 +121,3 @@ TH_API void THNN_ClSoftMax_updateGradInput(
           THClTensor *gradOutput,
           THClTensor *gradInput,
           THClTensor *output);
-
-TH_API void THNN_ClSpatialUpSamplingNearest_updateOutput(
-        THClState *state,
-        THClTensor *input,
-        THClTensor *output,
-        int scale_factor);
-TH_API void THNN_ClSpatialUpSamplingNearest_updateGradInput(
-        THClState *state,
-        THClTensor *input,
-        THClTensor *gradOutput,
-        THClTensor *gradInput,
-        int scale_factor);

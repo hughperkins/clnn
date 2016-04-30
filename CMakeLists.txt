@@ -11,7 +11,7 @@ SET(CMAKE_CXX_FLAGS "-std=c++0x -Wall")
 
 execute_process( COMMAND git log -n 1 --pretty=%h OUTPUT_VARIABLE git_commit OUTPUT_STRIP_TRAILING_WHITESPACE)
 #execute_process( COMMAND echo string commit="${git_commit}" > ${CMAKE_CURRENT_SOURCE_DIR}/commit.h )
-file(GENERATE OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/clnn_commit_generated.h
+file(GENERATE OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/clnn_commit_generated.h 
   CONTENT "const char *clnn_commit=\"${git_commit}\";\n"
 )
 
@@ -23,27 +23,23 @@ add_definitions(-DUSE_CLEW)
 INCLUDE_DIRECTORIES("${Torch_INSTALL_INCLUDE}/THCl")
 INCLUDE_DIRECTORIES("${Torch_INSTALL_INCLUDE}/easycl")
 LINK_DIRECTORIES("${Torch_INSTALL_LIB}")
-#message("Torch_INSTALL_LIB ${Torch_INSTALL_LIB}")
+message("Torch_INSTALL_LIB ${Torch_INSTALL_LIB}")
 
 #add_library( clnn SHARED init.cpp )
 
 set(src init.cpp utils.cpp
 )
-
 set(luasrc init.lua MSECriterion.lua Pointwise.lua Threshold.lua LookupTable.lua
-  LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua THCLNN.lua TemporalConvolution2.lua
+  LogSoftMax.lua ClassNLLCriterion.lua StatefulTimer.lua THCLNN.lua
   Narrow.lua CMulTable.lua test.lua test/testSpatialMaxPooling.lua test/testSpatialConvolutionMM.lua
-  test/testLookupTable.lua test/testMSECriterion.lua test/testSpatialUpSamplingNearest.lua
-  test/testELU.lua test/testhelpers.lua test/testTemporalConvolution2.lua test/testBatchNormalization.lua
-  BatchNormalization.lua SpatialBatchNormalization.lua
+  test/testLookupTable.lua test/testMSECriterion.lua
   test/testClassNLLCriterion.lua test/testSoftMax.lua test/testLogSoftMax.lua test/testSpatialAveragePooling.lua)
-
 ADD_TORCH_PACKAGE(clnn "${src}" "${luasrc}" )
 
 if(DEV_RUN_COG)
     add_custom_target(
         cog_clnn
-        python ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cogapp/cog.py -q -I ${CMAKE_CURRENT_SOURCE_DIR}/cog-batteries -r ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/*.h ${CMAKE_CURRENT_SOURCE_DIR}/lib/THCLNN/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/lib/THCLNN/*.h
+        python ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cogapp/cog.py -q -I ${CMAKE_CURRENT_SOURCE_DIR}/cog-batteries -r ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/*.h
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
     add_dependencies( clnn cog_clnn )

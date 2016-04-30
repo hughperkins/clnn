@@ -8,8 +8,30 @@ matrix:
 
 before_install:
   - if [ -f ".git/shallow" ]; then travis_retry git fetch --unshallow; fi
-  - bash travis/install-torch.sh
-  - source ~/torch/install/bin/torch-activate
+  - whoami
+  - pwd
+  - ls
+  - git status
+  - ls ~
+  - echo $HOME
+  - env
+  - cd
+  - git clone https://github.com/torch/distro.git ~/torch
+  - cd ~/torch
+  - 'for pkg in cudnn cunn cunnx cutorch qttorch trepl graph optim sdl2 threads submodule graphicsmagick audio fftw3 signal nnx qtlua gnuplot dok iTorch argcheck image xlua; do { sed -i -e "s/\(.*$pkg.*\)/echo skipping $pkg # \1/" install.sh; } done'
+  - 'awk ''NR==2{print "set -x"}1'' install.sh > ~install.sh'
+  - head ~install.sh
+  - mv ~install.sh install.sh
+  - head install.sh
+  - chmod +x install.sh
+  - for pkg in exe/luajit-rocks extra/nn pkg/cwrap pkg/paths pkg/sundown pkg/sys pkg/torch pkg/paths extra/penlight extra/lua-cjson extra/luaffifb extra/luafilesystem; do { git submodule update --init $pkg; } done
+  - # 'sed -i -e ''s/\(.*STATIC.*\)/# \1/'' pkg/torch/lib/TH/CMakeLists.txt pkg/torch/lib/luaT/CMakeLists.txt'
+  - # 'awk ''/_static PROPERTIES/{printf $0; next}1'' pkg/torch/cmake/TorchPackage.cmake > pkg/torch/cmake/~TorchPackage.cmake'
+  - # cat pkg/torch/cmake/~TorchPackage.cmake
+  - # mv pkg/torch/cmake/~TorchPackage.cmake pkg/torch/cmake/TorchPackage.cmake
+  - # 'sed -i -e ''s/\(.*static.*\)/# \1/'' pkg/torch/cmake/TorchPackage.cmake'
+  - # cat pkg/torch/cmake/TorchPackage.cmake
+  - ./install.sh -b
   - mkdir ~/git
   - cd ~/git
   - git clone https://github.com/hughperkins/cltorch.git ~/git/cltorch --recursive
@@ -30,8 +52,6 @@ script:
   - luarocks make rocks/clnn-scm-1.rockspec
   - ls ~/torch/install/lib
   - ls ~/torch/install/lib/lua/5.1
-  - otool -L ~/torch/install/lib/lua/5.1/libclnn.so
-  - otool -l ~/torch/install/lib/lua/5.1/libclnn.so | grep RPATH -A2
   - luajit -e "print(package.searchpath('libTHCLNN', package.cpath))"
   - luajit -e 'require "clnn"'
 
