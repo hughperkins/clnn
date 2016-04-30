@@ -1,3 +1,14 @@
+-- check we are installed from distro, otherwise error message and exit...
+
+require 'os'
+
+xpcall(function()
+  require 'distrocheck'
+end, function()
+  print('Please install cltorch from distro, per instructions at https://github.com/hughperkins/cltorch')
+  os.exit(1)
+end)
+
 require 'cltorch'
 
 require "torch"
