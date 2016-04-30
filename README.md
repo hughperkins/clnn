@@ -81,31 +81,30 @@ Please see https://github.com/soumith/convnet-benchmarks#imagenet-winners-benchm
 
 ### Pre-requisites
 
-* have installed:
-  * [torch](https://github.com/torch/torch7)
-  * [nn](https://github.com/torch/nn)
-  * [cltorch](https://github.com/hughperkins/cltorch)
-* have updated, right now, cltorch, to latest version, eg `luarocks install cltorch`
-  * any weird build issues on clnn, or seg faults etc, please verify cltorch is latest version before raising issue
 * have an OpenCL-enabled GPU device available, and appropriate OpenCL-enabled drivers installed
 
 ### Procedure
 
-```
-luarocks install clnn
-```
+IMPORTANT!  THIS HAS CHANGED!  Please install a specific Torch distro.  In fact it is sufficient to follow
+the installation instructions for https://github.com/hughperkins/cltorch , and this will install `clnn`
+automatically.
 
-You should now be able to use `require 'clnn'` from your lua scripts :-)
-
-Please check that all is working by running the unit-tests:
+You can check things are working after install by running the unit-tests:
 ```
 luajit -l clnn -e 'clnn.test()'
 ```
 
 ## Updating
 
-* Please update to latest version of cltorch before updating to latest version of clnn
-* If you update cltorch, please afterwards also update clnn
+* Please do not run `luarocks install torch` or `luarocks install nn`.  This will break your installation
+* It is safe to run `luarocks install cltorch` or `luarocks install clnn`
+* It's probably best to simply update your distro, ie:
+```
+cd ~/torch-cl
+git pull
+git submodule update --recursive
+./install.sh
+```
 
 ## Unit-tests
 
@@ -114,35 +113,15 @@ To run, do:
 luajit -l clnn -e 'clnn.test()'
 ```
 
-## On the bleeding edge: getting latest SpatialAveragePooling
-
-* latest SpatialAveragePooling has been ported from Sergey's [SpatialAveragePadding and ceil kernels](https://github.com/torch/cunn/pull/134)
-* you need to update your `nn` first, to a post-master fork:
-```
-git clone https://github.com/hughperkins/nn.git -b avepool_plus_master nn-avepool
-cd nn-avepool
-luarocks make rocks/nn-scm-1.rockspec
-cd ..
-```
-* now, you can update `clnn` to a post-master fork:
-```
-git clone https://github.com/hughperkins/clnn.git -b avgpool clnn-avgpool
-cd clnn-avgpool
-luarocks make rocks/clnn-scm-1.rockspec
-cd ..
-```
-* finally, run tests:
-```
-luajit -l clnn -e 'clnn.test()'
-```
-* you can see an example of using it in Justin's [neural-style](https://github.com/jcjohnson/neural-style), in the [OpenCL support](https://github.com/jcjohnson/neural-style/issues/44#issuecomment-142912267) issue
-
 ## Porting guidelines
 
 Porting guidelines, for project maintainers, available here: [porting-guidelines.md](doc/porting-guidelines.md).
 
 ## Recent changes
 
+* 30th April:
+  * rolled back to as-of 21st March, prior to lots of THNN changes in upstream Torch
+  * additionally, installation procedure is now to use a specific torch distro, for stability
 * 1st Feb:
   * merged/ported THNN phase 3.  Any weird build issues, please update both `nn` and `clnn`.
 * 2nd January, 2016:
