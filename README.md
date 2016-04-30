@@ -120,7 +120,7 @@ Porting guidelines, for project maintainers, available here: [porting-guidelines
 ## Recent changes
 
 * 30th April:
-  * rolled back to as-of 21st March, prior to lots of THNN changes in upstream Torch
+  * rolled back to as-of 21st February, prior to lots of THNN changes in upstream Torch
   * additionally, installation procedure is now to use a specific torch distro, for stability
 * 1st Feb:
   * merged/ported THNN phase 3.  Any weird build issues, please update both `nn` and `clnn`.
