@@ -2,6 +2,10 @@
 
 OpenCL backend for Torch nn neural networks library.
 
+## Installation
+
+Please see [distro-cl](https://github.com/hughperkins/distro-cl) for installation instructions.
+
 ## What works
 
 ### Parameterized Modules
@@ -78,42 +82,6 @@ Please see https://github.com/soumith/convnet-benchmarks#imagenet-winners-benchm
 
 * Andrej's [char-rnn](https://github.com/karpathy/char-rnn) is OpenCL-enabled, simple add option `-opencl 1`
 * Justin's [neural-style](https://github.com/jcjohnson/neural-style) has an OpenCL port in progress by Shubhanshu [napsternxg/neural-style](https://github.com/napsternxg/neural-style)
-
-## Installation
-
-### Pre-requisites
-
-* have an OpenCL-enabled GPU device available, and appropriate OpenCL-enabled drivers installed
-
-### Procedure
-
-IMPORTANT!  THIS HAS CHANGED!  Please install a specific Torch distro.  In fact it is sufficient to follow
-the installation instructions for https://github.com/hughperkins/cltorch , and this will install `clnn`
-automatically.
-
-You can check things are working after install by running the unit-tests:
-```
-luajit -l clnn -e 'clnn.test()'
-```
-
-## Updating
-
-* Please do not run `luarocks install torch` or `luarocks install nn`.  This will break your installation
-* It is safe to run `luarocks install cltorch` or `luarocks install clnn`
-* It's probably best to simply update your distro, ie:
-```
-cd ~/torch-cl
-git pull
-git submodule update --recursive
-./install.sh
-```
-
-## Unit-tests
-
-To run, do:
-```
-luajit -l clnn -e 'clnn.test()'
-```
 
 ## Porting guidelines
 
