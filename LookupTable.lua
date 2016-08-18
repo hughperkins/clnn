@@ -8,8 +8,8 @@ nn.LookupTable.baseAccUpdateGradParameters = nn.LookupTable.accUpdateGradParamet
 function nn.LookupTable:__init(nIndex, nOutput)
    nn.Module.__init(self)
 
-   self.nIndex = nIndex
-   self.nOutput = nOutput
+   -- self.nIndex = nIndex
+   -- self.nOutput = nOutput
    self.weight = torch.Tensor(nIndex, nOutput)
    self.gradWeight = torch.Tensor(nIndex, nOutput):zero()
 
@@ -104,9 +104,7 @@ function nn.LookupTable:updateOutput(input)
    assert(not self.shouldScaleGradByFreq, 'self.shouldScaleGradByFreq not implemented')
 
    if self.size == nil then
-      self.size = torch.LongStorage(2)
-      self.size[1] = self.nIndex
-      self.size[2] = self.nOutput
+      self.size = self.weight:size()
 
 --     if select('#', ...) == 1 and type(arg[1]) ~= "number" then
 --        local size = arg[1]
