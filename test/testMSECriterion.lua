@@ -119,8 +119,8 @@ function clnntest.mse_variablebatchsize()
 
     local mod = nn.MSECriterion():cl()
 
-    mytester:assert(mod:forward(input1,target1), 0.0, 'error should be 0')
-    mytester:assert(mod:forward(input2,target2), 0.0, 'error should be 0')
+    mytester:asserteq(mod:forward(input1,target1), 0.0, 'error should be 0')
+    mytester:asserteq(mod:forward(input2,target2), 0.0, 'error should be 0')
 end
 
 

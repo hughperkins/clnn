@@ -1,4 +1,4 @@
-local clnntest = {}
+local clnntest = torch.TestSuite()
 local precision_forward = 1e-4
 local precision_backward = 1e-2
 local nloop = 1
@@ -8,7 +8,7 @@ local times = {}
 --      th -lclnn -e 'clnn.tests.printExcluded()'
 --      th -lclnn -e 'clnn.tests.printIncluded()'
 
-local x_clnntest = {} -- assign to this to exclude from tests
+local x_clnntest = torch.TestSuite() -- assign to this to exclude from tests
 -- I guess we can have an option to include
 -- the _x assigned methods to the targets
 -- just for one session
@@ -638,37 +638,6 @@ function clnntest.Sum_backward()
    local error = rescl:float() - groundgrad
 
    mytester:assertlt(error:abs():max(), precision_backward, 'error on state (backward) ')
-end
-
-function clnntest.ClassNLLCriterionMultipleTarget()
-   local size = 3000
-   local input = torch.randn(size, size)
-   local target = torch.randperm(size)
-   local mod = nn.ClassNLLCriterion()
-
-   local tm = {}
-   local title = string.format('ClassNLLCriterionMultiTarget %d ',size)
-   times[title] = tm
-
-   local a = torch.Timer()
-   local fout = mod:forward(input, target)
-   local fgin = mod:backward(input, target):clone()
-   tm.cpu = a:time().real
-
-   local cinput = input:cl()
-   local ctarget = target:cl()
-   local cmod = nn.ClassNLLCriterion():cl()
-   a:reset()
-   local cout = cmod:forward(cinput,ctarget)
-   local cgin = cmod:backward(cinput,ctarget)
-   cltorch.synchronize()
-   tm.gpu = a:time().real
-
-   mytester:assertlt(
-      math.abs(fout-cout), precision_forward, 'error on output')
-
-   local gerr = cgin:float() - fgin
-   mytester:assertlt(gerr:abs():max(), precision_forward * 3, 'error on gradInput')
 end
 
 function clnntest.CMul_forward_batch()
@@ -2510,12 +2479,14 @@ local function setUp()
    initSeed(123456, false)
 end
 
-for k,v in pairs(clnntest) do
-   clnntest[k] = function()
+clnntest_new = torch.TestSuite()
+for k,v in pairs(clnntest.__tests) do
+   clnntest_new[k] = function()
       setUp()
       v()
    end
 end
+clnntest = clnntest_new
 
 function initSeed(seed, echo)
    if echo == nil then
@@ -2539,14 +2510,14 @@ function nn.testcl(tests, print_timing, n_loop, seed)
    mytester = torch.Tester()
    local mytests = clnntest
    if os.getenv('TESTS') ~= nil then
-      mytests = {}
-      for name, test in pairs(clnntest) do
+      mytests = torch.TestSuite()
+      for name, test in pairs(clnntest.__tests) do
          if name == os.getenv('TESTS') then
             table.insert(mytests, test)
          end
       end
    elseif os.getenv('LIST') ~= nil then
-      for name, test in pairs(clnntest) do
+      for name, test in pairs(clnntest.__tests()) do
          print(name)
       end
       os.exit(0)
@@ -2572,13 +2543,13 @@ clnn.test = nn.testcl
 clnn.tests = {}
 function clnn.tests.printExcluded()
    print('Excluded tests:')
-   for k,v in pairs(x_clnntest) do
+   for k,v in pairs(x_clnntest.__tests) do
       print('  ' .. k)
    end
 end
 function clnn.tests.printIncluded()
    print('Included tests:')
-   for k,v in pairs(clnntest) do
+   for k,v in pairs(clnntest.__tests) do
       print('  ' .. k)
    end
 end

@@ -290,7 +290,7 @@ function clnntest.SpatialConvolutionMM_backward_single()
    local berror = biascl:float() - groundbias
    
    mytester:assertlt(error:abs():max(), 1e-5, 'error on state (backward) ')
-   mytester:assertlt(werror:abs():max(), 1e-4, 'error on weight (backward) ')
+   mytester:assertlt(werror:abs():max(), 4e-4, 'error on weight (backward) ')
    mytester:assertlt(berror:abs():max(), 1e-4, 'error on bias (backward) ')
 end
 
