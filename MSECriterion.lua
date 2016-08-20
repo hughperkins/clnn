@@ -13,7 +13,7 @@ function nn.MSECriterion:updateOutput(input, target)
    end
 
    self.workBuffer:resizeAs(input)
-   self.workBuffer:map2(input, target, "*out = (*in1 - *in2) * (*in1 - *in2)")
+   self.workBuffer:map2_on_gpu(input, target, "*out = (*in1 - *in2) * (*in1 - *in2)")
    local se = torch.sum(self.workBuffer)
    
    local mse = se
@@ -34,7 +34,7 @@ function nn.MSECriterion:updateGradInput(input, target)
       norm = norm / size
    end
    self.gradInput:resize(target:size())
-   self.gradInput:map2(input, target, "*out = " .. norm .. " * (*in1 - *in2)")
+   self.gradInput:map2_on_gpu(input, target, "*out = " .. norm .. " * (*in1 - *in2)")
    return self.gradInput
 end
 

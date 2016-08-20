@@ -20,11 +20,11 @@ function nn.Threshold.updateOutput(self, input)
    self.thresholdstring = floatToString(self.threshold)
    self.valstring = floatToString(self.val)
    if self.inplace then
-      input:apply("*out = (*out > " .. self.thresholdstring .. ") ? *out : " .. self.valstring)
+      input:apply_on_gpu("*out = (*out > " .. self.thresholdstring .. ") ? *out : " .. self.valstring)
       self.output = input
    else
       self.output:resize(input:size())
-      self.output:map(input, "*out = ( *in1 > " .. self.thresholdstring .. ") ? *in1 : " .. self.valstring)
+      self.output:map_on_gpu(input, "*out = ( *in1 > " .. self.thresholdstring .. ") ? *in1 : " .. self.valstring)
    end
    return self.output
 end
@@ -40,10 +40,10 @@ function nn.Threshold.updateGradInput(self, input, gradOutput)
       self.gradInput:zero()
    end
    if self.inplace then
-      gradOutput:map2(input, gradOutput, "*out = (*in1 > " .. self.thresholdstring .. ") ? *in2 : 0.0f")
+      gradOutput:map2_on_gpu(input, gradOutput, "*out = (*in1 > " .. self.thresholdstring .. ") ? *in2 : 0.0f")
       self.gradInput = gradOutput
    else
-      self.gradInput:map2(input, gradOutput, "*out = (*in1 > " .. self.thresholdstring .. ") ? *in2 : 0.0f")
+      self.gradInput:map2_on_gpu(input, gradOutput, "*out = (*in1 > " .. self.thresholdstring .. ") ? *in2 : 0.0f")
    end
    return self.gradInput
 end

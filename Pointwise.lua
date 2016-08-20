@@ -75,16 +75,16 @@ for i,v in ipairs(definitions) do
   end
 
   torch.ClTensor.nn[v.name..'_updateOutput'] = function(self, input)
-    self.output:resizeAs(input):apply2(input, forward_op)
+    self.output:resizeAs(input):apply2_on_gpu(input, forward_op)
     return self.output
   end
   
   torch.ClTensor.nn[v.name..'_updateGradInput'] = function(self, input, gradOutput)
     self.gradInput:resizeAs(input)
     if backward_op:find'output' then
-      self.gradInput:apply3(self.output, gradOutput, (backward_op:gsub('output', 'y')))
+      self.gradInput:apply3_on_gpu(self.output, gradOutput, (backward_op:gsub('output', 'y')))
     elseif backward_op:find'input' then
-      self.gradInput:apply3(input, gradOutput, (backward_op:gsub('input', 'y')))
+      self.gradInput:apply3_on_gpu(input, gradOutput, (backward_op:gsub('input', 'y')))
     end
     return self.gradInput
   end
