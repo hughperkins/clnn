@@ -39,14 +39,14 @@ void im2col(THClState *state, THClTensor* im, const int channels,
   int width_col = (width + 2 * pad_w - ksize_w) / stride_w + 1;
   int num_kernels = channels * height_col * width_col;
 
-  std::string uniqueName = "SpatialConvolutionMM::im2col";
+  std::string uniqueName = "im2col";
   EasyCL *cl = im->storage->cl;
   CLKernel *kernel = 0;
   if(cl->kernelExists(uniqueName)) {
     kernel = cl->getKernel(uniqueName);
   } else {
     TemplatedKernel kernelBuilder(cl);
-    kernel = kernelBuilder.buildKernel(uniqueName, "SpatialConvolutionMM.cl",
+    kernel = kernelBuilder.buildKernel(uniqueName, "im2col.cl",
       getKernelTemplate(), "im2col_kernel");
   }
 
@@ -85,13 +85,13 @@ void col2im(THClState *state, THClTensor* col, const int channels,
   // bottom dimension, and then in the kernel add up the top dimensions.
 
   EasyCL *cl = im->storage->cl;
-  std::string uniqueName = "SpatialConvolutionMM::col2im";
+  std::string uniqueName = "col2im";
   CLKernel *kernel = 0;
   if(cl->kernelExists(uniqueName)) {
     kernel = cl->getKernel(uniqueName);
   } else {
     TemplatedKernel kernelBuilder(cl);
-    kernel = kernelBuilder.buildKernel(uniqueName, "SpatialConvolutionMM.cl",
+    kernel = kernelBuilder.buildKernel(uniqueName, "im2col.cl",
       getKernelTemplate(), "col2im_kernel");
   }
 
@@ -132,7 +132,7 @@ std::string getKernelTemplate() {
   // ]]]
   // generated using cog, from lib/THCLNN/im2col.cl:
   const char * kernelSource =  
-  "// from SpatialConvolutionMM.cu:\n"
+  "// from im2col.h:\n"
   "\n"
   "// CL: grid stride looping\n"
   "#define CL_KERNEL_LOOP(i, n)                        \\\n"

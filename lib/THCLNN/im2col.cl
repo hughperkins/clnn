@@ -1,4 +1,4 @@
-// from SpatialConvolutionMM.cu:
+// from im2col.h:
 
 // CL: grid stride looping
 #define CL_KERNEL_LOOP(i, n)                        \
