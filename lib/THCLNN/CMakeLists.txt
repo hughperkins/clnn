@@ -10,7 +10,7 @@ IF(NOT THCLNN_INSTALL_LIB_SUBDIR)
 ENDIF()
 
 #FILE(GLOB src-cl *.cpp)
-set(src-cl Abs.cpp SpatialConvolutionMM.cpp ELU.cpp SpatialAveragePooling.cpp SpatialMaxPooling.cpp
+set(src-cl Abs.cpp SpatialConvolutionMM.cpp SpatialFullConvolution.cpp ELU.cpp SpatialAveragePooling.cpp SpatialMaxPooling.cpp
   SoftMax.cpp Tanh.cpp common.cpp SpatialUpSamplingNearest.cpp im2col.cpp
 )
 
